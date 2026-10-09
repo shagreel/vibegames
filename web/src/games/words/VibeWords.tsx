@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ref, onValue, set, get, onDisconnect } from 'firebase/database';
-import { database } from './firebase';
+import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
+import BackToGames from '../../hub/BackToGames';
 import './VibeWords.css';
 
 type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'current';
@@ -547,6 +548,7 @@ function VibeWords() {
   return (
     <div className="vibewords-container">
       <header className="vibewords-header">
+        <BackToGames />
         <h1>VibeWords</h1>
         {playerCount > 0 && (
           <div className="player-count">

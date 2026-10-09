@@ -3,7 +3,7 @@
 A native iOS party-game app plus its companion website, in one repository.
 
 - `Sources/`, `Tests/`, `UITests/`, `project.yml` — the iOS app (XcodeGen)
-- `web/` — the browser version of Vibe Words (React + Vite)
+- `web/` — the browser versions, at play.vibegames.party (React + Vite)
 - `site/` — the marketing landing page (static HTML/CSS)
 - `firebase/` — Realtime Database rules shared by both clients
 
@@ -153,6 +153,52 @@ a poor proxy: a 34-clue grid very often still falls to singles, which is how
 
 Generation costs roughly 15 ms for Easy and 250 ms for Hard — a single carve,
 graded as it goes. Every board is still verified to have exactly one solution.
+
+## Playing in a browser
+
+**play.vibegames.party** is a menu. It used to be Vibe Words and nothing else,
+because Vibe Words was the only game with a browser version — going there and
+getting a word grid *was* the site. Each game now has its own path:
+
+| Path | Game | State |
+| --- | --- | --- |
+| `/` | the menu | live |
+| `/words` | Vibe Words | live |
+| `/trio` | Vibe Trio | live, solo and shared |
+| `/five` | Vibe Five | not ported |
+| `/sudoku` | Vibe Sudoku | not ported |
+
+Anything the router does not recognise falls through to the menu, so an old
+bookmark to the root still lands somewhere useful rather than on a 404. The
+router is thirty lines in `web/src/router.ts` — four screens behind a catch-all
+rewrite do not need a routing library, and the games keep their shared-game id in
+the query string, which is the part that actually needs preserving.
+
+A shared game is a query string, the same as it always was:
+`play.vibegames.party/trio?game=csngwo21`.
+
+### Vibe Trio in a browser, and why the shuffle is not a detail
+
+The browser talks the **same schema as the app** — `trio/{gameId}` with `meta`,
+`players` and `taken` — so a browser and a phone can sit in the same game. That
+only works if both build the *identical* board from the same seed, and the board
+is a pure function of the seed and the taken cards, so any disagreement about the
+shuffle is two players looking at different tables while the score says otherwise.
+
+That makes the shuffle load-bearing rather than incidental. Swift's
+`Array.shuffle(using:)` is forward Fisher–Yates drawing bounds by multiply-shift;
+`next() % bound` is also a correct shuffle and produces a *different* board for
+the same seed. `Tools/trio_fixtures/` runs the Swift engine and dumps the deck
+order, the opening table and a full play-out for seven seeds;
+`web/src/test/trioEngine.test.ts` replays them through the TypeScript engine and
+fails if the two ever disagree. Regenerate the fixtures after touching
+`TrioCard.swift`, `TrioEngine.swift` or `SeededGenerator.swift`.
+
+The card faces are not shipped twice. `Tools/make_web_cards.py` derives 512px,
+256-colour copies from the 900px masters in `cards/` into `web/public/cards/` —
+75MB down to **5.2MB**, which the browser fetches lazily, one per card actually on
+the table. 512 is measured, not guessed: the largest a card is ever drawn is
+484px, on a 13-inch iPad in portrait.
 
 ## Vibe Trio
 
@@ -474,7 +520,7 @@ site/                           Marketing landing page (static, no build step)
   assets/qr/                    Real QR codes pointing at placeholder URLs
   assets/screens/               App screenshots, light + dark
   assets/people/                Illustrations standing in for photos
-web/                            Browser version of Vibe Words (React + Vite)
+web/                            Browser versions, served at play.vibegames.party
   src/VibeWords.tsx             The game
   src/firebase.ts               Firebase wiring, incl. App Check
   .env.local                    Firebase config (git-ignored)

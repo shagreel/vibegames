@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { VALID_WORDS, ANSWER_WORDS } from '../wordList';
+import { VALID_WORDS, ANSWER_WORDS } from '../games/words/wordList';
 
 describe('Game Logic - Word Validation', () => {
   it('should have valid words list', () => {

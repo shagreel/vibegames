@@ -1,6 +1,17 @@
-# Multiplayer Vibe Words
+# Vibe Games, in a browser
 
-A multiplayer Vibe Words game built with React, TypeScript, Vite, and Firebase Realtime Database.
+The web client for **play.vibegames.party** — React, TypeScript, Vite and the
+Firebase Realtime Database. A menu, and a game at each path:
+
+| Path | Game |
+| --- | --- |
+| `/` | the menu |
+| `/words` | Vibe Words — solo and shared |
+| `/trio` | Vibe Trio — solo and shared on one table |
+| `/five`, `/sudoku` | not ported yet; the menu marks them Soon |
+
+Both shared games use the same database schema as the iOS app, so a browser and a
+phone can play together.
 
 ## ✨ Features
 
@@ -15,17 +26,22 @@ A multiplayer Vibe Words game built with React, TypeScript, Vite, and Firebase R
 
 ## 🧪 Test Suite
 
-Comprehensive test coverage with **41 passing tests**:
+**82 passing tests.**
 
 ```bash
-✓ src/test/localStorage.test.ts (9 tests)
-✓ src/test/multiDevice.test.ts (7 tests)
-✓ src/test/gameLogic.test.ts (17 tests)
-✓ src/test/integration.test.ts (8 tests)
-
-Test Files  4 passed (4)
-Tests       41 passed (41)
+✓ src/test/trioEngine.test.ts   (35 tests)   the rule, and agreement with iOS
+✓ src/test/gameLogic.test.ts    (17 tests)
+✓ src/test/localStorage.test.ts  (9 tests)
+✓ src/test/integration.test.ts   (8 tests)
+✓ src/test/multiDevice.test.ts   (7 tests)
+✓ src/test/router.test.ts        (6 tests)
 ```
+
+`trioEngine.test.ts` is the one to keep green: a shared Vibe Trio game sends a
+seed and the taken cards and nothing else, so if the browser and the phone
+shuffled differently they would sit in the same game looking at different tables.
+It checks the TypeScript engine against fixtures dumped from the Swift engine —
+see `Tools/trio_fixtures/`.
 
 See [TESTING.md](TESTING.md) for detailed test documentation.
 

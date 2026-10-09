@@ -1,0 +1,190 @@
+/* The menu at play.vibegames.party. Dark, to match the games it opens into —
+   a light menu handing over to a dark word grid would be a jolt. */
+
+.hub {
+  min-height: 100vh;
+  background-color: #121213;
+  background-image:
+    radial-gradient(60% 45% at 50% -5%, rgba(69, 133, 245, 0.18), transparent 70%),
+    radial-gradient(45% 40% at 12% 15%, rgba(255, 71, 87, 0.12), transparent 70%),
+    radial-gradient(45% 40% at 88% 25%, rgba(247, 185, 41, 0.12), transparent 70%);
+  background-repeat: no-repeat;
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2.5rem 1.25rem 3rem;
+}
+
+.hub__inner {
+  width: 100%;
+  max-width: 34rem;
+  margin: auto 0;
+}
+
+.hub__header {
+  margin-bottom: 2rem;
+}
+
+.hub__header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  background: linear-gradient(115deg, #ffffff 25%, #a9b6d6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hub__header p {
+  margin: 0;
+  font-size: 1rem;
+  color: #9aa0a6;
+}
+
+.hub__games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+
+.card[data-available='true']:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.card[data-available='true']:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.card:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.card:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.card__icon {
+  flex: 0 0 auto;
+  width: 4rem;
+  height: 4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, var(--a), var(--b));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.card__icon svg {
+  width: 2rem;
+  height: 2rem;
+  fill: #ffffff;
+}
+
+.card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.card__soon {
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #d5d8dd;
+}
+
+.card__tagline {
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}
+
+.card__play {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.card__play svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: #ffffff;
+}
+
+.hub__footer {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #6f757b;
+}
+
+.hub__footer a {
+  color: #9aa0a6;
+  text-decoration: none;
+}
+
+.hub__footer a:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 380px) {
+  .hub__header h1 {
+    font-size: 2.1rem;
+  }
+
+  .card__icon {
+    width: 3.4rem;
+    height: 3.4rem;
+  }
+}

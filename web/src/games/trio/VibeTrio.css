@@ -1,0 +1,571 @@
+/* Vibe Trio on the web. Dark to match the rest of the suite, with the game's
+   own gold-to-green running through the bits that are Trio's alone. */
+
+.trio {
+  --trio-a: #f7b929;
+  --trio-b: #85d647;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #121213;
+  color: #ffffff;
+}
+
+.trio__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid #2a2a2d;
+}
+
+.trio__header .back-to-games {
+  position: absolute;
+  left: 0.75rem;
+}
+
+.trio__leave {
+  position: absolute;
+  right: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #d5d8dd;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+.trio__leave:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.trio__titles {
+  text-align: center;
+  min-width: 0;
+}
+
+.trio__titles h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.trio__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8b9197;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trio__notice {
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffd479;
+}
+
+/* ── lobby ─────────────────────────────────────────────────────────────── */
+
+.trio__lobby {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.trio__blurb {
+  margin: 0 0 0.5rem;
+  color: #9aa0a6;
+  text-align: center;
+}
+
+.trio-card-button {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.05rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.3rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.trio-card-button strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.trio-card-button span {
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}
+
+.trio-card-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.trio-card-button:first-of-type {
+  background: linear-gradient(135deg, rgba(247, 185, 41, 0.22), rgba(133, 214, 71, 0.16));
+  border-color: rgba(247, 185, 41, 0.4);
+}
+
+.trio__join {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trio__join label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b9197;
+}
+
+.trio__join-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.trio__join input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 1rem;
+  height: 3.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.trio__join input:focus-visible {
+  outline: 2px solid var(--trio-a);
+  outline-offset: 2px;
+}
+
+.trio__join button {
+  padding: 0 1.4rem;
+  border: none;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--trio-a), var(--trio-b));
+  color: #1b1b1b;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.trio__join button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.trio__join-error {
+  margin: 0;
+  color: #ff8c8c;
+  font-size: 0.85rem;
+}
+
+.trio__link {
+  border: none;
+  background: none;
+  color: #9aa0a6;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.6rem;
+}
+
+.trio__link:hover {
+  color: #ffffff;
+}
+
+/* ── waiting room ──────────────────────────────────────────────────────── */
+
+.trio__waiting {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.trio__code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.trio__waiting-text {
+  margin: 0;
+  max-width: 24rem;
+  color: #9aa0a6;
+}
+
+.trio__players {
+  margin: 0;
+  color: #6f757b;
+  font-size: 0.85rem;
+}
+
+.trio__start {
+  padding: 0.85rem 2rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--trio-a), var(--trio-b));
+  color: #1b1b1b;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* ── board ─────────────────────────────────────────────────────────────── */
+
+.trio__board-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.5rem 0.75rem 0;
+}
+
+/* The board takes whatever is left; the fitter measures it and sizes the cards
+   so all of them are on screen. Nothing here scrolls. */
+.trio__board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.trio__row {
+  display: flex;
+  justify-content: center;
+}
+
+.trio-card {
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.trio-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+}
+
+.trio-card[data-state='selected'] {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 0 0 4px var(--trio-a), 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.trio-card[data-state='rejected'] {
+  box-shadow: 0 0 0 4px #ff4757;
+  animation: trio-shake 0.4s ease;
+}
+
+.trio-card:disabled {
+  cursor: default;
+}
+
+.trio-card__back {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+  background-color: #1d1d20;
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@keyframes trio-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.trio__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.25rem calc(0.6rem + env(safe-area-inset-bottom));
+}
+
+.trio__hint {
+  padding: 0.7rem 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trio__hint--off {
+  border-color: transparent;
+  background: none;
+  color: #6f757b;
+  cursor: default;
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding-left: 0.25rem;
+}
+
+.trio__deck {
+  color: #6f757b;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ── leaderboard ───────────────────────────────────────────────────────── */
+
+.trio__leaderboard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1.25rem;
+  text-align: center;
+}
+
+.trio__trophy {
+  margin: 0;
+  font-size: 2.4rem;
+}
+
+.trio__leaderboard h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.trio__result-sub {
+  margin: 0;
+  color: #8b9197;
+  font-size: 0.9rem;
+}
+
+.trio__standings {
+  list-style: none;
+  width: 100%;
+  max-width: 26rem;
+  margin: 1rem 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.2rem;
+  overflow: hidden;
+}
+
+.trio__standings li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+}
+
+.trio__standings li + li {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.trio__standings li.is-me {
+  background: rgba(247, 185, 41, 0.12);
+}
+
+.trio__rank {
+  width: 1.4rem;
+  text-align: right;
+  color: #6f757b;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.trio__standing-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trio__score {
+  margin-left: auto;
+  font-weight: 800;
+}
+
+/* ── countdown ─────────────────────────────────────────────────────────── */
+
+.trio__countdown {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: rgba(18, 18, 19, 0.86);
+  z-index: 20;
+}
+
+.trio__countdown span {
+  color: #9aa0a6;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.trio__countdown strong {
+  font-size: 4rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--trio-a), var(--trio-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── rules ─────────────────────────────────────────────────────────────── */
+
+.trio__rules {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  color: #c8ccd2;
+  line-height: 1.6;
+}
+
+.trio__rules dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.trio__rules dt {
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.trio__rules dd {
+  margin: 0;
+  color: #9aa0a6;
+}
+
+.trio__rules em {
+  color: var(--trio-a);
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* ── name prompt ───────────────────────────────────────────────────────── */
+
+.trio__overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(10, 10, 12, 0.8);
+  z-index: 30;
+}
+
+.trio__name-card {
+  width: 100%;
+  max-width: 24rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.5rem;
+  background: #1a1a1d;
+  text-align: center;
+}
+
+.trio__name-card h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.trio__name-card p {
+  margin: 0;
+  color: #9aa0a6;
+  font-size: 0.9rem;
+}
+
+.trio__name-card input {
+  height: 3.2rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.trio__name-card input:focus-visible {
+  outline: 2px solid var(--trio-a);
+  outline-offset: 2px;
+}
+
+/* Wider screens get a wider table, not bigger cards forever. */
+@media (min-width: 720px) {
+  .trio__titles h1 {
+    font-size: 1.25rem;
+  }
+}

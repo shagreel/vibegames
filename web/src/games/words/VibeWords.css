@@ -8,9 +8,18 @@
 }
 
 .vibewords-header {
+  position: relative;
   border-bottom: 1px solid #3a3a3c;
   padding: 1rem;
   text-align: center;
+}
+
+/* Sits in the header's left margin so the title stays centred. */
+.vibewords-header .back-to-games {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .vibewords-header h1 {

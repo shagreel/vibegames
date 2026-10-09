@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Vibe Games: one quadrant per game, in the app's four gradients. -->
+  <defs>
+    <linearGradient id="five" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff4757"/><stop offset="1" stop-color="#ff8c33"/>
+    </linearGradient>
+    <linearGradient id="words" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#21b8a8"/><stop offset="1" stop-color="#4585f5"/>
+    </linearGradient>
+    <linearGradient id="sudoku" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8549f0"/><stop offset="1" stop-color="#db54c2"/>
+    </linearGradient>
+    <linearGradient id="trio" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7b929"/><stop offset="1" stop-color="#85d647"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#121213"/>
+  <rect x="9"  y="9"  width="21" height="21" rx="6" fill="url(#five)"/>
+  <rect x="34" y="9"  width="21" height="21" rx="6" fill="url(#words)"/>
+  <rect x="9"  y="34" width="21" height="21" rx="6" fill="url(#sudoku)"/>
+  <rect x="34" y="34" width="21" height="21" rx="6" fill="url(#trio)"/>
+</svg>
