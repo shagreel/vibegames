@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" width="900" height="640" role="img" aria-label="People playing vibe trio crowd">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#33290a"/>
+      <stop offset="1" stop-color="#0b0a17"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3ad0c0"/>
+      <stop offset="1" stop-color="#4a86f7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="640" fill="url(#bg)"/>
+  <g fill="#ffffff"><circle cx="598" cy="367" r="7" opacity="0.29"/><circle cx="670" cy="379" r="4" opacity="0.31"/><circle cx="150" cy="487" r="5" opacity="0.13"/><circle cx="738" cy="307" r="9" opacity="0.39"/><circle cx="350" cy="423" r="7" opacity="0.37"/><circle cx="486" cy="331" r="6" opacity="0.21"/><circle cx="138" cy="359" r="4" opacity="0.19"/><circle cx="2" cy="419" r="3" opacity="0.25"/><circle cx="338" cy="503" r="6" opacity="0.23"/><circle cx="666" cy="355" r="8" opacity="0.15"/><circle cx="702" cy="231" r="9" opacity="0.39"/><circle cx="26" cy="299" r="7" opacity="0.29"/><circle cx="734" cy="479" r="8" opacity="0.13"/><circle cx="110" cy="323" r="4" opacity="0.29"/><circle cx="486" cy="135" r="8" opacity="0.29"/><circle cx="394" cy="291" r="7" opacity="0.29"/><circle cx="62" cy="87" r="8" opacity="0.27"/><circle cx="710" cy="3" r="4" opacity="0.35"/><circle cx="150" cy="95" r="9" opacity="0.31"/><circle cx="42" cy="491" r="4" opacity="0.33"/><circle cx="570" cy="215" r="7" opacity="0.15"/><circle cx="278" cy="83" r="8" opacity="0.25"/><circle cx="386" cy="239" r="5" opacity="0.15"/><circle cx="86" cy="91" r="3" opacity="0.39"/><circle cx="898" cy="31" r="5" opacity="0.39"/><circle cx="358" cy="331" r="4" opacity="0.21"/></g>
+
+  <g fill="#ffffff"><g opacity="0.3"><circle cx="150" cy="414" r="46"/><rect x="84" y="470" width="132" height="150" rx="66"/></g><g opacity="0.46"><circle cx="330" cy="397" r="54"/><rect x="252" y="463" width="156" height="177" rx="78"/></g><g opacity="0.92"><circle cx="450.0" cy="443" r="40"/><rect x="393" y="491" width="114" height="129" rx="57"/></g><g opacity="0.46"><circle cx="570" cy="397" r="54"/><rect x="492" y="463" width="156" height="177" rx="78"/></g><g opacity="0.3"><circle cx="750" cy="414" r="46"/><rect x="684" y="470" width="132" height="150" rx="66"/></g></g>
+
+  <!-- the phone everyone is looking at -->
+  <g>
+    <rect x="368.0" y="142" width="164" height="284" rx="30" fill="#ffffff" opacity="0.14"/>
+    <rect x="376.0" y="150" width="148" height="268" rx="24" fill="#0b0a17"/>
+    <rect x="388.0" y="170" width="124" height="222" rx="14" fill="url(#screen)" opacity="0.92"/>
+    <rect x="406.0" y="196" width="88" height="16" rx="8" fill="#ffffff" opacity="0.85"/>
+    <rect x="406.0" y="228" width="64" height="16" rx="8" fill="#ffffff" opacity="0.55"/>
+    <rect x="406.0" y="260" width="76" height="16" rx="8" fill="#ffffff" opacity="0.35"/>
+  </g>
+</svg>

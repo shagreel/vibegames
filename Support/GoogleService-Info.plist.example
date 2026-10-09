@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TEMPLATE — this file is not used by the build.
+
+  Firebase issues the real file per project. To get it:
+
+    1. Firebase console -> Project settings -> General
+    2. "Your apps" -> Add app -> iOS
+    3. Bundle ID: party.vibegames.VibeGames
+    4. Download GoogleService-Info.plist
+
+  Then drop it in Sources/ (so it is bundled) and re-run `xcodegen generate`.
+  The values below are placeholders and will not connect to anything.
+-->
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>REPLACE_WITH_YOUR_IOS_API_KEY</string>
+	<key>GCM_SENDER_ID</key>
+	<string>000000000000</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>party.vibegames.VibeGames</string>
+	<key>PROJECT_ID</key>
+	<string>REPLACE_WITH_YOUR_PROJECT_ID</string>
+	<key>STORAGE_BUCKET</key>
+	<string>REPLACE_WITH_YOUR_PROJECT_ID.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<false/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<false/>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:000000000000:ios:0000000000000000000000</string>
+	<key>DATABASE_URL</key>
+	<string>https://REPLACE_WITH_YOUR_PROJECT_ID-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>

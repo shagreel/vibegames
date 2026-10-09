@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vibe Games — four party games for the phone in your pocket</title>
+<meta name="description" content="Vibe Five, Vibe Words, Vibe Sudoku and Vibe Trio. Play solo, or share a code and race everyone in the room." />
+<meta name="theme-color" content="#0b0a17" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<a class="skip" href="#games">Skip to the games</a>
+
+<!-- ───────────────────────────── hero ───────────────────────────── -->
+<header class="hero">
+  <div class="hero__glow" aria-hidden="true"></div>
+
+  <div class="hero__inner">
+    <div class="hero__copy">
+      <p class="eyebrow">Four games · One phone · No rules to learn</p>
+      <h1>Vibe&nbsp;Games</h1>
+      <p class="lede">
+        Name three things before the buzzer. Crack a five-letter word.
+        Fill a grid faster than everyone else. Spot three cards that agree
+        on everything — or on nothing. Party games for the phone that is
+        already in your pocket.
+      </p>
+
+      <div class="store">
+        <div class="store__item">
+          <img src="assets/qr/appstore.svg" alt="QR code for the App Store listing" width="132" height="132" />
+          <div>
+            <strong>App Store</strong>
+            <span class="pill">Coming soon</span>
+          </div>
+        </div>
+        <div class="store__item">
+          <img src="assets/qr/playstore.svg" alt="QR code for the Google Play listing" width="132" height="132" />
+          <div>
+            <strong>Google Play</strong>
+            <span class="pill">Coming soon</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="fine">
+        Point a camera at a code to try it — the listings are not live yet, so
+        the links are placeholders for now.
+      </p>
+    </div>
+
+    <div class="hero__device">
+      <div class="phone phone--float">
+        <picture><source srcset="assets/screens/hub-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/hub-light.jpg" alt="The Vibe Games home screen, listing four games" /></picture>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ───────────────────────────── modes ───────────────────────────── -->
+<section class="modes" id="play">
+  <div class="wrap">
+    <h2 class="reveal">Two ways to play</h2>
+    <p class="sub reveal">Both work with one phone. One of them works with six.</p>
+
+    <div class="cards">
+      <article class="card reveal">
+        <div class="card__icon card__icon--solo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M11 5.5h2"/></svg>
+        </div>
+        <h3>Play it yourself</h3>
+        <p>
+          Pick a game, pick a difficulty, go. Nothing to set up and nothing to
+          connect — perfect for a commute, a queue, or avoiding conversation.
+        </p>
+        <ul class="ticks">
+          <li>Works with no signal</li>
+          <li>Solo difficulty on every game</li>
+          <li>Your score is your business</li>
+        </ul>
+      </article>
+
+      <article class="card reveal">
+        <div class="card__icon card__icon--friends" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M15.5 14.4c2.6.2 4.6 2.1 4.6 4.6"/></svg>
+        </div>
+        <h3>Or race the room</h3>
+        <p>
+          Start a game, read out the code, and everyone plays the same board on
+          their own phone. First to finish takes it.
+        </p>
+        <ul class="ticks">
+          <li>Same puzzle for everybody</li>
+          <li>Live player list and winner announcement</li>
+          <li>Straight into the next round</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────── games ───────────────────────────── -->
+<div id="games"></div>
+
+<section class="game game--five" id="vibe-five" data-accent="five">
+  <div class="game__backdrop" aria-hidden="true"></div>
+  <div class="game__inner wrap">
+    <div class="game__copy">
+      <p class="game__index">Game 01</p>
+      <h2>Vibe&nbsp;Five</h2>
+      <p class="game__tag">Name three things. You have five seconds.</p>
+      <p>
+        A category lands on screen — <em>pizza toppings</em>, <em>things in a
+        junk drawer</em> — and the table has five seconds to name three that
+        fit. The buzzer does not care about your excuses.
+      </p>
+      <ol class="steps">
+        <li>Read the category out to the room.</li>
+        <li>Start the clock when everyone is ready.</li>
+        <li>Five seconds. Ticks for the last three. Then the buzzer.</li>
+      </ol>
+      <p class="game__meta"><strong>1,100 categories</strong> across 11 packs. Pass one phone around.</p>
+    </div>
+
+    <div class="game__shots">
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibefive-revealed-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-revealed-light.jpg" alt="A Vibe Five category on screen, waiting for the clock to start" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibefive-counting-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-counting-light.jpg" alt="The five second countdown running" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="2"><picture><source srcset="assets/screens/vibefive-buzzed-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-buzzed-light.jpg" alt="Time is up, shown in red" /></picture></div>
+    </div>
+  </div>
+</section>
+
+<section class="game game--words" id="vibe-words" data-accent="words">
+  <div class="game__backdrop" aria-hidden="true"></div>
+  <div class="game__inner wrap game__inner--flip">
+    <div class="game__copy">
+      <p class="game__index">Game 02</p>
+      <h2>Vibe&nbsp;Words</h2>
+      <p class="game__tag">Six guesses. Everyone gets the same word.</p>
+      <p>
+        A five-letter word, six tries, and green-amber-grey hints. Play it
+        quietly on your own, or start a game and watch the winner get announced
+        to the whole room.
+      </p>
+      <ol class="steps">
+        <li>Guess a word. Green means right letter, right place.</li>
+        <li>Amber means it is in there somewhere. Grey means give up on it.</li>
+        <li>Solve it before anyone else does.</li>
+      </ol>
+      <p class="game__meta"><strong>14,855 words</strong> to guess from. Also playable in a browser.</p>
+    </div>
+
+    <div class="game__shots">
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibewords-solved-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibewords-solved-light.jpg" alt="A Vibe Words board with coloured hints and a tinted keyboard" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibewords-shared-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibewords-shared-light.jpg" alt="A shared Vibe Words game showing the code to share" /></picture></div>
+    </div>
+  </div>
+</section>
+
+<section class="game game--sudoku" id="vibe-sudoku" data-accent="sudoku">
+  <div class="game__backdrop" aria-hidden="true"></div>
+  <div class="game__inner wrap">
+    <div class="game__copy">
+      <p class="game__index">Game 03</p>
+      <h2>Vibe&nbsp;Sudoku</h2>
+      <p class="game__tag">Fill the grid. Beat the room to it.</p>
+      <p>
+        Proper Sudoku with pencil marks and clash warnings. Play Easy, Medium
+        or Hard on your own — or pick the difficulty yourself and race friends
+        on the same board, whoever is hosting.
+      </p>
+      <ol class="steps">
+        <li>Pick a difficulty, then play solo or share a code to race.</li>
+        <li>Notes mode for pencil marks, tap a number twice to undo it.</li>
+        <li>Every puzzle is generated fresh. There are billions.</li>
+      </ol>
+      <p class="game__meta"><strong>Infinite puzzles</strong>, each graded by the technique it needs — not by how many clues it happens to show.</p>
+    </div>
+
+    <div class="game__shots">
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibesudoku-grid-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibesudoku-grid-light.jpg" alt="A Sudoku grid mid-solve with the number keypad below" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibesudoku-shared-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibesudoku-shared-light.jpg" alt="Waiting for everyone to join a shared Sudoku race" /></picture></div>
+    </div>
+  </div>
+</section>
+
+<section class="game game--trio" id="vibe-trio" data-accent="trio">
+  <div class="game__backdrop" aria-hidden="true"></div>
+  <div class="game__inner wrap">
+    <div class="game__copy">
+      <p class="game__index">Game 04</p>
+      <h2>Vibe&nbsp;Trio</h2>
+      <p class="game__tag">Same on all three, or different on all three.</p>
+      <p>
+        Twelve charcuterie boards are face up. Every board has a platter, a
+        cheese, a meat and a garnish, and each comes three ways. Three cards
+        make a trio when every one of those features is <em>either the same on
+        all three or different on all three</em> — two matching and a third odd
+        is not it.
+      </p>
+      <ol class="steps">
+        <li>Tap three cards. They light up as you pick them.</li>
+        <li>Wrong? They flash red and nothing moves. Look again.</li>
+        <li>Clear the deck solo, or race the room: one shared table, and a trio
+            taken by anyone is gone for everyone.</li>
+      </ol>
+      <p class="game__meta"><strong>81 boards</strong>, one seed — so every phone in the race rebuilds the identical table, and the only thing sent is which cards were taken.</p>
+    </div>
+
+    <div class="game__shots">
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibetrio-board-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibetrio-board-light.jpg" alt="A Vibe Trio table of twelve charcuterie boards" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibetrio-leaderboard-dark.jpg" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibetrio-leaderboard-light.jpg" alt="The Vibe Trio end-of-game leaderboard" /></picture></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────── people ───────────────────────────── -->
+<section class="people" id="people">
+  <div class="wrap">
+    <h2 class="reveal">Better with a crowd</h2>
+    <p class="sub reveal">
+      One phone in the middle of the table beats four people staring at their own.
+    </p>
+  </div>
+
+  <div class="people__strip reveal">
+    <img src="assets/people/playing-together.svg" alt="Illustration of a group playing together" />
+    <img src="assets/people/vibe-five-crowd.svg" alt="Illustration of a group playing Vibe Five" />
+    <img src="assets/people/vibe-sudoku-crowd.svg" alt="Illustration of a group playing Vibe Sudoku" />
+    <img src="assets/people/vibe-trio-crowd.svg" alt="Illustration of a group playing Vibe Trio" />
+  </div>
+
+  <div class="wrap">
+    <p class="fine fine--center">
+      Illustrations for now — drop real photos into <code>assets/people/</code>
+      using the same filenames and they take over.
+    </p>
+  </div>
+</section>
+
+<!-- ───────────────────────────── footer ───────────────────────────── -->
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div>
+      <p class="foot__mark">Vibe Games</p>
+      <p class="fine">Four games. One phone. No rules to learn.</p>
+    </div>
+    <p class="fine">
+      QR codes are real but point at placeholder store URLs until the app ships.
+    </p>
+  </div>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>
