@@ -3,6 +3,14 @@
 // Renders the 1024pt App Store icon for Vibe Games.
 // Usage: swift Tools/make_icon.swift Sources/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png
 //
+// The icon is the suite's mark: four tiles, one per game, in that game's own
+// gradient. It used to be Vibe Five's dial and numeral, which put one game's
+// badge on all four — and made the app look like a buzzer timer to anyone who
+// had not opened it.
+//
+// The same four tiles are the browser favicon, so the tab and the home screen
+// carry one identity rather than two.
+//
 import AppKit
 
 let outputPath = CommandLine.arguments.count > 1
@@ -25,58 +33,85 @@ guard let ctx = CGContext(data: nil,
 
 NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
 
-// Background: violet -> hot pink -> orange sweep.
-let background = NSGradient(colors: [
-    NSColor(srgbRed: 0.34, green: 0.13, blue: 0.70, alpha: 1),
-    NSColor(srgbRed: 0.94, green: 0.20, blue: 0.44, alpha: 1),
-    NSColor(srgbRed: 1.00, green: 0.58, blue: 0.20, alpha: 1)
-])!
-background.draw(in: NSRect(x: 0, y: 0, width: side, height: side), angle: -55)
+func colour(_ hex: UInt32) -> NSColor {
+    NSColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255,
+            green: CGFloat((hex >> 8) & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255,
+            alpha: 1)
+}
 
-// Soft glow behind the dial.
-let glow = NSGradient(colors: [
-    NSColor(white: 1, alpha: 0.28),
-    NSColor(white: 1, alpha: 0.0)
-])!
-glow.draw(in: NSRect(x: center.x - 420, y: center.y - 420, width: 840, height: 840),
-          relativeCenterPosition: .zero)
+// MARK: - Background
+//
+// Deep indigo rather than near-black: an icon this dark has to keep an edge
+// against a dark wallpaper, and the four tiles need something to sit in.
 
-// Dial track: a full, faint ring.
-let radius = side * 0.345
-let lineWidth = side * 0.075
+let ink = NSGradient(colors: [colour(0x1B1836), colour(0x0E0D1B)])!
+ink.draw(in: NSRect(x: 0, y: 0, width: side, height: side), angle: -60)
 
-let track = NSBezierPath()
-track.appendArc(withCenter: center, radius: radius, startAngle: 0, endAngle: 360)
-track.lineWidth = lineWidth
-NSColor(white: 1, alpha: 0.22).setStroke()
-track.stroke()
+// A soft pool of light behind the mark, so the tiles look lit rather than pasted.
+//
+// Drawn as an explicit radial gradient whose radius ends *inside* the canvas
+// edge but outside the corners. `NSGradient.draw(in:relativeCenterPosition:)`
+// looked right and left a visible square seam where its rect stopped — about
+// eight levels of a step, enough to see on a subtle background.
+if let glow = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                         colors: [NSColor(white: 1, alpha: 0.13).cgColor,
+                                  NSColor(white: 1, alpha: 0.0).cgColor] as CFArray,
+                         locations: [0, 1]) {
+    ctx.drawRadialGradient(glow,
+                           startCenter: center, startRadius: 0,
+                           endCenter: center, endRadius: side * 0.62,
+                           options: [])
+}
 
-// Dial progress: a bright arc running most of the way round, with a gap.
-let progress = NSBezierPath()
-progress.appendArc(withCenter: center,
-                   radius: radius,
-                   startAngle: 90,
-                   endAngle: -215,
-                   clockwise: true)
-progress.lineWidth = lineWidth
-progress.lineCapStyle = .round
-NSColor.white.setStroke()
-progress.stroke()
+// MARK: - The mark
 
-// The numeral.
-let glyph = "5"
-let baseFont = NSFont.systemFont(ofSize: side * 0.46, weight: .black)
-let descriptor = baseFont.fontDescriptor.withDesign(.rounded) ?? baseFont.fontDescriptor
-let font = NSFont(descriptor: descriptor, size: side * 0.46) ?? baseFont
+/// One tile, in the gradient of the game it stands for.
+func drawTile(_ rect: NSRect, _ top: UInt32, _ bottom: UInt32) {
+    let path = NSBezierPath(roundedRect: rect, xRadius: side * 0.072, yRadius: side * 0.072)
 
-let attributes: [NSAttributedString.Key: Any] = [
-    .font: font,
-    .foregroundColor: NSColor.white
-]
-let string = NSAttributedString(string: glyph, attributes: attributes)
-let textSize = string.size()
-string.draw(at: NSPoint(x: center.x - textSize.width / 2,
-                        y: center.y - textSize.height / 2 - font.descender / 2))
+    // Drop shadow first, by filling the shape underneath it.
+    NSGraphicsContext.saveGraphicsState()
+    let shadow = NSShadow()
+    shadow.shadowColor = NSColor(white: 0, alpha: 0.34)
+    shadow.shadowBlurRadius = side * 0.030
+    shadow.shadowOffset = NSSize(width: 0, height: -side * 0.012)
+    shadow.set()
+    NSColor.black.setFill()
+    path.fill()
+    NSGraphicsContext.restoreGraphicsState()
+
+    NSGraphicsContext.saveGraphicsState()
+    path.addClip()
+    NSGradient(colors: [colour(top), colour(bottom)])!
+        .draw(in: rect, angle: -60)
+
+    // A gloss across the upper half: enough to read as a raised tile.
+    let gloss = NSGradient(colors: [
+        NSColor(white: 1, alpha: 0.26),
+        NSColor(white: 1, alpha: 0.0)
+    ])!
+    gloss.draw(in: NSRect(x: rect.minX, y: rect.midY,
+                          width: rect.width, height: rect.height / 2),
+               angle: -90)
+    NSGraphicsContext.restoreGraphicsState()
+}
+
+let tile = side * 0.300
+let gap = side * 0.044
+let total = tile * 2 + gap
+let originX = (side - total) / 2
+let originY = (side - total) / 2
+
+// Reading order, the same order the games are listed in the app and on the menu.
+drawTile(NSRect(x: originX, y: originY + tile + gap, width: tile, height: tile),
+         0xFF4757, 0xFF8C33)                                    // Vibe Five
+drawTile(NSRect(x: originX + tile + gap, y: originY + tile + gap, width: tile, height: tile),
+         0x21B8A8, 0x4585F5)                                    // Vibe Words
+drawTile(NSRect(x: originX, y: originY, width: tile, height: tile),
+         0x8549F0, 0xDB54C2)                                    // Vibe Sudoku
+drawTile(NSRect(x: originX + tile + gap, y: originY, width: tile, height: tile),
+         0xF7B929, 0x85D647)                                    // Vibe Trio
 
 guard let image = ctx.makeImage() else {
     fatalError("Could not render image")
