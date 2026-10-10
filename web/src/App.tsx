@@ -1,6 +1,7 @@
 import Hub from './hub/Hub';
 import VibeWords from './games/words/VibeWords';
 import VibeTrio from './games/trio/VibeTrio';
+import VibeFive from './games/five/VibeFive';
 import { usePath } from './router';
 
 /**
@@ -18,6 +19,8 @@ function App() {
       return <VibeWords />;
     case '/trio':
       return <VibeTrio />;
+    case '/five':
+      return <VibeFive />;
     case '/':
       return <Hub />;
     default:

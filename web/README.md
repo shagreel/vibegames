@@ -8,7 +8,8 @@ Firebase Realtime Database. A menu, and a game at each path:
 | `/` | the menu |
 | `/words` | Vibe Words — solo and shared |
 | `/trio` | Vibe Trio — solo and shared on one table |
-| `/five`, `/sudoku` | not ported yet; the menu marks them Soon |
+| `/five` | Vibe Five — pass the phone; no server involved |
+| `/sudoku` | not ported yet; the menu marks it Soon |
 
 Both shared games use the same database schema as the iOS app, so a browser and a
 phone can play together.
@@ -26,14 +27,16 @@ phone can play together.
 
 ## 🧪 Test Suite
 
-**82 passing tests.**
+**105 passing tests.**
 
 ```bash
 ✓ src/test/trioEngine.test.ts   (35 tests)   the rule, and agreement with iOS
 ✓ src/test/gameLogic.test.ts    (17 tests)
+✓ src/test/fiveModel.test.ts    (16 tests)   rounds, the clock, the packs
 ✓ src/test/localStorage.test.ts  (9 tests)
 ✓ src/test/integration.test.ts   (8 tests)
 ✓ src/test/multiDevice.test.ts   (7 tests)
+✓ src/test/fiveSound.test.ts     (7 tests)   the synthesised cues
 ✓ src/test/router.test.ts        (6 tests)
 ```
 

@@ -53,7 +53,7 @@ export const GAMES: GameEntry[] = [
     tagline: 'Name three things before the buzzer.',
     accent: ['#ff4757', '#ff8c33'],
     symbol: IconFive,
-    available: false,
+    available: true,
   },
   {
     id: 'words',

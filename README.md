@@ -165,7 +165,7 @@ getting a word grid *was* the site. Each game now has its own path:
 | `/` | the menu | live |
 | `/words` | Vibe Words | live |
 | `/trio` | Vibe Trio | live, solo and shared |
-| `/five` | Vibe Five | not ported |
+| `/five` | Vibe Five | live — pass the phone |
 | `/sudoku` | Vibe Sudoku | not ported |
 
 Anything the router does not recognise falls through to the menu, so an old
@@ -199,6 +199,24 @@ The card faces are not shipped twice. `Tools/make_web_cards.py` derives 512px,
 75MB down to **5.2MB**, which the browser fetches lazily, one per card actually on
 the table. 512 is measured, not guessed: the largest a card is ever drawn is
 484px, on a 13-inch iPad in portrait.
+
+### Vibe Five in a browser
+
+The odd one out: Vibe Five has no database behind it, in the app or on the web,
+because it is one phone handed round a table. Nothing about it is shared.
+
+Its 1,100 categories live in `Sources/Features/VibeFive/Packs/` as Swift and stay
+the single source of truth — the app and the browser must offer the same prompts,
+and a second hand-maintained copy would drift.
+`Tools/make_web_packs.py` generates `web/src/games/five/prompts.generated.ts`
+from them; regenerate after changing a pack, and `Tools/check_packs.py` validates
+the content itself.
+
+The sounds are synthesised rather than shipped, as they are in the app:
+`web/src/games/five/sound.ts` ports `SoundEngine.swift` to Web Audio, down to the
+low-pass filter that stops the stacked square waves of the buzzer from hissing.
+Its tests check the arithmetic produces real, in-range, non-silent audio, because
+a NaN sample would fail silently as "no sound".
 
 ## Vibe Trio
 
