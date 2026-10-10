@@ -1,70 +1,5 @@
+import { SeededGenerator, shuffle } from '../../lib/seeded';
 import { CARD_BY_ID, DECK, isTrio, type TrioCard } from './cards';
-
-/**
- * A small SplitMix64 generator, identical to `SeededGenerator.swift`.
- *
- * Determinism is the whole point: a shared game stores a seed and a list of
- * taken cards, and every device — iOS or browser — has to build the byte-identical
- * board from them. `Math.random` would give each player a different table, and a
- * mismatch would only show up as two people disagreeing about what is on the
- * table in a live game.
- */
-export class SeededGenerator {
-  private state: bigint;
-
-  constructor(seed: number) {
-    this.state =
-      (BigInt(seed) * 0x9e3779b97f4a7c15n + 0x2545f4914f6cdd1dn) & 0xffffffffffffffffn;
-  }
-
-  next(): bigint {
-    this.state = (this.state + 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
-    let z = this.state;
-    z = ((z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n) & 0xffffffffffffffffn;
-    z = ((z ^ (z >> 27n)) * 0x94d049bb133111ebn) & 0xffffffffffffffffn;
-    return (z ^ (z >> 31n)) & 0xffffffffffffffffn;
-  }
-
-  /**
-   * A uniform value below `bound`, by the same multiply-shift method Swift's
-   * `next(upperBound:)` uses.
-   *
-   * This is the part that is easy to get subtly wrong and impossible to notice:
-   * plain `next() % bound` produces a different shuffle for the same seed, so a
-   * browser and a phone would disagree about the opening twelve cards. The
-   * fixtures in `engine.fixtures.json` pin it against the Swift engine.
-   */
-  nextBounded(bound: number): number {
-    const limit = BigInt(bound);
-    let product = this.next() * limit;
-    let low = product & 0xffffffffffffffffn;
-    if (low < limit) {
-      const threshold = ((0n - limit) % limit + limit) % limit;
-      while (low < threshold) {
-        product = this.next() * limit;
-        low = product & 0xffffffffffffffffn;
-      }
-    }
-    return Number(product >> 64n);
-  }
-}
-
-/**
- * Swift's `Array.shuffle(using:)`.
- *
- * Forward Fisher–Yates, swapping `i` with `i + rand(count - i)`. Any other
- * correct shuffle is still a shuffle, but not *this* shuffle, and a shared game
- * needs all of them to agree.
- */
-export function shuffle<T>(items: T[], generator: SeededGenerator): void {
-  const count = items.length;
-  for (let i = 0; i < count - 1; i += 1) {
-    const j = i + generator.nextBounded(count - i);
-    const swap = items[i];
-    items[i] = items[j];
-    items[j] = swap;
-  }
-}
 
 /** The cards on the table, and the rules for keeping play possible. */
 export interface TrioTable {
@@ -244,4 +179,4 @@ function allTrios(cards: readonly TrioCard[]): [number, number, number][] {
 }
 
 /** Convenience for the tests and the hint: a card by id. */
-export { CARD_BY_ID };
+export { CARD_BY_ID, SeededGenerator, shuffle };

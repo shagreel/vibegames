@@ -71,7 +71,7 @@ export const GAMES: GameEntry[] = [
     tagline: 'Fill the grid. Race your friends to it.',
     accent: ['#8549f0', '#db54c2'],
     symbol: IconSudoku,
-    available: false,
+    available: true,
   },
   {
     id: 'trio',

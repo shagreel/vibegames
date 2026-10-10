@@ -166,7 +166,7 @@ getting a word grid *was* the site. Each game now has its own path:
 | `/words` | Vibe Words | live |
 | `/trio` | Vibe Trio | live, solo and shared |
 | `/five` | Vibe Five | live — pass the phone |
-| `/sudoku` | Vibe Sudoku | not ported |
+| `/sudoku` | Vibe Sudoku | live — solo and raced |
 
 Anything the router does not recognise falls through to the menu, so an old
 bookmark to the root still lands somewhere useful rather than on a 404. The
@@ -217,6 +217,40 @@ The sounds are synthesised rather than shipped, as they are in the app:
 low-pass filter that stops the stacked square waves of the buzzer from hissing.
 Its tests check the arithmetic produces real, in-range, non-silent audio, because
 a NaN sample would fail silently as "no sound".
+
+### Vibe Sudoku in a browser, and the hardest thing to port
+
+A shared race stores **only a seed** — never the board — so the answer is never
+sitting in the database for a client to read, and both devices generate the
+puzzle from that one number. Which means the generator has to be ported exactly,
+not approximately.
+
+That is a taller order than the Trio shuffle. Carving removes clues one at a
+time, checking after each removal that the puzzle still has exactly one solution
+and re-grading what is left; a single difference anywhere changes which clue goes
+next, and the two players end up racing different boards while the screen says
+otherwise. The grader sits underneath that — eight human techniques applied
+easiest-first, from naked singles to X-Wings and XY-Wings — and it decides when
+carving stops.
+
+`Tools/sudoku_fixtures/` dumps the Swift generator's output for seven seeds
+across all three difficulties, including the clue count and the grade;
+`web/src/test/sudokuGenerator.test.ts` regenerates each one and fails if the
+givens, the solution, the clue count or the grade differ. Twenty-one boards,
+matched exactly.
+
+One thing that is **not** a bug, and reads like one: hitting the requested grade
+is best-effort. Generation tries a handful of carve orders and keeps the closest
+miss. Measured over forty seeds it lands exactly on easy 40/40, medium 31/40 and
+hard 39/40 — and the fixtures show the iOS generator behaving identically, so it
+is the intended shape rather than a porting slip. It never lands more than one
+grade away.
+
+The web build also fixes a real bug the app still has: arriving at a shared link
+set the game id without registering the player, so they could see the board and
+nobody could see them. And the winner is recorded with a transaction rather than
+a read-then-write, so two people finishing on the same tick cannot overwrite each
+other.
 
 ## Vibe Trio
 
@@ -597,6 +631,10 @@ Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
 Tools/check_branding.py         Naming guard
 Tools/make_qr.mjs               Generates the landing page QR codes
+Tools/make_web_cards.py         Derives the web-sized card faces
+Tools/make_web_packs.py         Generates the web Vibe Five categories
+Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
+Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
 Tools/prune_games.py            Deletes old games (admin — clients cannot)
 Tools/make_illustrations.py     Generates the stand-in illustrations
 Tools/shoot_site.mjs            Screenshots the landing page for review
