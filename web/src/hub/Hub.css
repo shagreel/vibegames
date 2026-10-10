@@ -2,6 +2,7 @@
    a light menu handing over to a dark word grid would be a jolt. */
 
 .hub {
+  --heart: #ff6b85;
   min-height: 100vh;
   background-color: #121213;
   background-image:
@@ -187,4 +188,224 @@
     width: 3.4rem;
     height: 3.4rem;
   }
+}
+
+/* ── saying thanks ─────────────────────────────────────────────────────── */
+
+.hub__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hub__heart {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.hub__heart svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: var(--heart);
+}
+
+.hub__heart:hover {
+  border-color: rgba(255, 107, 133, 0.6);
+}
+
+/* The one line under the header. Deliberately small: the ask belongs on the
+   menu, but not between anyone and the game they came for. */
+.support-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: #b9bec6;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.support-strip:hover {
+  border-color: rgba(255, 107, 133, 0.45);
+  color: #e5e8ec;
+}
+
+.support-heart {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  fill: var(--heart);
+}
+
+.support-heart svg {
+  width: 100%;
+  height: 100%;
+  fill: inherit;
+}
+
+.support-heart--large {
+  width: 3.4rem;
+  height: 3.4rem;
+  align-self: center;
+  filter: drop-shadow(0 0 22px rgba(255, 107, 133, 0.5));
+}
+
+.support-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(8, 8, 12, 0.78);
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.support-panel {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.6rem 1.4rem 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.6rem;
+  background: #16161a;
+  text-align: center;
+  animation: support-in 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes support-in {
+  from { transform: translateY(14px) scale(0.97); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.support-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c8ccd2;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.support-panel h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.support-blurb {
+  margin: 0;
+  color: #a7adb6;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.support-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  text-align: left;
+}
+
+.support-row {
+  width: 100%;
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.045);
+  color: inherit;
+  text-decoration: none;
+}
+
+.support-row:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.support-row__icon {
+  flex: 0 0 auto;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 1.1rem;
+}
+
+.support-row__icon--venmo { background: rgba(255, 107, 133, 0.18); }
+.support-row__icon--feedback { background: rgba(54, 200, 220, 0.16); }
+.support-row__icon--share { background: rgba(158, 133, 255, 0.18); }
+
+.support-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.support-row__text strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.support-row__text span {
+  font-size: 0.78rem;
+  color: #8b9197;
+}
+
+.support-row__arrow {
+  margin-left: auto;
+  color: #6f757b;
+  font-size: 0.9rem;
+}
+
+.support-copy {
+  margin-top: 0.6rem;
+  height: 2.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.support-foot {
+  margin: 0.3rem 0 0;
+  font-size: 0.76rem;
+  color: #6f757b;
 }

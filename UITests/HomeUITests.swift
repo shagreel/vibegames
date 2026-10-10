@@ -125,6 +125,36 @@ final class HomeUITests: XCTestCase {
         attach(app, named: "70-trio-name-only-when-sharing")
     }
 
+    /// The games are free, so the only thing behind the heart is a thank-you —
+    /// and the ways to act on it have to be reachable.
+    func testTheHeartOpensTheSupportPanel() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        dismissNamePromptIfPresent(app)
+
+        let heart = app.buttons["hub.support"]
+        XCTAssertTrue(heart.waitForExistence(timeout: 15), "the hub should carry a heart")
+        XCTAssertTrue(app.descendants(matching: .any)["hub.supportStrip"].exists,
+                      "and say what it is for, under it")
+        attach(app, named: "71-hub-support-strip")
+
+        heart.tap()
+
+        let done = app.buttons["support.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "the heart should open the panel")
+        attach(app, named: "72-support-panel")
+
+        // The handle is written out as well as linked, for anyone who would
+        // rather type it than follow a link.
+        let handle = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "@chill-gelato"))
+            .firstMatch
+        XCTAssertTrue(handle.waitForExistence(timeout: 5), "the Venmo handle should be on screen")
+
+        done.tap()
+        XCTAssertTrue(heart.waitForExistence(timeout: 5), "and close back to the hub")
+    }
+
     // MARK: - Helpers
 
     /// A leftover name from an earlier run means there is no first-run prompt to

@@ -68,6 +68,9 @@ enum VibeTheme {
     )
 
     static let calm = Color(red: 0.36, green: 0.85, blue: 0.98)
+    /// The support heart. Warm enough to read as affection rather than an alert,
+    /// and deliberately outside the red used for time running out.
+    static let heart = Color(red: 1.00, green: 0.42, blue: 0.52)
     static let warn = Color(red: 1.00, green: 0.78, blue: 0.28)
     static let danger = Color(red: 1.00, green: 0.32, blue: 0.36)
     static let go = Color(red: 0.38, green: 0.92, blue: 0.60)

@@ -7,6 +7,7 @@ struct HomeView: View {
 
     @State private var showingPreferences = false
     @State private var showingNamePrompt = false
+    @State private var showingSupport = false
 
     /// Read through `PlayerIdentity` so a field of nothing but spaces counts as
     /// no name here too, rather than only where the games look.
@@ -31,6 +32,9 @@ struct HomeView: View {
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingPreferences) {
             PreferencesView()
+        }
+        .sheet(isPresented: $showingSupport) {
+            SupportView()
         }
         .sheet(isPresented: $showingNamePrompt) {
             NamePromptView.firstRun { chosen in
@@ -58,6 +62,7 @@ struct HomeView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 Spacer(minLength: 12)
+                heartButton
                 preferencesButton
             }
 
@@ -66,8 +71,31 @@ struct HomeView: View {
                 .foregroundStyle(VibeTheme.secondaryText)
 
             nameChip
+
+            // Under the heart, and above the games: the ask belongs on the home
+            // screen, but it should not be the first thing between anyone and
+            // the game they opened the app for.
+            SupportStrip { showingSupport = true }
         }
         .padding(.bottom, 6)
+    }
+
+    /// Sits beside the gear. The games are free and stay free, so the only thing
+    /// behind this is a thank-you.
+    private var heartButton: some View {
+        Button {
+            showingSupport = true
+        } label: {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(VibeTheme.heart)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(VibeTheme.surfaceStrong))
+                .overlay(Circle().stroke(VibeTheme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Support Vibe Games")
+        .accessibilityIdentifier("hub.support")
     }
 
     /// The whole of the settings, in one place. It used to be appearance only,
