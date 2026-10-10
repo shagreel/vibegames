@@ -14,7 +14,7 @@
 (function () {
   "use strict";
 
-  var MEASUREMENT_ID = "";
+  var MEASUREMENT_ID = "G-9F2T6QVFFH";
 
   if (!MEASUREMENT_ID) return;
 

@@ -840,10 +840,11 @@ way to get a number that looks like data and is not:
 - **One file per client.** `Sources/Firebase/AppAnalytics.swift` and
   `web/src/analytics.ts` hold every event name. A report is only worth reading if
   `game_start` means the same thing in all four games and in both apps.
-- **Off is enforced by the bundler, not by a runtime check.** The measurement id
-  is a build-time value, so with none set the web bundle contains no analytics
-  code and emits no analytics chunk — measured, not assumed. On iOS the switch is
-  the console flag written into the plist.
+- **Off is a build-time fact on the web, and a console fact on iOS.** The web
+  measurement id is baked in at build time, so with none set no gtag script is
+  ever created. iOS needs nothing beyond the property existing on the project:
+  the `IS_ANALYTICS_ENABLED` flag written into the plist is *not* a gate, which
+  was measured after an earlier claim here said otherwise.
 - **StrictMode is on, and effects run twice.** Almost every web hook is a React
   effect, so each one is guarded — by a `useRef` keyed on the round, which is
   what stops a development double-invoke from counting a round twice. A page view
@@ -855,11 +856,17 @@ way to get a number that looks like data and is not:
   are *derived* states with no single line to hang a counter on.
 
 **Nothing sent identifies anybody.** No names, no game codes, no free text from
-the feedback box — counts of things happening, and nothing else. Analytics is
-also optional at every level: with no measurement id the web client does not even
-download the library, and with the flag off in its plist the iOS SDK starts but
-sends nothing. [FIREBASE_SETUP.md](FIREBASE_SETUP.md#7-switching-analytics-on)
-has the three places to fill in.
+the feedback box — counts of things happening, and nothing else.
+
+The web client sends these with **gtag.js directly, not the Firebase Analytics
+SDK**. That SDK asks Google for the app's web config at runtime and, where the
+reply omits `measurementId`, trusts the omission — loading gtag with
+`id=undefined` while the locally configured id sits unused, because it only falls
+back when the request fails rather than when the answer is incomplete. The
+measurement id is known at build time anyway, so taking it straight to gtag
+removes the dependency instead of working around it.
+[FIREBASE_SETUP.md](FIREBASE_SETUP.md#7-switching-analytics-on) has the two
+places to fill in.
 
 It is worth saying plainly that this changes the privacy story. The App Store
 privacy answers now need Analytics declared alongside Crashlytics — device

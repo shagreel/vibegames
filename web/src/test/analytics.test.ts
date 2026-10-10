@@ -9,32 +9,20 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  * Second, that a counter can never throw into the app: these calls sit inside
  * the router's announce and inside React effects, where an exception would be a
  * broken game rather than a missing data point.
+ *
+ * The transport is gtag.js rather than the Firebase Analytics SDK, for the
+ * reason set out in `src/analytics.ts` — so these assert on the script tag that
+ * gets appended and on what reaches `dataLayer`, which is exactly what gtag
+ * itself consumes.
  */
 
-const { logEvent, initializeAnalytics, setAnalyticsCollectionEnabled, isSupported } = vi.hoisted(
-  () => ({
-    // Typed rather than given dummy parameters, so the recorded calls can be
-    // indexed without TypeScript reading the tuple as empty — and without a row
-    // of unused arguments that lint would rightly complain about.
-    logEvent: vi.fn<(analytics: unknown, name: string, params?: unknown) => void>(),
-    initializeAnalytics: vi.fn<(app: unknown, options?: unknown) => { fake: string }>(() => ({
-      fake: 'analytics',
-    })),
-    setAnalyticsCollectionEnabled: vi.fn<(analytics: unknown, enabled: boolean) => void>(),
-    isSupported: vi.fn<() => Promise<boolean>>(async () => true),
-  }),
-);
-
-vi.mock('firebase/analytics', () => ({
-  logEvent,
-  initializeAnalytics,
-  setAnalyticsCollectionEnabled,
-  isSupported,
-}));
-
-// Mocked so that importing the module does not drag in a real Firebase app
-// built from environment variables that a test environment does not have.
+// Mocked so that importing the analytics module does not drag in a real Firebase
+// app built from environment variables a test environment does not have.
 vi.mock('../firebase', () => ({ app: { name: 'test' } }));
+
+interface ScriptTag { tag: string; src: string }
+
+let appended: ScriptTag[] = [];
 
 /** A fresh copy of the module, with the measurement id set or not. */
 async function fresh(measurementId: string) {
@@ -43,25 +31,44 @@ async function fresh(measurementId: string) {
   return import('../analytics');
 }
 
-/** The parameters of the nth call to `logEvent`, if any. */
-function paramsOf(index: number): Record<string, unknown> {
-  return (logEvent.mock.calls[index]?.[2] ?? {}) as Record<string, unknown>;
+/**
+ * Everything queued for gtag, in order. This is read from `window.dataLayer`
+ * rather than from a mock, so it is the same queue the real library would drain.
+ */
+function dataLayer(): unknown[][] {
+  return (window.dataLayer ?? []).map((entry) => Array.from(entry as ArrayLike<unknown>));
 }
 
-function eventNames(): string[] {
-  return logEvent.mock.calls.map((call) => call[1] as string);
+/** Every `event` command that reached the data layer. */
+function events(): { name: string; params?: Record<string, unknown> }[] {
+  return dataLayer()
+    .filter((args) => args[0] === 'event')
+    .map((args) => ({
+      name: args[1] as string,
+      params: args[2] as Record<string, unknown> | undefined,
+    }));
+}
+
+/** The `config` command, which is what turns the property on. */
+function configCall(): unknown[] | undefined {
+  return dataLayer().find((args) => args[0] === 'config');
 }
 
 beforeEach(() => {
-  logEvent.mockClear();
-  initializeAnalytics.mockClear();
-  setAnalyticsCollectionEnabled.mockClear();
-  isSupported.mockReset();
-  isSupported.mockResolvedValue(true);
+  appended = [];
+  delete window.dataLayer;
+  delete window.gtag;
+  vi.spyOn(document.head, 'appendChild').mockImplementation(((tag: ScriptTag) => {
+    appended.push(tag);
+  }) as never);
+  vi.spyOn(document, 'createElement').mockImplementation(
+    ((tag: string) => ({ tag, src: '' })) as never,
+  );
   window.history.replaceState({}, '', '/');
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.resetModules();
 });
@@ -70,53 +77,51 @@ describe('installAnalytics', () => {
   it('does nothing at all without a measurement id', async () => {
     const analytics = await fresh('');
 
-    await analytics.installAnalytics();
+    analytics.installAnalytics();
 
     expect(analytics.isTracking()).toBe(false);
-    // Not merely quiet: the library is never even loaded.
-    expect(initializeAnalytics).not.toHaveBeenCalled();
-    expect(logEvent).not.toHaveBeenCalled();
+    // Not merely quiet: gtag is never fetched, and no data layer is created.
+    expect(appended).toHaveLength(0);
+    expect(window.dataLayer).toBeUndefined();
   });
 
-  it('brings Analytics up and reports the page already on screen', async () => {
-    window.history.replaceState({}, '', '/trio');
+  it('loads gtag with the configured id', async () => {
     const analytics = await fresh('G-TEST123');
 
-    await analytics.installAnalytics();
+    analytics.installAnalytics();
 
     expect(analytics.isTracking()).toBe(true);
-    expect(setAnalyticsCollectionEnabled).toHaveBeenCalled();
-    expect(eventNames()).toEqual(['page_view']);
-    expect(paramsOf(0)).toMatchObject({ page_path: '/trio', screen_name: 'vibe-trio' });
+    expect(appended).toHaveLength(1);
+    expect(appended[0].src).toBe('https://www.googletagmanager.com/gtag/js?id=G-TEST123');
   });
 
   it('switches off the automatic page view, so the first load is not counted twice', async () => {
     const analytics = await fresh('G-TEST123');
 
-    await analytics.installAnalytics();
+    analytics.installAnalytics();
 
-    expect(initializeAnalytics.mock.calls[0][1]).toMatchObject({
-      config: { send_page_view: false },
-    });
+    expect(configCall()?.[1]).toBe('G-TEST123');
+    expect(configCall()?.[2]).toEqual({ send_page_view: false });
   });
 
-  it('stays quiet in a browser that will not support it', async () => {
-    isSupported.mockResolvedValue(false);
+  it('reports the page already on screen', async () => {
+    window.history.replaceState({}, '', '/trio');
     const analytics = await fresh('G-TEST123');
 
-    await analytics.installAnalytics();
+    analytics.installAnalytics();
 
-    expect(analytics.isTracking()).toBe(false);
-    expect(logEvent).not.toHaveBeenCalled();
+    expect(events()).toHaveLength(1);
+    expect(events()[0].name).toBe('page_view');
+    expect(events()[0].params).toMatchObject({ page_path: '/trio', screen_name: 'vibe-trio' });
   });
 
-  it('survives the library refusing to load', async () => {
-    initializeAnalytics.mockImplementationOnce(() => {
+  it('survives a browser that will not let the script load', async () => {
+    vi.spyOn(document, 'createElement').mockImplementation(() => {
       throw new Error('blocked by an extension');
     });
     const analytics = await fresh('G-TEST123');
 
-    await expect(analytics.installAnalytics()).resolves.toBeUndefined();
+    expect(() => analytics.installAnalytics()).not.toThrow();
     expect(analytics.isTracking()).toBe(false);
   });
 
@@ -126,15 +131,16 @@ describe('installAnalytics', () => {
     analytics.trackGameStart(analytics.GAMES.trio, { mode: 'solo' });
     analytics.trackPageView('/trio');
 
-    expect(logEvent).not.toHaveBeenCalled();
+    expect(events()).toHaveLength(0);
   });
 });
 
 describe('trackPageView', () => {
   async function ready() {
     const analytics = await fresh('G-TEST123');
-    await analytics.installAnalytics();
-    logEvent.mockClear();
+    analytics.installAnalytics();
+    // Drop the initial page view, so each test sees only what it caused.
+    window.dataLayer = [];
     return analytics;
   }
 
@@ -145,7 +151,7 @@ describe('trackPageView', () => {
     analytics.trackPageView('/trio');
     analytics.trackPageView('/trio');
 
-    expect(logEvent).toHaveBeenCalledTimes(1);
+    expect(events()).toHaveLength(1);
   });
 
   it('counts leaving and coming back as two visits', async () => {
@@ -155,7 +161,7 @@ describe('trackPageView', () => {
     analytics.trackPageView('/');
     analytics.trackPageView('/trio');
 
-    expect(eventNames()).toEqual(['page_view', 'page_view', 'page_view']);
+    expect(events().map((event) => event.params?.page_path)).toEqual(['/trio', '/', '/trio']);
   });
 
   it('names each screen the way the iOS app names it', async () => {
@@ -165,8 +171,13 @@ describe('trackPageView', () => {
       analytics.trackPageView(path);
     }
 
-    expect(logEvent.mock.calls.map((call) => paramsOf(logEvent.mock.calls.indexOf(call)).screen_name))
-      .toEqual(['vibe-five', 'vibe-words', 'vibe-sudoku', 'vibe-trio', 'hub']);
+    expect(events().map((event) => event.params?.screen_name)).toEqual([
+      'vibe-five',
+      'vibe-words',
+      'vibe-sudoku',
+      'vibe-trio',
+      'hub',
+    ]);
   });
 
   it('calls an unrecognised path unknown rather than guessing', async () => {
@@ -174,15 +185,16 @@ describe('trackPageView', () => {
 
     analytics.trackPageView('/nonsense');
 
-    expect(paramsOf(0).screen_name).toBe('unknown');
+    expect(events()[0].params?.screen_name).toBe('unknown');
   });
 });
 
 describe('game events', () => {
   async function ready() {
     const analytics = await fresh('G-TEST123');
-    await analytics.installAnalytics();
-    logEvent.mockClear();
+    analytics.installAnalytics();
+    // Drop the initial page view, so each test sees only what it caused.
+    window.dataLayer = [];
     return analytics;
   }
 
@@ -191,8 +203,8 @@ describe('game events', () => {
 
     analytics.trackGameStart(analytics.GAMES.five, { mode: 'solo', round: 3 });
 
-    expect(logEvent.mock.calls[0][1]).toBe('game_start');
-    expect(paramsOf(0)).toEqual({ game_name: 'vibe-five', mode: 'solo', round: 3 });
+    expect(events()[0].name).toBe('game_start');
+    expect(events()[0].params).toEqual({ game_name: 'vibe-five', mode: 'solo', round: 3 });
   });
 
   it('reports a finish with its outcome and score', async () => {
@@ -204,8 +216,8 @@ describe('game events', () => {
       score: 4,
     });
 
-    expect(logEvent.mock.calls[0][1]).toBe('game_finish');
-    expect(paramsOf(0)).toEqual({
+    expect(events()[0].name).toBe('game_finish');
+    expect(events()[0].params).toEqual({
       game_name: 'vibe-words',
       mode: 'shared',
       outcome: 'won',
@@ -219,7 +231,7 @@ describe('game events', () => {
     // Vibe Words tracks no elapsed time; a zero would read as instant.
     analytics.trackGameFinish(analytics.GAMES.words, { mode: 'solo', outcome: 'lost', score: 6 });
 
-    expect(paramsOf(0)).not.toHaveProperty('seconds');
+    expect(events()[0].params).not.toHaveProperty('seconds');
   });
 
   it('tells a shared game from a shared app', async () => {
@@ -228,8 +240,8 @@ describe('game events', () => {
     analytics.trackShare(analytics.GAMES.trio, 'game');
     analytics.trackShare(undefined, 'app');
 
-    expect(paramsOf(0)).toEqual({ content_type: 'game', item_id: 'vibe-trio' });
-    expect(paramsOf(1)).toEqual({ content_type: 'app', item_id: 'vibe-games' });
+    expect(events()[0].params).toEqual({ content_type: 'game', item_id: 'vibe-trio' });
+    expect(events()[1].params).toEqual({ content_type: 'app', item_id: 'vibe-games' });
   });
 
   it('carries the game on the support and feedback events, when there is one', async () => {
@@ -238,24 +250,28 @@ describe('game events', () => {
     analytics.trackSupportOpen(analytics.GAMES.sudoku);
     analytics.trackFeedbackSent();
 
-    expect(paramsOf(0)).toEqual({ game_name: 'vibe-sudoku' });
-    // From the hub there is no game to name, and no parameter is better than a
-    // placeholder that would read as one.
-    expect(logEvent.mock.calls[1][2]).toBeUndefined();
+    expect(events()[0].params).toEqual({ game_name: 'vibe-sudoku' });
+    // From the hub there is no game to name, and an empty object is not a name.
+    expect(events()[1].params).toEqual({});
   });
 
   it('never lets a failure in reporting reach the caller', async () => {
     const analytics = await ready();
-    logEvent.mockImplementation(() => {
+    // gtag present but failing, which is the case that actually needs the guard.
+    // An absent one is already harmless through optional chaining, so deleting
+    // it here would test nothing at all — as a mutation showed.
+    window.gtag = () => {
       throw new Error('the network is gone');
-    });
+    };
 
-    // Each of these sits somewhere a throw would be a broken game.
+    // Each of these sits somewhere a throw would be a broken game: the first
+    // inside the router's announce, the rest inside React effects.
     expect(() => analytics.trackPageView('/trio')).not.toThrow();
     expect(() => analytics.trackGameStart(analytics.GAMES.trio, { mode: 'solo' })).not.toThrow();
     expect(() =>
       analytics.trackGameFinish(analytics.GAMES.trio, { mode: 'solo', outcome: 'completed' }),
     ).not.toThrow();
     expect(() => analytics.trackDonationTap()).not.toThrow();
+    expect(() => analytics.trackShare(analytics.GAMES.trio)).not.toThrow();
   });
 });

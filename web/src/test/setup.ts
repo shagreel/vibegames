@@ -39,8 +39,14 @@ define('navigator', {
   userAgent: 'Mozilla/5.0 (Test) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36',
 });
 
-// Just enough of a document for the page title a page view reports.
-define('document', { title: 'Vibe Games' });
+// Just enough of a document for a page title and for the gtag script tag that
+// `src/analytics.ts` appends when it is switched on. A plain object rather than
+// jsdom's, to match the hand-made `window` above.
+define('document', {
+  title: 'Vibe Games',
+  createElement: (tag: string) => ({ tag, src: '' }),
+  head: { appendChild: () => {} },
+});
 
 // A window with enough of a URL and an event target to test the router, which
 // reads `location.pathname`, writes through `history`, and then announces the

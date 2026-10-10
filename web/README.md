@@ -156,18 +156,30 @@ Plus `support_open`, `donation_tap` and `feedback_sent` around the support panel
 
 Two things are deliberate rather than incidental:
 
-- **The first page view is counted once.** The SDK's automatic page views are
+- **The first page view is counted once.** gtag's automatic page views are
   switched off (`send_page_view: false`) and every route is logged here instead,
-  so the load you land on is counted like every other one. Left alone, a
-  menu-based single-page app looks like exactly one page.
-- **With no measurement id, none of this ships.** It is not a check that
-  happens to skip at runtime: Vite inlines `import.meta.env` at build time, so
-  with no id the value is `undefined`, every path that could send is provably
-  dead, and the bundler removes it — leaving no analytics code in the main
-  bundle and no extra chunk emitted at all. With an id, a separate ~19 kB chunk
-  appears and is fetched on demand. So the id is a *build-time* setting: add it
+  so the load you land on is counted like every other one. Left alone, gtag
+  counts the first load only, and a menu-based single-page app looks like
+  exactly one page.
+- **With no measurement id, nothing is loaded and nothing is sent.** The id is a
+  *build-time* setting: without one the gtag script tag is never created. Add it
   to `.env.local` and rebuild, and it is live; there is nothing to toggle at
   runtime.
+
+### Why gtag.js and not the Firebase SDK
+
+The Firebase Analytics SDK was the obvious choice and did not work. It asks
+`firebase.googleapis.com` for the app's web config at runtime and, where the
+answer omits `measurementId`, trusts the omission — loading gtag with
+`id=undefined` and sending nothing. It only falls back to the locally configured
+id if the request *fails*, and a 200 with an incomplete body is not a failure.
+That endpoint served a config with no `measurementId` while `apps:sdkconfig`
+reported one, so the id was known and unused.
+
+Since the id is known at build time anyway, it goes straight to gtag, which
+removes the dependency rather than working around it. It also drops the SDK's
+~19 kB from the bundle: gtag.js comes from Google's CDN, which every site using
+it shares.
 
 Routes are watched from `onPathChange` in `src/router.ts`, subscribed once at
 startup rather than from a component. React runs effects twice in development,

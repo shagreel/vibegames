@@ -1,5 +1,3 @@
-import { app } from './firebase';
-
 /**
  * What the site tells Analytics, in one place.
  *
@@ -10,15 +8,25 @@ import { app } from './firebase';
  * **Nothing here identifies anybody.** No names, no game codes, no free text
  * from the feedback box. These are counts of things happening.
  *
+ * This loads gtag.js and uses the measurement id from the environment. It does
+ * *not* use the Firebase Analytics SDK, which was the obvious choice and turned
+ * out not to work: that SDK asks `firebase.googleapis.com` for the app's web
+ * config at runtime and, where the answer omits `measurementId`, uses that
+ * omission — loading gtag with `id=undefined` and sending nothing. It only falls
+ * back to the locally configured id if the request *fails*, which it does not:
+ * it succeeds with an incomplete answer. Since the id is known at build time
+ * anyway, taking it straight to gtag removes the dependency rather than working
+ * around it.
+ *
  * Two deliberate choices:
  *
- *   * Analytics is loaded with a dynamic import, and only when a measurement id
- *     is configured. A checkout without one never downloads the library at all,
- *     which is the honest behaviour for a setting nobody has filled in.
- *   * Page views are switched off in the SDK and logged here instead, so the
- *     first load and every route change are counted exactly once. Left to
- *     itself the SDK reports the first load only, and a menu-based single-page
- *     app would look like one page.
+ *   * Nothing is loaded and nothing is sent unless a measurement id was
+ *     configured at build time. See the note in the README on what the bundler
+ *     does with that.
+ *   * Page views are switched off in gtag and logged from `trackPageView`
+ *     instead, so the first load and every route change are counted exactly
+ *     once. Left to itself gtag counts the first load only, and a menu-based
+ *     single-page app would look like exactly one page.
  *
  * Every call is wrapped: Analytics must never be able to break a game.
  */
@@ -58,29 +66,45 @@ const SCREENS: Record<string, string> = {
 
 type Sender = (name: string, params?: Record<string, unknown>) => void;
 
+/** What gtag.js puts on the page. Declared here because nothing else does. */
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
 let send: Sender | null = null;
 let lastPath: string | null = null;
 
 /**
- * Brings Analytics up, if it is configured and the browser can support it.
+ * Brings Analytics up, if a measurement id was configured at build time.
  *
- * Resolves either way: nothing downstream waits on it, and a browser that
- * refuses cookies should still get a working game.
+ * Not `async` and not awaited anywhere: loading gtag is a script tag, and gtag
+ * queues everything pushed to `dataLayer` until it arrives, so events logged in
+ * the meantime are not lost.
  */
-export async function installAnalytics(): Promise<void> {
+export function installAnalytics(): void {
   if (!MEASUREMENT_ID) return;
 
   try {
-    const mod = await import('firebase/analytics');
-    if (!(await mod.isSupported())) return;
+    const tag = document.createElement('script');
+    tag.async = true;
+    tag.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(MEASUREMENT_ID)}`;
+    document.head.appendChild(tag);
 
-    const analytics = mod.initializeAnalytics(app, {
-      // Page views are logged from `trackPageView` instead, so that the first
-      // load is not the only one counted.
-      config: { send_page_view: false },
-    });
-    mod.setAnalyticsCollectionEnabled(analytics, true);
-    send = (name, params) => mod.logEvent(analytics, name, params);
+    window.dataLayer = window.dataLayer || [];
+    // The standard shim: gtag becomes a function that queues its arguments, and
+    // the real library drains the queue when it loads.
+    window.gtag = function gtag() {
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer!.push(arguments);
+    };
+    window.gtag('js', new Date());
+    // The first load is logged by `trackPageView` below, like every other one.
+    window.gtag('config', MEASUREMENT_ID, { send_page_view: false });
+
+    send = (name, params) => window.gtag?.('event', name, params ?? {});
   } catch {
     // An ad blocker, a hardened browser, a bad id. Solo play is unaffected and
     // there is nothing useful to say to the player about it.

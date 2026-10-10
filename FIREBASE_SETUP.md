@@ -212,38 +212,60 @@ Then `npm run build && firebase deploy --only hosting` in the web project.
 
 ## 7. Switching Analytics on
 
-Analytics is quietly optional everywhere: with it off, nothing is loaded, nothing
-is sent, and every game works. There are three places to fill in, and only the
-first is a decision.
+Analytics is optional at every level: with it off, nothing is loaded, nothing is
+sent, and every game works.
 
 1. **Enable it on the project.** **Project settings → Integrations → Google
    Analytics → Enable.** This creates the GA4 property the events land in. Note
    that a Firebase project can only be linked to an Analytics property once, and
    the link is not something this repository can do for you.
 
-2. **The iOS config file.** Download `GoogleService-Info.plist` again (step 3)
-   and replace `Sources/GoogleService-Info.plist`. Analytics is switched off by a
-   flag inside that file (`IS_ANALYTICS_ENABLED`), and a plist downloaded before
-   step 1 carries `false` — in which case the SDK starts but never sends
-   anything, which is a quiet and confusing failure. To check:
+   Nothing else is needed on iOS. The app starts reporting as soon as the project
+   has a property — the `IS_ANALYTICS_ENABLED` flag written into
+   `GoogleService-Info.plist` is **not** a gate: a plist carrying `false` still
+   starts Analytics, enables collection and uploads. That was measured rather than
+   assumed, after an earlier reading of it here was wrong. Re-downloading the
+   plist is harmless but not required.
+
+2. **The measurement id, in two places.** Find it under **Project settings →
+   Integrations → Google Analytics →** the web data stream, or ask the CLI:
 
    ```bash
-   plutil -extract IS_ANALYTICS_ENABLED raw Sources/GoogleService-Info.plist
+   firebase apps:sdkconfig WEB <web-app-id> --project <project-id>
    ```
 
-3. **The two measurement ids.** Both are the `G-…` value from the GA4 web data
-   stream (**Project settings → Integrations → Google Analytics → the web
-   stream**):
+   It is the `G-…` value. Put it in:
 
-   - `web/.env.local` → `VITE_FIREBASE_MEASUREMENT_ID`
-   - `site/analytics.js` → `MEASUREMENT_ID`
+   - `web/.env.local` → `VITE_FIREBASE_MEASUREMENT_ID`, then rebuild and redeploy
+     (`npm run build && firebase deploy --only hosting`). It is a *build-time*
+     value: with none set, nothing is loaded and nothing is sent, and that is the
+     default state of a fresh checkout.
+   - `site/analytics.js` → `MEASUREMENT_ID`.
 
-   Leave either blank and that one stays off. The web client does not even
-   download the Analytics library without one.
+   Leave either blank and that one stays off.
+
+   > **The web client does not use the Firebase Analytics SDK**, and this is
+   > deliberate. That SDK asks `firebase.googleapis.com` for the app's web config
+   > at runtime and, where the answer omits `measurementId`, trusts the omission —
+   > loading gtag with `id=undefined` and sending nothing, while only falling back
+   > to the locally configured id if the request *fails*. That endpoint served a
+   > config with no `measurementId` for a while after Analytics was enabled, while
+   > `apps:sdkconfig` reported one. Using gtag.js directly removes the dependency
+   > on that endpoint rather than working around it. If the web client ever stops
+   > reporting, check this first:
+   >
+   > ```bash
+   > curl -s "https://firebase.googleapis.com/v1alpha/projects/-/apps/<web-app-id>/webConfig?key=<api-key>" | grep measurementId
+   > ```
 
 To confirm it is working, open the GA4 **Realtime** report and play a round: a
 `page_view` arrives on load, then `game_start`, then `game_finish`. On iOS the
 same events appear, attributed to the app rather than the web stream.
+
+A quicker check for the web client, without opening the console: in the browser's
+Network tab, filter for `collect`. Playing a round should produce a request to
+`google-analytics.com/g/collect` carrying `tid=` your measurement id, and an
+`en=` for each of `page_view`, `game_start` and `game_finish`.
 
 ## 8. Verify
 
