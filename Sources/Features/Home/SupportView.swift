@@ -15,10 +15,6 @@ enum Support {
 
     static let heading = "Made with love"
 
-    /// Short enough to read on the strip, and the panel says the same thing at
-    /// greater length rather than something different.
-    static let short = "The games are free, and always will be. Tap to say thanks."
-
     static let blurb = """
         I built these four games for my own family. We play them in the evenings \
         — it is how we wind down together and stay close — and I wanted to share \
@@ -28,42 +24,6 @@ enum Support {
         like to say thanks, I would love to hear what you think of them, or you \
         could buy my family a treat to help cover what it costs to keep them running.
         """
-}
-
-/// The one line under the hub header. Deliberately small: the ask belongs on the
-/// home screen, but not above the games.
-struct SupportStrip: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(VibeTheme.heart)
-
-                Text(Support.short)
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.secondaryText)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(VibeTheme.surface)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(VibeTheme.hairline, lineWidth: 1)
-                    }
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("hub.supportStrip")
-    }
 }
 
 /// What the heart opens: why the games exist, and how to say thanks.

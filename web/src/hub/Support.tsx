@@ -15,18 +15,6 @@ const VENMO_URL = 'https://venmo.com/u/chill-gelato';
 const FEEDBACK_URL = 'https://github.com/shagreel/vibegames/issues';
 const PLAY_URL = 'https://play.vibegames.party';
 
-export const SUPPORT_SHORT = 'The games are free, and always will be. Tap to say thanks.';
-
-/** The one line under the header, on the menu itself. */
-export function SupportStrip({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" className="support-strip" onClick={onClick}>
-      <Heart />
-      <span>{SUPPORT_SHORT}</span>
-    </button>
-  );
-}
-
 function Heart() {
   return (
     <svg className="support-heart" viewBox="0 0 24 24" aria-hidden="true">

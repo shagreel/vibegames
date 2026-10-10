@@ -72,10 +72,6 @@ struct HomeView: View {
 
             nameChip
 
-            // Under the heart, and above the games: the ask belongs on the home
-            // screen, but it should not be the first thing between anyone and
-            // the game they opened the app for.
-            SupportStrip { showingSupport = true }
         }
         .padding(.bottom, 6)
     }

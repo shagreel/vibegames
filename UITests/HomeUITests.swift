@@ -134,9 +134,12 @@ final class HomeUITests: XCTestCase {
 
         let heart = app.buttons["hub.support"]
         XCTAssertTrue(heart.waitForExistence(timeout: 15), "the hub should carry a heart")
-        XCTAssertTrue(app.descendants(matching: .any)["hub.supportStrip"].exists,
-                      "and say what it is for, under it")
-        attach(app, named: "71-hub-support-strip")
+
+        // The heart is the whole of it: there was a line under it saying the
+        // games are free, and it was doing nothing the panel does not.
+        XCTAssertFalse(app.descendants(matching: .any)["hub.supportStrip"].exists,
+                       "the hub should not carry a banner about it")
+        attach(app, named: "71-hub-support-heart")
 
         heart.tap()
 

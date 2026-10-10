@@ -221,31 +221,6 @@
   border-color: rgba(255, 107, 133, 0.6);
 }
 
-/* The one line under the header. Deliberately small: the ask belongs on the
-   menu, but not between anyone and the game they came for. */
-.support-strip {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.04);
-  color: #b9bec6;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-
-.support-strip:hover {
-  border-color: rgba(255, 107, 133, 0.45);
-  color: #e5e8ec;
-}
-
 .support-heart {
   flex: 0 0 auto;
   width: 1rem;

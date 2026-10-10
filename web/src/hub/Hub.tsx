@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { navigate } from '../router';
 import { GAMES } from './catalog';
-import { SupportPanel, SupportStrip } from './Support';
+import { SupportPanel } from './Support';
 import './Hub.css';
 
 function Hub() {
@@ -27,7 +27,6 @@ function Hub() {
             </button>
           </div>
           <p>Quick party games. Grab a phone, pass it round.</p>
-          <SupportStrip onClick={() => setShowingSupport(true)} />
         </header>
 
         <ul className="hub__games">
