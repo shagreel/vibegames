@@ -174,6 +174,10 @@ final class VibeFiveModel: ObservableObject {
         lastWholeSecond = nil
         phase = .running
 
+        // A round is the unit of play here, so it is what gets counted. Five is
+        // single-device by nature and has no second mode.
+        AppAnalytics.gameStart(.five, mode: .solo, round: roundNumber)
+
         if soundEnabled { SoundEngine.shared.play(.start) }
         UIApplication.shared.isIdleTimerDisabled = true
         startTicker()

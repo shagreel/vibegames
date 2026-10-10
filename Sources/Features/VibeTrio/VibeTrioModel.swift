@@ -260,6 +260,11 @@ final class VibeTrioModel: ObservableObject {
             clockTask?.cancel(); clockTask = nil
             elapsed = 0
             startClock()
+
+            // Every guest begins a round here rather than at any button: the
+            // host's Start only writes a flag, and the seed arriving is what
+            // actually deals a new table.
+            AppAnalytics.gameStart(.trio, mode: .shared)
         }
 
         rebuildTable()
@@ -310,6 +315,8 @@ final class VibeTrioModel: ObservableObject {
         isResolving = false
         conflictNotice = nil
         startClock()
+
+        AppAnalytics.gameStart(.trio, mode: .solo)
     }
 
     /// Tapping a card toggles it; the third tap judges the three.

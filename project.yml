@@ -46,6 +46,13 @@ targets:
       # so it has to arrive on its own.
       - package: Firebase
         product: FirebaseCrashlytics
+      # Counts of things happening: games started and finished, screens opened.
+      # The WithoutAdIdSupport variant on purpose — this app has no ads and no
+      # use for the advertising identifier, so it never has to ask for tracking
+      # permission and the App Store privacy answers stay simpler. The Swift
+      # module is still `FirebaseAnalytics`.
+      - package: Firebase
+        product: FirebaseAnalyticsWithoutAdIdSupport
     # Crash reports are unreadable without this: it uploads the dSYMs so stack
     # traces arrive with function names rather than addresses.
     # After the build, not after compilation: the script reads the app's own

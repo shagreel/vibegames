@@ -25,8 +25,27 @@ struct VibeFiveView: View {
         .vibeCanvas()
         .toolbar(.hidden, for: .navigationBar)
         .statusBarHidden(false)
-        .task { SoundEngine.shared.warmUp() }
+        .task {
+            AppAnalytics.screen(.five)
+            SoundEngine.shared.warmUp()
+        }
         .onDisappear { model.endSession() }
+        // Five has no winner, only whether the table beat the clock: stopping
+        // the round yourself is the good ending, the buzzer is the other one.
+        // Observed rather than logged in the model because a round can end from
+        // a tap *or* from the ticker running out, and one place beats two.
+        .onChange(of: model.phase) { _, newPhase in
+            switch newPhase {
+            case .stopped:
+                AppAnalytics.gameFinish(.five, mode: .solo,
+                                        outcome: .won, round: model.roundNumber)
+            case .buzzed:
+                AppAnalytics.gameFinish(.five, mode: .solo,
+                                        outcome: .lost, round: model.roundNumber)
+            default:
+                break
+            }
+        }
         .sensoryFeedback(trigger: model.tickCount) { _, _ in
             model.hapticsEnabled ? .impact(weight: .light, intensity: 0.55) : nil
         }
@@ -159,7 +178,7 @@ struct VibeFiveView: View {
             .frame(maxWidth: .infinity)
 
             HStack(spacing: 6) {
-                SupportButton(game: "Vibe Five")
+                SupportButton(game: .five)
 
                 Button {
                     isShowingSettings = true

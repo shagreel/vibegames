@@ -61,6 +61,10 @@ enum FirebaseBootstrapper {
         // arrive on their own.
         Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
 
+        // Loading the Analytics library in the first place is what starts it;
+        // this only makes the intent explicit and matches the line above.
+        AppAnalytics.start()
+
         isConfigured = true
     }
 

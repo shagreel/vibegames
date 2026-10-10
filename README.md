@@ -597,6 +597,7 @@ Sources/
   Audio/SoundEngine.swift       Runtime-synthesised buzzer / ticks / start blip
   Firebase/
     FirebaseBootstrapper.swift  Optional Firebase + App Check wiring
+    AppAnalytics.swift          Every event name the app reports, in one place
   Features/
     Home/HomeView.swift         Hub screen
     Home/PreferencesView.swift  Name and appearance, from the hub's gear button
@@ -799,6 +800,74 @@ One limitation is worth knowing rather than discovering: a failure inside a
 **cross-origin** script arrives as `Script error.` with no stack. That is the
 browser withholding detail, not the reporter losing it — it does not apply to the
 app's own bundle, and the page and browser are still recorded.
+
+### Which games get played
+
+Four games, two clients and a landing page, and until recently no idea which of
+any of them anybody used. Now all three report into one Google Analytics
+property, using the same event names and the same values, so the counts can be
+read side by side rather than through a translation table.
+
+    launch      session_start and first_open, recorded by Analytics itself
+    a visit     page_view, per route — the web client and the landing page
+    a game      game_start, and game_finish with an outcome
+
+`game_start` carries `game_name` (`vibe-trio`, matching the web routes and both
+`GameEntry.id`s), `mode` (`solo` or `shared`), and whatever else the game knows:
+`grade` for Sudoku, `round` for Five. `game_finish` adds `outcome` — `won`,
+`lost`, or `completed` — plus `score` and `seconds` where they mean something.
+
+Four smaller events sit around the edges, each because it answers a question that
+would otherwise be a guess: `screen_view` (a game opened but never started is a
+lobby problem, not a game problem), `feedback_sent` (does the form work in the
+wild), `support_open` and `donation_tap` (the top and the bottom of the only
+funnel that keeps this running), and `share`.
+
+**There is deliberately no "app launched" event.** Analytics records
+`first_open` and `session_start` on its own, with the retention and engagement
+reporting built around them, and a hand-rolled duplicate would be a worse version
+of the same number.
+
+**And there is deliberately no "abandoned" outcome.** Leaving mid-game is only
+observable where the app shows a Leave button, which is two of the eight places
+a round can end. A count that covers a quarter of the cases but is presented as
+"abandonment" is worse than no count: the gap between starts and finishes
+already carries that signal, honestly, because both are counted the same way.
+
+Three things are worth knowing about how it is wired, because each of them is a
+way to get a number that looks like data and is not:
+
+- **One file per client.** `Sources/Firebase/AppAnalytics.swift` and
+  `web/src/analytics.ts` hold every event name. A report is only worth reading if
+  `game_start` means the same thing in all four games and in both apps.
+- **Off is enforced by the bundler, not by a runtime check.** The measurement id
+  is a build-time value, so with none set the web bundle contains no analytics
+  code and emits no analytics chunk — measured, not assumed. On iOS the switch is
+  the console flag written into the plist.
+- **StrictMode is on, and effects run twice.** Almost every web hook is a React
+  effect, so each one is guarded — by a `useRef` keyed on the round, which is
+  what stops a development double-invoke from counting a round twice. A page view
+  counted twice is worse than one not counted at all, because it looks like data.
+- **Starts are logged where the round begins, finishes where it ends.** A shared
+  round begins when the seed arrives over the wire, not when the host presses
+  Start, so instrumenting the button would miss every guest. Finishes are
+  observed on the transition out of play, because Sudoku's loss and Trio's ending
+  are *derived* states with no single line to hang a counter on.
+
+**Nothing sent identifies anybody.** No names, no game codes, no free text from
+the feedback box — counts of things happening, and nothing else. Analytics is
+also optional at every level: with no measurement id the web client does not even
+download the library, and with the flag off in its plist the iOS SDK starts but
+sends nothing. [FIREBASE_SETUP.md](FIREBASE_SETUP.md#7-switching-analytics-on)
+has the three places to fill in.
+
+It is worth saying plainly that this changes the privacy story. The App Store
+privacy answers now need Analytics declared alongside Crashlytics — device
+identifiers and usage data, collected for analytics rather than advertising,
+and not linked to identity. The
+app still asks for no account, no email address and no tracking permission, and
+the `WithoutAdIdSupport` build of the Analytics SDK is used on purpose so that
+the advertising identifier is never touched and no ATT prompt is ever needed.
 
 ### Your name, and where it is asked for
 

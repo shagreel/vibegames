@@ -8,6 +8,7 @@ site/
   index.html
   styles.css
   main.js
+  analytics.js   one page view; a no-op until a measurement id is filled in
   assets/
     qr/        appstore.svg, playstore.svg   (real QR codes, placeholder URLs)
     screens/   app screenshots, light + dark

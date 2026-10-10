@@ -39,6 +39,9 @@ define('navigator', {
   userAgent: 'Mozilla/5.0 (Test) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36',
 });
 
+// Just enough of a document for the page title a page view reports.
+define('document', { title: 'Vibe Games' });
+
 // A window with enough of a URL and an event target to test the router, which
 // reads `location.pathname`, writes through `history`, and then announces the
 // change with a `popstate` event of its own.

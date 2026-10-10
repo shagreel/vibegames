@@ -47,3 +47,28 @@ export function usePath(): string {
 
   return path;
 }
+
+const listeners = new Set<(path: string) => void>();
+
+/**
+ * Told about every path change, including the first one and back/forward.
+ *
+ * Subscribed to once at startup rather than from a component, which keeps it
+ * out of React's reach and so out of the double-invoke that StrictMode does to
+ * effects in development. A page view counted twice is worse than one not
+ * counted at all, because it looks like data.
+ *
+ * `navigate` announces itself through `popstate`, the same event the browser
+ * sends for the back button, so there is only one thing to listen for.
+ */
+export function onPathChange(listener: (path: string) => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function announce(): void {
+  const path = normalise(window.location.pathname);
+  listeners.forEach((listener) => listener(path));
+}
+
+window.addEventListener('popstate', announce);

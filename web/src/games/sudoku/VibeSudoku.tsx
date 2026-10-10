@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import {
   CELL_COUNT,
@@ -88,7 +89,15 @@ function VibeSudoku() {
     setSelected(null);
     setSolved(false);
     setElapsed(0);
-  }, [puzzle, seed]);
+
+    // The seed is the round. A solo game, a shared game starting and a rematch
+    // all arrive here, and the guard above already stops React's development
+    // double-invoke from counting any of them twice.
+    trackGameStart(GAMES.sudoku, {
+      mode: gameId ? 'shared' : 'solo',
+      grade: puzzle.difficulty,
+    });
+  }, [puzzle, seed, gameId]);
 
   // MARK: - The game id in the URL
 
@@ -345,6 +354,20 @@ function VibeSudoku() {
 
   const roundOver = solved || (snapshot.winner !== null && snapshot.winner.name !== name);
   const screen: Screen = puzzle && (!gameId || snapshot.seed !== null) ? 'game' : 'lobby';
+
+  // Sudoku has a win and no loss of its own: you either finish the grid or
+  // somebody finishes theirs first. Either way it is one transition out of play,
+  // reported once per seed.
+  const reportedFinish = useRef<number | null>(null);
+  useEffect(() => {
+    if (!roundOver || seed == null || reportedFinish.current === seed) return;
+    reportedFinish.current = seed;
+    trackGameFinish(GAMES.sudoku, {
+      mode: gameId ? 'shared' : 'solo',
+      outcome: solved ? 'won' : 'lost',
+      seconds: Math.round(elapsed),
+    });
+  }, [roundOver, seed, gameId, solved, elapsed]);
 
   return (
     <div className="sudoku">
@@ -672,6 +695,7 @@ function Waiting(props: {
         type="button"
         className="sudoku__link"
         onClick={() => {
+          trackShare(GAMES.sudoku, 'game');
           void navigator.clipboard.writeText(`${window.location.origin}/sudoku?game=${props.gameId}`);
         }}
       >

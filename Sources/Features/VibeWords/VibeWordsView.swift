@@ -34,8 +34,22 @@ struct VibeWordsView: View {
                 action?()
             }
         }
+        .task { AppAnalytics.screen(.words) }
         .onDisappear { model.endSession() }
-        .onChange(of: model.answer) { _, _ in roundToken += 1 }
+        .onChange(of: model.answer) { _, _ in
+            roundToken += 1
+            // A new word *is* a new round, solo and shared alike: the answer
+            // only changes when one begins, and a snapshot arriving with the
+            // same word leaves it untouched.
+            AppAnalytics.gameStart(.words, mode: model.isShared ? .shared : .solo)
+        }
+        .onChange(of: model.isRoundOver) { _, isOver in
+            guard isOver else { return }
+            AppAnalytics.gameFinish(.words,
+                                    mode: model.isShared ? .shared : .solo,
+                                    outcome: model.won ? .won : .lost,
+                                    score: model.guesses.count)
+        }
         .onChange(of: model.countdown) { _, newValue in
             // The board is cleared when the countdown ends, so re-arm the flip.
             if newValue == nil { roundToken += 1 }
@@ -318,7 +332,7 @@ struct VibeWordsView: View {
             .frame(maxWidth: .infinity)
 
             HStack(spacing: 6) {
-                SupportButton(game: "Vibe Words")
+                SupportButton(game: .words)
 
                 if model.isRoundOver {
                     Button("Play again") {

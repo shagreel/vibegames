@@ -103,7 +103,13 @@ handles for you, both of which cost a debugging cycle if missed:
 2. Name it something without the trademarked term — `vibe-words` works well.
    The project ID becomes permanent and appears in your config file, so pick it
    deliberately.
-3. Google Analytics is not needed. Turn it off.
+3. **Google Analytics**: everything here works without it, but the app then
+   reports crashes only, not which games get played. If you want the counts the
+   README describes, turn Analytics **on** at this point. Adding it to a project
+   created without it is possible later, under **Project settings →
+   Integrations** — but the iOS config file must then be downloaded again (step
+   3 below), because `IS_ANALYTICS_ENABLED` is written into it and is `false`
+   for a project that had Analytics switched off.
 
 ## 2. Create the Realtime Database
 
@@ -196,6 +202,7 @@ VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_APP_CHECK_SITE_KEY=...
+VITE_FIREBASE_MEASUREMENT_ID=...
 ```
 
 No code change is needed — the web client reads all of it from the environment.
@@ -203,7 +210,42 @@ Add a web app under **Project settings → Your apps** if you have not already.
 
 Then `npm run build && firebase deploy --only hosting` in the web project.
 
-## 7. Verify
+## 7. Switching Analytics on
+
+Analytics is quietly optional everywhere: with it off, nothing is loaded, nothing
+is sent, and every game works. There are three places to fill in, and only the
+first is a decision.
+
+1. **Enable it on the project.** **Project settings → Integrations → Google
+   Analytics → Enable.** This creates the GA4 property the events land in. Note
+   that a Firebase project can only be linked to an Analytics property once, and
+   the link is not something this repository can do for you.
+
+2. **The iOS config file.** Download `GoogleService-Info.plist` again (step 3)
+   and replace `Sources/GoogleService-Info.plist`. Analytics is switched off by a
+   flag inside that file (`IS_ANALYTICS_ENABLED`), and a plist downloaded before
+   step 1 carries `false` — in which case the SDK starts but never sends
+   anything, which is a quiet and confusing failure. To check:
+
+   ```bash
+   plutil -extract IS_ANALYTICS_ENABLED raw Sources/GoogleService-Info.plist
+   ```
+
+3. **The two measurement ids.** Both are the `G-…` value from the GA4 web data
+   stream (**Project settings → Integrations → Google Analytics → the web
+   stream**):
+
+   - `web/.env.local` → `VITE_FIREBASE_MEASUREMENT_ID`
+   - `site/analytics.js` → `MEASUREMENT_ID`
+
+   Leave either blank and that one stays off. The web client does not even
+   download the Analytics library without one.
+
+To confirm it is working, open the GA4 **Realtime** report and play a round: a
+`page_view` arrives on load, then `game_start`, then `game_finish`. On iOS the
+same events appear, attributed to the app rather than the web stream.
+
+## 8. Verify
 
 Run the app, open Vibe Words, and the lobby's multiplayer options should become
 available (the "Add GoogleService-Info.plist" notice disappears).

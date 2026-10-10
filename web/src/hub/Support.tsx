@@ -1,5 +1,13 @@
 import { useState } from 'react';
 import { FeedbackError, sendFeedback } from '../games/feedback';
+import {
+  GAMES,
+  trackDonationTap,
+  trackFeedbackSent,
+  trackShare,
+  trackSupportOpen,
+  type GameName,
+} from '../analytics';
 
 /**
  * Saying thanks, and saying what is wrong.
@@ -24,6 +32,11 @@ const GAME_TITLES: Record<string, string> = {
   trio: 'Vibe Trio',
 };
 
+/** The short key a screen passes around (`'trio'`) as the name Analytics uses. */
+function gameName(key?: string): GameName | undefined {
+  return key && key in GAMES ? GAMES[key as keyof typeof GAMES] : undefined;
+}
+
 function Heart() {
   return (
     <svg className="support-heart" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,19 +53,25 @@ function Heart() {
  */
 export function SupportButton({ game }: { game?: string }) {
   const [open, setOpen] = useState(false);
-  const title = game ? GAME_TITLES[game] : undefined;
 
   return (
     <>
       <button
         type="button"
         className="hub__heart"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          // The top of the donation funnel, and the step that says whether
+          // anyone finds the heart at all.
+          trackSupportOpen(gameName(game));
+        }}
         aria-label="Support Vibe Games"
       >
         <Heart />
       </button>
-      {open && <SupportPanel game={title} onClose={() => setOpen(false)} />}
+      {/* The key goes down, not the title: the panel is the only thing that
+          needs to read it out, and the form has to send the key anyway. */}
+      {open && <SupportPanel game={game} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -69,6 +88,7 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
   };
 
   const share = () => {
+    trackShare(gameName(game), 'app');
     void navigator.clipboard.writeText(PLAY_URL).then(() => {
       setShared(true);
       window.setTimeout(() => setShared(false), 2000);
@@ -104,7 +124,13 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
           </p>
 
           <div className="support-actions">
-            <a className="support-row" href={VENMO_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              className="support-row"
+              href={VENMO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={trackDonationTap}
+            >
               <span className="support-row__icon support-row__icon--venmo" aria-hidden="true">
                 🎁
               </span>
@@ -149,6 +175,7 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
  * fill in rather than a message to leave.
  */
 function FeedbackForm({ game }: { game?: string }) {
+  const title = game ? GAME_TITLES[game] : undefined;
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -158,8 +185,11 @@ function FeedbackForm({ game }: { game?: string }) {
     setSending(true);
     setProblem('');
     try {
-      await sendFeedback({ text, source: 'web', game: game?.toLowerCase().replace(/^vibe /, '') });
+      await sendFeedback({ text, source: 'web', game });
       setSent(true);
+      // Only on the way through: a note that failed to send is not feedback
+      // anybody received.
+      trackFeedbackSent(gameName(game));
     } catch (error) {
       setProblem(
         error instanceof FeedbackError
@@ -203,7 +233,7 @@ function FeedbackForm({ game }: { game?: string }) {
       </button>
       <p className="feedback__note">
         No account, no email address, nothing to sign up for — it reaches me as a note
-        {game ? ` about ${game}` : ''}.
+        {title ? ` about ${title}` : ''}.
       </p>
     </div>
   );

@@ -33,7 +33,25 @@ struct VibeSudokuView: View {
                 action?()
             }
         }
+        .task { AppAnalytics.screen(.sudoku) }
         .onDisappear { model.endSession() }
+        // The puzzle's seed *is* the round. A solo game, a shared game starting
+        // and a rematch all arrive here as a new seed, so one hook covers them.
+        .onChange(of: model.puzzle?.seed) { _, seed in
+            guard seed != nil else { return }
+            AppAnalytics.gameStart(.sudoku,
+                                   mode: model.isShared ? .shared : .solo,
+                                   grade: model.difficulty.rawValue)
+        }
+        // Sudoku has a win and no loss of its own: you either finish the grid or
+        // somebody finishes theirs first, which from here is one transition.
+        .onChange(of: model.isRoundOver) { _, isOver in
+            guard isOver else { return }
+            AppAnalytics.gameFinish(.sudoku,
+                                    mode: model.isShared ? .shared : .solo,
+                                    outcome: model.solved ? .won : .lost,
+                                    seconds: Int(model.elapsed))
+        }
     }
 
     // MARK: - Name
@@ -360,7 +378,7 @@ struct VibeSudokuView: View {
             .frame(maxWidth: .infinity)
 
             HStack(spacing: 6) {
-                SupportButton(game: "Vibe Sudoku")
+                SupportButton(game: .sudoku)
 
                 if model.isRoundOver {
                     Button("Play again") {

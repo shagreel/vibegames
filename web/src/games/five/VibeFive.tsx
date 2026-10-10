@@ -18,6 +18,7 @@ import {
   type Phase,
 } from './model';
 import { Sound } from './sound';
+import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import './VibeFive.css';
 
 /**
@@ -53,6 +54,31 @@ function loadFlag(key: string, fallback: boolean): boolean {
   return stored == null ? fallback : stored === 'true';
 }
 
+/**
+ * One round is one `game_start` and one `game_finish`, whichever way the state
+ * machine got there.
+ *
+ * Reported from the single place state changes rather than from the button, so
+ * that a round ended by the ticker is counted the same as one ended by a tap —
+ * and so nothing is counted twice. Five has no winner, only whether the table
+ * beat the clock, which is what separates the two endings.
+ */
+function reportRound(previous: FiveState, next: FiveState): void {
+  if (previous.phase !== 'running' && next.phase === 'running') {
+    trackGameStart(GAMES.five, { mode: 'solo', round: next.roundNumber });
+    return;
+  }
+  if (next.phase === previous.phase) return;
+
+  const mode = 'solo' as const;
+  const round = next.roundNumber;
+  if (next.phase === 'stopped') {
+    trackGameFinish(GAMES.five, { mode, outcome: 'won', round });
+  } else if (next.phase === 'buzzed') {
+    trackGameFinish(GAMES.five, { mode, outcome: 'lost', round });
+  }
+}
+
 function VibeFive() {
   const [enabled, setEnabled] = useState<PackId[]>(loadPacks);
   const [soundOn, setSoundOn] = useState(() => loadFlag(SOUND_KEY, true));
@@ -69,8 +95,10 @@ function VibeFive() {
   const sound = useRef(new Sound());
 
   const apply = useCallback((next: FiveState) => {
+    const previous = stateRef.current;
     stateRef.current = next;
     setState(next);
+    reportRound(previous, next);
   }, []);
 
   const playCue = useCallback(

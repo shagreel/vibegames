@@ -32,14 +32,16 @@ enum Support {
 /// are in is the feedback worth having, and nobody goes looking for a settings
 /// page to report a bug.
 struct SupportButton: View {
-    /// Named in the note, so an issue arrives with some context.
-    var game: String?
+    /// Which game the heart was tapped in, when it is not the hub. Named in the
+    /// note, so an issue arrives with some context.
+    var game: AppAnalytics.Game?
 
     @State private var showing = false
 
     var body: some View {
         Button {
             showing = true
+            AppAnalytics.supportOpened(game: game)
         } label: {
             Image(systemName: "heart.fill")
                 .font(.system(size: 16, weight: .semibold))
@@ -60,8 +62,8 @@ struct SupportButton: View {
 /// What the heart opens: why the games exist, how to say thanks, and the box to
 /// say what is wrong.
 struct SupportView: View {
-    /// The full title of the game, when the panel was opened from inside one.
-    var game: String?
+    /// Which game the panel was opened from, when it is not the hub.
+    var game: AppAnalytics.Game?
 
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
@@ -108,6 +110,11 @@ struct SupportView: View {
                                 detail: "Venmo \(Support.venmoHandle)",
                                 tint: VibeTheme.heart)
                         }
+                        .simultaneousGesture(TapGesture().onEnded {
+                            // The one signal that a treat was ever on its way:
+                            // nothing comes back from Venmo.
+                            AppAnalytics.donationTapped()
+                        })
 
                         ShareLink(item: Support.playURL) {
                             row(symbol: "person.2.fill",
@@ -205,7 +212,8 @@ struct SupportView: View {
 /// One box and a send button, deliberately: anything more would be a form to
 /// fill in rather than a message to leave.
 private struct FeedbackForm: View {
-    let game: String?
+    /// Which game the note was written in, when it was written in one.
+    let game: AppAnalytics.Game?
 
     @State private var text = ""
     @State private var sending = false
@@ -292,7 +300,7 @@ private struct FeedbackForm: View {
             .accessibilityIdentifier("feedback.send")
 
             Text("No account, no email address, nothing to sign up for — it reaches me as a note"
-                 + (game.map { " about \($0)" } ?? "") + ".")
+                 + (game.map { " about \($0.title)" } ?? "") + ".")
                 .font(.system(size: 11.5, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .multilineTextAlignment(.center)
@@ -305,9 +313,12 @@ private struct FeedbackForm: View {
         sending = true
         problem = nil
         do {
-            try await FeedbackService.send(trimmed, from: .ios, game: game)
+            try await FeedbackService.send(trimmed, from: .ios, game: game?.title)
             focused = false
             sent = true
+            // Only on the way through, not on an attempt: a note that failed to
+            // send is not feedback anybody received.
+            AppAnalytics.feedbackSent(game: game)
         } catch {
             problem = error.localizedDescription
         }

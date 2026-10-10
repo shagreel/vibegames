@@ -33,7 +33,20 @@ struct VibeTrioView: View {
                 action?()
             }
         }
+        .task { AppAnalytics.screen(.trio) }
         .onDisappear { model.endSession() }
+        // Trio ends when the deck is spent, which is nobody's win in particular
+        // — the score is the result, so that is what gets reported. Observed
+        // rather than logged where the table is rebuilt, because the last take
+        // may well have been somebody else's and arrived over the wire.
+        .onChange(of: model.isFinished) { _, finished in
+            guard finished else { return }
+            AppAnalytics.gameFinish(.trio,
+                                    mode: model.isShared ? .shared : .solo,
+                                    outcome: .completed,
+                                    score: model.myScore,
+                                    seconds: Int(model.elapsed))
+        }
     }
 
     // MARK: - Name
@@ -537,7 +550,7 @@ struct VibeTrioView: View {
             .frame(maxWidth: .infinity)
 
             HStack(spacing: 6) {
-                SupportButton(game: "Vibe Trio")
+                SupportButton(game: .trio)
 
                 if model.isFinished {
                     Button("Play again") {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { artworkPath, spokenDescription, type TrioCard } from './cards';
+import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { firstTrio, isFinished, replay, takeAt, type TrioTable } from './engine';
 import { BOARD_SPACING, CARD_ASPECT, fitBoard, rowsOfIndices } from './layout';
 import {
@@ -122,7 +123,27 @@ function VibeTrio() {
     setRejected([]);
     setNotice('');
     setElapsed(0);
-  }, [seed]);
+
+    // A new seed *is* a new round, for solo and for a shared game alike, and
+    // this effect is already guarded against React running it twice in
+    // development — which is exactly the guard a counter needs.
+    trackGameStart(GAMES.trio, { mode: gameId ? 'shared' : 'solo' });
+  }, [seed, gameId]);
+
+  // The deck running out is the only ending Trio has, and it is derived rather
+  // than set: the last take may well have been somebody else's, arriving over
+  // the wire. So the finish is reported on the transition, once per seed.
+  const reportedFinish = useRef<number | null>(null);
+  useEffect(() => {
+    if (!finished || seed == null || reportedFinish.current === seed) return;
+    reportedFinish.current = seed;
+    trackGameFinish(GAMES.trio, {
+      mode: gameId ? 'shared' : 'solo',
+      outcome: 'completed',
+      score: myTakes,
+      seconds: Math.round(elapsed),
+    });
+  }, [finished, seed, gameId, myTakes, elapsed]);
 
   // MARK: - Clocks
 
@@ -491,6 +512,7 @@ function Waiting(props: {
         type="button"
         className="trio__link"
         onClick={() => {
+          trackShare(GAMES.trio, 'game');
           const url = `${window.location.origin}/trio?game=${props.gameId}`;
           void navigator.clipboard.writeText(url);
         }}

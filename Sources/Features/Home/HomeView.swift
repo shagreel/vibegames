@@ -42,6 +42,7 @@ struct HomeView: View {
             }
         }
         .task {
+            AppAnalytics.screen("hub")
             // Asked once, at the front door. The games that need a name used to
             // ask for it themselves, in the middle of their own lobby.
             if name == nil, promptAnswered.isEmpty { showingNamePrompt = true }

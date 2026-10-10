@@ -4,6 +4,7 @@ import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import './VibeWords.css';
 
 type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'current';
@@ -107,6 +108,15 @@ function VibeWords() {
           setShareMessage('');
           setGameOver(false);
           setWon(false);
+        }
+
+        if (previousAnswerRef.current !== newWord) {
+          // A word nobody had seen before is a round beginning — for the
+          // creator whose game it is and for everyone who followed the link
+          // alike. Skipped when the same word arrives twice, which is what a
+          // reconnection looks like, and what React's development double-mount
+          // would otherwise turn into two counts.
+          trackGameStart(GAMES.words, { mode: gameId ? 'shared' : 'solo' });
         }
 
         previousAnswerRef.current = newWord;
@@ -300,6 +310,22 @@ function VibeWords() {
 
     return state;
   };
+
+  // A round ends when this player runs out of guesses, or when they solve it,
+  // or when somebody else solves it first — which arrives over the wire and so
+  // has to be watched rather than logged where the guess was judged. Keyed on
+  // the word, so a rematch (a new word) is counted and a repeat is not.
+  const roundOver = gameOver || (winner !== null && winner.name !== playerName);
+  const reportedWord = useRef<string | null>(null);
+  useEffect(() => {
+    if (!roundOver || !answer || reportedWord.current === answer) return;
+    reportedWord.current = answer;
+    trackGameFinish(GAMES.words, {
+      mode: gameId ? 'shared' : 'solo',
+      outcome: won ? 'won' : 'lost',
+      score: guesses.length,
+    });
+  }, [roundOver, answer, gameId, won, guesses.length]);
 
   // Handle key press
   const handleKeyPress = useCallback((key: string) => {
@@ -535,6 +561,10 @@ function VibeWords() {
     }
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
+
+    // Sharing the invite is the growth loop, so it is counted — this is the
+    // only multiplayer game in the suite where somebody has to recruit someone.
+    trackShare(GAMES.words, 'game');
 
     // Copy to clipboard
     navigator.clipboard.writeText(shareUrl).then(() => {

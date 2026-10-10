@@ -28,7 +28,7 @@ handed round a table.
 
 ## 🧪 Test Suite
 
-**152 passing tests.**
+**168 passing tests.**
 
 ```bash
 ✓ src/test/trioEngine.test.ts     (35 tests)   the rule, and agreement with iOS
@@ -36,6 +36,7 @@ handed round a table.
 ✓ src/test/gameLogic.test.ts    (17 tests)
 ✓ src/test/fiveModel.test.ts    (16 tests)   rounds, the clock, the packs
 ✓ src/test/errors.test.ts       (13 tests)   the crash reporter
+✓ src/test/analytics.test.ts    (16 tests)   what gets counted, and what does not
 ✓ src/test/localStorage.test.ts  (9 tests)
 ✓ src/test/integration.test.ts   (8 tests)
 ✓ src/test/multiDevice.test.ts   (7 tests)
@@ -139,6 +140,40 @@ detail, not the reporter losing it, and it does not apply to the app's own
 bundle. The page and browser are still recorded, which is usually enough to
 place it.
 
+## 📈 What Gets Counted
+
+`src/analytics.ts` reports four things that matter, into the same Google
+Analytics property the iOS client uses, with the same event names and values:
+
+| event | when | carries |
+| --- | --- | --- |
+| `page_view` | every route, including the first | `page_path`, `screen_name` |
+| `game_start` | a round begins | `game_name`, `mode`, `grade`, `round` |
+| `game_finish` | a round ends | `game_name`, `mode`, `outcome`, `score`, `seconds` |
+| `share` | a game link or the app is shared | `content_type`, `item_id` |
+
+Plus `support_open`, `donation_tap` and `feedback_sent` around the support panel.
+
+Two things are deliberate rather than incidental:
+
+- **The first page view is counted once.** The SDK's automatic page views are
+  switched off (`send_page_view: false`) and every route is logged here instead,
+  so the load you land on is counted like every other one. Left alone, a
+  menu-based single-page app looks like exactly one page.
+- **With no measurement id, none of this ships.** It is not a check that
+  happens to skip at runtime: Vite inlines `import.meta.env` at build time, so
+  with no id the value is `undefined`, every path that could send is provably
+  dead, and the bundler removes it — leaving no analytics code in the main
+  bundle and no extra chunk emitted at all. With an id, a separate ~19 kB chunk
+  appears and is fetched on demand. So the id is a *build-time* setting: add it
+  to `.env.local` and rebuild, and it is live; there is nothing to toggle at
+  runtime.
+
+Routes are watched from `onPathChange` in `src/router.ts`, subscribed once at
+startup rather than from a component. React runs effects twice in development,
+and a page view counted twice is worse than one not counted at all, because it
+looks like data. The same reasoning guards every effect-based event.
+
 ## 🔐 Privacy & Data
 
 - User data stored in browser localStorage
@@ -147,6 +182,8 @@ place it.
 - Game data stored in Firebase Realtime Database
 - Crash reports carry the error, the page and the browser's user-agent string,
   and are published as public issues on the repository
+- Analytics counts what happened — a route, a game started, a game finished —
+  and never who did it: no names, no game codes, no feedback text
 
 ## 📄 License
 

@@ -10,11 +10,18 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  // Only Analytics reads this, and only once it has been switched on in the
+  // Firebase console. Without it the site works and nothing is sent: see
+  // `src/analytics.ts`.
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+/** Exported for Analytics, which needs the app itself rather than the database. */
+export { app };
 
 // Initialize App Check
 // Get your reCAPTCHA v3 site key from Firebase Console -> App Check
