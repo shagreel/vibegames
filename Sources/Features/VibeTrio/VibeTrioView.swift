@@ -265,11 +265,30 @@ struct VibeTrioView: View {
                                            card: table.visible[index],
                                            width: layout.cardWidth,
                                            faceDown: faceDown)
+                                    // Identity follows the *card*, not the slot.
+                                    // A take replaces cards where they stand, so
+                                    // without this the picture in a slot simply
+                                    // became a different picture between frames —
+                                    // and in a race, three cards vanishing is the
+                                    // whole point going past unnoticed.
+                                    .id(table.visible[index].id)
+                                    .transition(
+                                        .asymmetric(
+                                            insertion: .scale(scale: 0.72)
+                                                .combined(with: .opacity),
+                                            removal: .scale(scale: 0.86)
+                                                .combined(with: .opacity)
+                                        )
+                                    )
                             }
                         }
                     }
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)
+                // Keyed to the cards themselves, so any change to the table —
+                // this device's take or somebody else's — animates.
+                .animation(.spring(response: 0.36, dampingFraction: 0.76),
+                           value: table.visible.map(\.id))
             }
             // Outside the reader, so the size being fitted is the size the cards
             // actually get.

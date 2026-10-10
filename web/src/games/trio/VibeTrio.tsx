@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { artworkPath, spokenDescription } from './cards';
+import { artworkPath, spokenDescription, type TrioCard } from './cards';
 import { firstTrio, isFinished, replay, takeAt, type TrioTable } from './engine';
 import { BOARD_SPACING, CARD_ASPECT, fitBoard, rowsOfIndices } from './layout';
 import {
@@ -531,43 +531,109 @@ function Board(props: {
     return () => observer.disconnect();
   }, [props.finished]);
 
+  /**
+   * Cards that have just left the table.
+   *
+   * A take replaces cards where they stand — the board never reshuffles, by
+   * design — so without this the three cards simply became three different
+   * pictures between one frame and the next, and in a race that is the whole
+   * point of the game going past unnoticed.
+   */
+  const visible = props.table.visible;
+  const previousVisible = useRef<readonly TrioCard[] | null>(null);
+  const [leaving, setLeaving] = useState<{ key: string; index: number; card: TrioCard }[]>([]);
+  const ghostId = useRef(0);
+  const ghostTimers = useRef<number[]>([]);
+
+  useEffect(() => {
+    const before = previousVisible.current;
+    previousVisible.current = visible;
+    // The opening deal has nothing leaving it.
+    if (!before) return;
+
+    const departed: { key: string; index: number; card: TrioCard }[] = [];
+    before.forEach((card, index) => {
+      const now = visible[index];
+      if (!now || now.id !== card.id) {
+        ghostId.current += 1;
+        departed.push({ key: `ghost-${ghostId.current}`, index, card });
+      }
+    });
+    if (departed.length === 0) return;
+
+    // The extra render is the feature: React cannot animate an element it has
+    // already forgotten, so the cards that just left are held for one animation
+    // and then dropped. This is the "synchronise with an external system" case
+    // the rule is not aimed at, and the alternative — cloning nodes into the
+    // DOM by hand — would be worse.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLeaving((current) => [...current, ...departed]);
+    // Each ghost keeps its own timer rather than one shared one, so a second
+    // take arriving mid-animation cannot cancel the first lot's removal and
+    // strand them on the board.
+    ghostTimers.current.push(
+      window.setTimeout(() => {
+        setLeaving((current) => current.filter((ghost) => !departed.includes(ghost)));
+      }, 340),
+    );
+  }, [visible]);
+
+  useEffect(() => () => ghostTimers.current.forEach(window.clearTimeout), []);
+
   if (props.finished) {
     return <Leaderboard {...props} />;
   }
 
-  const layout = fitBoard(props.table.visible.length, size.width, size.height, BOARD_SPACING);
+  const layout = fitBoard(visible.length, size.width, size.height, BOARD_SPACING);
   const cardHeight = layout.cardWidth / CARD_ASPECT;
 
   return (
     <div className="trio__board-area">
-      <div className="trio__board" ref={ref} data-cards={props.table.visible.length}>
-        {rowsOfIndices(props.table.visible.length, layout.columns).map((row, rowIndex) => (
+      <div className="trio__board" ref={ref} data-cards={visible.length}>
+        {rowsOfIndices(visible.length, layout.columns).map((row, rowIndex) => (
           <div className="trio__row" key={rowIndex} style={{ gap: BOARD_SPACING }}>
             {row.map((index) => {
-              const card = props.table.visible[index];
+              const card = visible[index];
               const state = props.rejected.includes(card.id)
                 ? 'rejected'
                 : props.selected.includes(card.id)
                   ? 'selected'
                   : 'idle';
               return (
-                <button
+                /* The slot is keyed by the card, so a card that merely moves
+                   keeps its element and does not replay the arrival animation —
+                   only a genuinely new card does. */
+                <div
+                  className="trio__slot"
                   key={card.id}
-                  type="button"
-                  className="trio-card"
-                  data-state={state}
                   style={{ width: layout.cardWidth, height: cardHeight }}
-                  onClick={() => props.onTap(card.id)}
-                  disabled={props.faceDown}
-                  aria-label={spokenDescription(card)}
-                  aria-pressed={state === 'selected'}
                 >
-                  {props.faceDown ? (
-                    <span className="trio-card__back" aria-hidden="true" />
-                  ) : (
-                    <img src={artworkPath(card)} alt="" draggable={false} />
-                  )}
-                </button>
+                  <button
+                    type="button"
+                    className="trio-card"
+                    data-state={state}
+                    style={{ '--slot': index } as React.CSSProperties}
+                    onClick={() => props.onTap(card.id)}
+                    disabled={props.faceDown}
+                    aria-label={spokenDescription(card)}
+                    aria-pressed={state === 'selected'}
+                  >
+                    {props.faceDown ? (
+                      <span className="trio-card__back" aria-hidden="true" />
+                    ) : (
+                      <img src={artworkPath(card)} alt="" draggable={false} />
+                    )}
+                  </button>
+
+                  {/* The card that was here a moment ago, on its way out. */}
+                  {leaving
+                    .filter((ghost) => ghost.index === index)
+                    .map((ghost) => (
+                      <span className="trio__ghost" key={ghost.key} aria-hidden="true">
+                        <img src={artworkPath(ghost.card)} alt="" draggable={false} />
+                      </span>
+                    ))}
+                </div>
               );
             })}
           </div>
