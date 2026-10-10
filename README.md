@@ -626,7 +626,7 @@ Sources/
 Tests/                          Unit tests (engine, schema, model)
 UITests/                        End-to-end UI tests
 firebase/database.rules.json    Realtime Database rules
-Tools/make_icon.swift           Renders the app icon
+Tools/make_icon.swift           Renders the app icon and the favicon
 Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
 Tools/check_branding.py         Naming guard
@@ -669,6 +669,37 @@ automatically.
 The suite supports light and dark, and **follows the device by default**. Pick
 `System`, `Light` or `Dark` in **Preferences**, behind the gear button at the top
 right of the hub; the choice persists and applies to every game.
+
+### The app icon
+
+**VG**, the suite's initials, set in the system's rounded heavy face and slanted,
+filled with a sweep through all four game colours. The letterform is the app's own
+voice — the interface is rounded and heavy throughout — so the icon is set in the
+product's voice rather than in a lookalike.
+
+It replaced four coloured tiles, which had replaced Vibe Five's dial and numeral.
+Both of those put one idea on the whole suite: the dial made the app look like a
+buzzer timer to anyone who had not opened it, and the tiles read as a grid of
+unrelated things.
+
+`Tools/make_icon.swift` renders both the 1024pt icon and the browser favicon, and
+the favicon is written from the **same glyph outlines** rather than redrawn by
+hand — so the tab and the home screen cannot drift apart:
+
+    swift Tools/make_icon.swift \
+      Sources/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png \
+      web/public/favicon.svg
+
+Two things it has to get right, both of which are easy to get wrong quietly:
+
+- **No transparency.** The App Store rejects an icon with see-through pixels.
+  `AppIconTests` checks every pixel rather than the channel format, because
+  Xcode's derived copies are RGBA whatever the source is.
+- **No seam.** The glow behind the mark is an explicit radial gradient whose
+  radius ends inside the canvas edge but outside the corners. The obvious
+  `NSGradient.draw(in:relativeCenterPosition:)` looks right and leaves a square
+  step of about eight levels where its rect stops, which is visible on a
+  background this subtle.
 
 ### Your name, and where it is asked for
 
