@@ -384,3 +384,114 @@
   font-size: 0.76rem;
   color: #6f757b;
 }
+
+/* ── the feedback form ─────────────────────────────────────────────────── */
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.feedback label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.feedback textarea {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.feedback textarea::placeholder {
+  color: #6f757b;
+}
+
+.feedback textarea:focus-visible {
+  outline: 2px solid var(--heart);
+  outline-offset: 2px;
+}
+
+.feedback__send {
+  margin-top: 0;
+}
+
+.feedback__send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.feedback__problem {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #ff8c8c;
+}
+
+.feedback__note {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #6f757b;
+  text-align: center;
+}
+
+.feedback--sent {
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.feedback--sent strong {
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.feedback--sent span {
+  font-size: 0.82rem;
+  color: #8b9197;
+}
+
+/* The ways to help are the second ask, not the first: folded away. */
+.support-more {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.support-more summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #9aa0a6;
+  list-style: none;
+}
+
+.support-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.support-more summary::before {
+  content: '▸ ';
+  color: var(--heart);
+}
+
+.support-more[open] summary::before {
+  content: '▾ ';
+}
+
+.support-more summary:hover {
+  color: #ffffff;
+}

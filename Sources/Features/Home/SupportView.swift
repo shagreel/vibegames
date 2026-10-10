@@ -8,7 +8,6 @@ enum Support {
     static let venmoHandle = "@chill-gelato"
     static let venmoURL = URL(string: "https://venmo.com/u/chill-gelato")!
 
-    static let feedbackURL = URL(string: "https://github.com/shagreel/vibegames/issues")!
     /// Where the browser versions live. Sharing costs nothing and helps as much
     /// as anything else here.
     static let playURL = URL(string: "https://play.vibegames.party")!
@@ -26,8 +25,44 @@ enum Support {
         """
 }
 
-/// What the heart opens: why the games exist, and how to say thanks.
+/// The heart in the corner, and the panel behind it.
+///
+/// One component so every screen gets the same thing, and so the panel cannot
+/// drift between them. It is on every screen because feedback about the game you
+/// are in is the feedback worth having, and nobody goes looking for a settings
+/// page to report a bug.
+struct SupportButton: View {
+    /// Named in the note, so an issue arrives with some context.
+    var game: String?
+
+    @State private var showing = false
+
+    var body: some View {
+        Button {
+            showing = true
+        } label: {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(VibeTheme.heart)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(VibeTheme.surfaceStrong))
+                .overlay(Circle().stroke(VibeTheme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Support Vibe Games")
+        .accessibilityIdentifier("hub.support")
+        .sheet(isPresented: $showing) {
+            SupportView(game: game)
+        }
+    }
+}
+
+/// What the heart opens: why the games exist, how to say thanks, and the box to
+/// say what is wrong.
 struct SupportView: View {
+    /// The full title of the game, when the panel was opened from inside one.
+    var game: String?
+
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
 
@@ -54,6 +89,15 @@ struct SupportView: View {
                     }
                     .padding(.horizontal, 6)
 
+                    FeedbackForm(game: game)
+
+                    Divider().padding(.vertical, 2)
+
+                    Text("Other ways to help")
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .kerning(1.5)
+                        .foregroundStyle(VibeTheme.tertiaryText)
+
                     VStack(spacing: 10) {
                         // Venmo: the handle is shown as well as linked, because
                         // it is what someone needs if the link opens the wrong
@@ -63,13 +107,6 @@ struct SupportView: View {
                                 title: "Buy us a treat",
                                 detail: "Venmo \(Support.venmoHandle)",
                                 tint: VibeTheme.heart)
-                        }
-
-                        Link(destination: Support.feedbackURL) {
-                            row(symbol: "bubble.left.and.text.bubble.right.fill",
-                                title: "Tell me what you think",
-                                detail: "Ideas, bugs, or a game you would like next",
-                                tint: VibeTheme.calm)
                         }
 
                         ShareLink(item: Support.playURL) {
@@ -113,6 +150,9 @@ struct SupportView: View {
                 .padding(.bottom, 36)
             }
             .vibeCanvas()
+            // The panel is a form on a phone: without this the keyboard covers
+            // Send and the only way to it is to guess that you can scroll.
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Support")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -159,4 +199,119 @@ struct SupportView: View {
                 }
         }
     }
+
+/// The form.
+///
+/// One box and a send button, deliberately: anything more would be a form to
+/// fill in rather than a message to leave.
+private struct FeedbackForm: View {
+    let game: String?
+
+    @State private var text = ""
+    @State private var sending = false
+    @State private var sent = false
+    @State private var problem: String?
+    @FocusState private var focused: Bool
+
+    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSend: Bool {
+        !sending && trimmed.count >= FeedbackService.minimumLength
+    }
+
+    var body: some View {
+        if sent {
+            thanks
+        } else {
+            form
+        }
+    }
+
+    private var thanks: some View {
+        VStack(spacing: 4) {
+            Text("Thank you — that has gone straight to me.")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+            Text("I read everything, even when I cannot reply to it.")
+                .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("feedback.sent")
+    }
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tell me what you think, or what is not working")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+
+            TextEditor(text: $text)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 96)
+                .padding(8)
+                .background {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(VibeTheme.surfaceStrong)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(VibeTheme.hairline, lineWidth: 1)
+                        }
+                }
+                .focused($focused)
+                .disabled(sending)
+                .accessibilityIdentifier("feedback.text")
+
+            if let problem {
+                Text(problem)
+                    .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(VibeTheme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("feedback.problem")
+            }
+
+            Button {
+                Task { await send() }
+            } label: {
+                Text(sending ? "Sending…" : "Send")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(VibeTheme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(VibeTheme.surfaceStrong)
+                    }
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSend)
+            .opacity(canSend ? 1 : 0.5)
+            .accessibilityIdentifier("feedback.send")
+
+            Text("No account, no email address, nothing to sign up for — it reaches me as a note"
+                 + (game.map { " about \($0)" } ?? "") + ".")
+                .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func send() async {
+        sending = true
+        problem = nil
+        do {
+            try await FeedbackService.send(trimmed, from: .ios, game: game)
+            focused = false
+            sent = true
+        } catch {
+            problem = error.localizedDescription
+        }
+        sending = false
+    }
+}
 }

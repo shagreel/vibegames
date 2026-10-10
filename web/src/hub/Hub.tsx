@@ -1,12 +1,9 @@
-import { useState } from 'react';
 import { navigate } from '../router';
 import { GAMES } from './catalog';
-import { SupportPanel } from './Support';
+import { SupportButton } from './Support';
 import './Hub.css';
 
 function Hub() {
-  const [showingSupport, setShowingSupport] = useState(false);
-
   return (
     <div className="hub">
       <div className="hub__inner">
@@ -15,16 +12,7 @@ function Hub() {
             <h1>Vibe Games</h1>
             {/* The app puts this beside its settings gear; the menu has no
                 settings, so it sits where the gear would. */}
-            <button
-              type="button"
-              className="hub__heart"
-              onClick={() => setShowingSupport(true)}
-              aria-label="Support Vibe Games"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 20.3 4.2 12.6a4.6 4.6 0 0 1 0-6.6 4.8 4.8 0 0 1 6.7 0l1.1 1.1 1.1-1.1a4.8 4.8 0 0 1 6.7 0 4.6 4.6 0 0 1 0 6.6z" />
-              </svg>
-            </button>
+            <SupportButton />
           </div>
           <p>Quick party games. Grab a phone, pass it round.</p>
         </header>
@@ -72,8 +60,6 @@ function Hub() {
           <a href="https://vibegames.party">About Vibe Games</a>
         </footer>
       </div>
-
-      {showingSupport && <SupportPanel onClose={() => setShowingSupport(false)} />}
     </div>
   );
 }

@@ -54,8 +54,7 @@
 }
 
 .five__settings-button {
-  position: absolute;
-  right: 0.75rem;
+  position: static;
   width: 2.5rem;
   height: 2.5rem;
   display: grid;
@@ -465,4 +464,17 @@
   font-weight: 700;
   color: #6f757b;
   font-variant-numeric: tabular-nums;
+}
+
+/* The heart shares the corner with whatever else the screen needs there. */
+.five__corner {
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.five__corner .five__settings-button {
+  position: static;
 }

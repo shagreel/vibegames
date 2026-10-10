@@ -536,24 +536,26 @@ struct VibeTrioView: View {
             }
             .frame(maxWidth: .infinity)
 
-            if model.isFinished {
-                Button("Play again") {
-                    Task { await model.playAgain() }
+            HStack(spacing: 6) {
+                SupportButton(game: "Vibe Trio")
+
+                if model.isFinished {
+                    Button("Play again") {
+                        Task { await model.playAgain() }
+                    }
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .frame(height: 44)
+                    .background { Capsule().fill(VibeTheme.vibeTrio) }
+                    .accessibilityIdentifier("trio.playAgain")
+                } else if model.isShared {
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .buttonStyle(VibeIconButtonStyle())
+                    .accessibilityLabel("Share game code")
                 }
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .frame(height: 44)
-                .background { Capsule().fill(VibeTheme.vibeTrio) }
-                .accessibilityIdentifier("trio.playAgain")
-            } else if model.isShared {
-                ShareLink(item: shareText) {
-                    Image(systemName: "square.and.arrow.up")
-                }
-                .buttonStyle(VibeIconButtonStyle())
-                .accessibilityLabel("Share game code")
-            } else {
-                Color.clear.frame(width: 44, height: 44)
             }
         }
         .padding(.horizontal, 20)

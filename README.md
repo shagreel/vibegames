@@ -627,6 +627,7 @@ Tests/                          Unit tests (engine, schema, model)
 UITests/                        End-to-end UI tests
 firebase/database.rules.json    Realtime Database rules
 Tools/make_icon.swift           Renders the app icon and the favicon
+Tools/feedback_to_issues.py     Turns app feedback into issues (scheduled)
 Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
 Tools/check_branding.py         Naming guard
@@ -700,6 +701,45 @@ Two things it has to get right, both of which are easy to get wrong quietly:
   `NSGradient.draw(in:relativeCenterPosition:)` looks right and leaves a square
   step of about eight levels where its rect stops, which is visible on a
   background this subtle.
+
+### Feedback, and how it gets here
+
+Nobody playing these games has a GitHub account, and asking someone to make one
+to report a bug means the bug never gets reported. So there is a heart in the
+corner of **every screen** — the hub, all four games, and the instructions page —
+and behind it a panel with one box and a send button.
+
+    app  →  feedback/{key} in the database  →  a scheduled Action  →  an issue
+
+The inbox is a node in the same Realtime Database the games already use, writable
+by anyone and readable by anyone. It is validated hard: text between 4 and 2,000
+characters, a source of `ios` or `web`, an optional game, and no unknown fields.
+Overwriting an existing entry is refused, so nothing can be edited after the
+fact. Public read is deliberate — everything in it is about to become a public
+issue, so there is nothing there to protect.
+
+`Tools/feedback_to_issues.py` drains it, run by
+`.github/workflows/feedback.yml` every fifteen minutes and on demand from the
+Actions tab.
+
+**No secret is stored anywhere for this.** The database inbox needs no
+credential, and the workflow uses the `GITHUB_TOKEN` it is handed for free. That
+is the whole reason for the two-step rather than the app calling GitHub
+directly: a token in a client is a token anyone can read out of it.
+
+Two consequences worth knowing:
+
+- **It is not instant.** A GitHub-hosted scheduled run can be minutes late. That
+  is the price of not running a server; if it ever matters, a small always-on
+  endpoint would make it immediate and would need an account somewhere.
+- **Running it twice is safe.** Every issue carries a `feedback-id` marker and
+  anything already carrying one is skipped, so a failed run can simply be run
+  again, and a missed schedule costs nothing.
+
+The rules were probed before anything was built on them — nine cases, two that
+should be allowed and seven that should be refused — and the whole path was then
+walked end to end, from typing in a real browser and on a real phone through to
+issues appearing on the repository.
 
 ### Your name, and where it is asked for
 

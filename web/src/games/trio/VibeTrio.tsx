@@ -20,6 +20,7 @@ import {
 } from './service';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import BackToGames from '../../hub/BackToGames';
+import { SupportButton } from '../../hub/Support';
 import './VibeTrio.css';
 
 /**
@@ -314,11 +315,14 @@ function VibeTrio() {
     <div className="trio">
       <header className="trio__header">
         <BackToGames />
-        {screen === 'game' && gameId && (
-          <button type="button" className="trio__leave" onClick={leave}>
-            Leave
-          </button>
-        )}
+        <div className="trio__corner">
+          <SupportButton game="trio" />
+          {screen === 'game' && gameId && (
+            <button type="button" className="trio__leave" onClick={leave}>
+              Leave
+            </button>
+          )}
+        </div>
         <div className="trio__titles">
           <h1>Vibe Trio</h1>
           {screen === 'game' && table && (

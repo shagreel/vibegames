@@ -93,7 +93,7 @@ struct TrioInstructionsView: View {
             }
             .frame(maxWidth: .infinity)
 
-            Color.clear.frame(width: 44, height: 44)
+            SupportButton(game: "Vibe Trio")
         }
         .padding(.top, 10)
     }

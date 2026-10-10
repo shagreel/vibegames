@@ -158,6 +158,41 @@ final class HomeUITests: XCTestCase {
         XCTAssertTrue(heart.waitForExistence(timeout: 5), "and close back to the hub")
     }
 
+    /// The whole point of the heart being on every screen: you can say what is
+    /// wrong while you are looking at it, without a GitHub account and without
+    /// leaving the game.
+    func testFeedbackCanBeSentFromInsideAGame() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        dismissNamePromptIfPresent(app)
+
+        app.descendants(matching: .any)["game.vibe-trio"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["trio.playSolo"].waitForExistence(timeout: 10),
+                      "Vibe Trio should open")
+
+        // The heart is here too, not only on the hub.
+        let heart = app.buttons["hub.support"]
+        XCTAssertTrue(heart.waitForExistence(timeout: 5), "a game screen should carry the heart")
+        heart.tap()
+
+        let box = app.textViews["feedback.text"]
+        XCTAssertTrue(box.waitForExistence(timeout: 5), "the panel should carry the form")
+        XCTAssertFalse(app.buttons["feedback.send"].isEnabled,
+                       "an empty note should not be sendable")
+
+        box.tap()
+        box.typeText("The trio animation is a lovely touch.")
+
+        let send = app.buttons["feedback.send"]
+        XCTAssertTrue(send.isEnabled, "and a written one should be")
+        attach(app, named: "73-feedback-form")
+        send.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.sent"].waitForExistence(timeout: 20),
+                      "sending should say so rather than failing quietly")
+        attach(app, named: "74-feedback-sent")
+    }
+
     // MARK: - Helpers
 
     /// A leftover name from an earlier run means there is no first-run prompt to

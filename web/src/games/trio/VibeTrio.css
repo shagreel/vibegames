@@ -27,8 +27,7 @@
 }
 
 .trio__leave {
-  position: absolute;
-  right: 0.75rem;
+  position: static;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -628,4 +627,17 @@
   .trio__titles h1 {
     font-size: 1.25rem;
   }
+}
+
+/* The heart shares the corner with whatever else the screen needs there. */
+.trio__corner {
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trio__corner .trio__leave {
+  position: static;
 }

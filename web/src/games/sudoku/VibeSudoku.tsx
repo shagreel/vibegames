@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BackToGames from '../../hub/BackToGames';
+import { SupportButton } from '../../hub/Support';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import {
   CELL_COUNT,
@@ -349,11 +350,14 @@ function VibeSudoku() {
     <div className="sudoku">
       <header className="sudoku__header">
         <BackToGames />
-        {screen === 'game' && gameId && (
-          <button type="button" className="sudoku__leave" onClick={leave}>
-            Leave
-          </button>
-        )}
+        <div className="sudoku__corner">
+          <SupportButton game="sudoku" />
+          {screen === 'game' && gameId && (
+            <button type="button" className="sudoku__leave" onClick={leave}>
+              Leave
+            </button>
+          )}
+        </div>
         <div className="sudoku__titles">
           <h1>Vibe Sudoku</h1>
           {screen === 'game' && puzzle && (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BackToGames from '../../hub/BackToGames';
+import { SupportButton } from '../../hub/Support';
 import { ALL_PACK_IDS, PACKS, countIn, type PackId } from './packs';
 import {
   advance,
@@ -160,19 +161,22 @@ function VibeFive() {
           <h1>Vibe Five</h1>
           <p>{state.roundNumber === 0 ? 'Ready to play' : `Round ${state.roundNumber}`}</p>
         </div>
-        <button
-          type="button"
-          className="five__settings-button"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Game settings"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-            <circle cx="8" cy="6" r="2.4" />
-            <circle cx="16" cy="12" r="2.4" />
-            <circle cx="10" cy="18" r="2.4" />
-          </svg>
-        </button>
+        <div className="five__corner">
+          <SupportButton game="five" />
+          <button
+            type="button"
+            className="five__settings-button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Game settings"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+              <circle cx="8" cy="6" r="2.4" />
+              <circle cx="16" cy="12" r="2.4" />
+              <circle cx="10" cy="18" r="2.4" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <CategoryCard state={state} />
