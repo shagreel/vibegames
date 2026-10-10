@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseAppCheck
 import FirebaseCore
+import FirebaseCrashlytics
 import FirebaseDatabase
 
 /// Brings Firebase up once, and tolerates not being configured yet.
@@ -54,7 +55,24 @@ enum FirebaseBootstrapper {
         }
 
         database = Database.database()
+
+        // Collecting is on by default; this is only here to say so out loud.
+        // Crashes are the one failure a player cannot report, so they have to
+        // arrive on their own.
+        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+
         isConfigured = true
+    }
+
+    /// Records a failure the app caught and handled.
+    ///
+    /// Everything the models catch — a game that would not create, a claim that
+    /// could not reach the server — currently shows a message and is then gone.
+    /// This is what makes them findable afterwards.
+    static func record(_ error: Error, during what: String) {
+        guard isConfigured else { return }
+        Crashlytics.crashlytics().record(error: error)
+        Crashlytics.crashlytics().log(what)
     }
 }
 

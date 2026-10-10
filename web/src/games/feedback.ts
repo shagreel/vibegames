@@ -21,6 +21,8 @@ export interface Feedback {
   source: 'ios' | 'web';
   /** Which game they were in, when that is known. */
   game?: string;
+  /** A person's note, or something the browser threw on its own. */
+  kind?: 'feedback' | 'crash';
 }
 
 export class FeedbackError extends Error {}
@@ -49,5 +51,6 @@ export async function sendFeedback(feedback: Feedback): Promise<void> {
     source: feedback.source,
     createdAt: Date.now(),
     ...(feedback.game ? { game: feedback.game } : {}),
+    ...(feedback.kind ? { kind: feedback.kind } : {}),
   });
 }

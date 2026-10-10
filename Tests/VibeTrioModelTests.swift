@@ -12,10 +12,34 @@ final class VibeTrioModelTests: XCTestCase {
         model.playSolo()
 
         XCTAssertEqual(model.session, .solo)
-        XCTAssertEqual(model.cardCount, 12, "a game opens with twelve cards")
+
+        // Twelve, *or more*. The opening deal is twelve cards, but the table
+        // deals another row whenever those twelve hold no trio, so a full table
+        // is 12 + 3n and is not always 12. About one seed in thirty opens
+        // larger — a flat `== 12` here fails on roughly that many runs, which
+        // is exactly often enough to be dismissed as flake.
+        let extra = model.table?.extraDeals ?? 0
+        XCTAssertGreaterThanOrEqual(model.cardCount, 12, "a game opens with at least twelve cards")
+        XCTAssertEqual(model.cardCount, 12 + extra * 3, "grown a row at a time")
+        XCTAssertEqual(model.table?.hasTrio, true, "and always with something to take")
+
         XCTAssertEqual(model.myScore, 0)
         XCTAssertFalse(model.isShared)
         XCTAssertEqual(model.standings, [], "nobody has scored yet")
+    }
+
+    /// The three extra rows are not a quirk of one seed, so the deal is checked
+    /// across a spread of them rather than once. Seeds 5, 66 and 88 open on
+    /// fifteen and 8075 on eighteen.
+    func testAnOpeningTableIsAlwaysPlayableHoweverItIsSeeded() {
+        for seed in UInt32(0)..<400 {
+            let table = TrioTable(seed: seed)
+            XCTAssertGreaterThanOrEqual(table.visible.count, 12, "seed \(seed)")
+            XCTAssertEqual(table.visible.count, 12 + table.extraDeals * 3, "seed \(seed)")
+            if !table.remaining.isEmpty {
+                XCTAssertTrue(table.hasTrio, "seed \(seed) left nothing to take")
+            }
+        }
     }
 
     func testAnInvalidSelectionIsRefusedAndLeavesTheBoardAlone() {

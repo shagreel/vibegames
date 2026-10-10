@@ -124,6 +124,8 @@ final class VibeSudokuModel: ObservableObject {
             loadPuzzle(seed: seed, difficulty: difficulty)
             beginObserving(gameID: gameID)
         } catch {
+            // Shown to the player, and recorded so it is findable later.
+            FirebaseBootstrapper.record(error, during: "Could not create the game")
             errorMessage = "Could not create the game: \(error.localizedDescription)"
         }
     }
@@ -145,6 +147,8 @@ final class VibeSudokuModel: ObservableObject {
             session = .shared(gameID: gameID, isHost: isHost)
             beginObserving(gameID: gameID)
         } catch {
+            // Shown to the player, and recorded so it is findable later.
+            FirebaseBootstrapper.record(error, during: "Could not join that game")
             errorMessage = "Could not join that game: \(error.localizedDescription)"
         }
     }
@@ -154,6 +158,8 @@ final class VibeSudokuModel: ObservableObject {
         do {
             try await service.startGame(gameID: gameID)
         } catch {
+            // Shown to the player, and recorded so it is findable later.
+            FirebaseBootstrapper.record(error, during: "Could not start the game")
             errorMessage = "Could not start the game: \(error.localizedDescription)"
         }
     }
@@ -317,6 +323,8 @@ final class VibeSudokuModel: ObservableObject {
             do {
                 try await service.beginRestart(gameID: gameID, seed: seed)
             } catch {
+                // Shown to the player, and recorded so it is findable later.
+                FirebaseBootstrapper.record(error, during: "Could not start the next round")
                 errorMessage = "Could not start the next round: \(error.localizedDescription)"
             }
         } else {

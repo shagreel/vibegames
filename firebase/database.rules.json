@@ -172,6 +172,9 @@
         "game": {
           ".validate": "newData.val() === null || (newData.isString() && newData.val().length <= 40)"
         },
+        "kind": {
+          ".validate": "newData.val() === null || newData.val() === 'feedback' || newData.val() === 'crash'"
+        },
         "createdAt": {
           ".validate": "newData.isNumber()"
         },

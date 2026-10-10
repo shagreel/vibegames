@@ -42,6 +42,31 @@ targets:
       # App Check via App Attest, replacing the web client's reCAPTCHA.
       - package: Firebase
         product: FirebaseAppCheck
+      # Crash reports. A crash is the one thing a player cannot tell us about,
+      # so it has to arrive on its own.
+      - package: Firebase
+        product: FirebaseCrashlytics
+    # Crash reports are unreadable without this: it uploads the dSYMs so stack
+    # traces arrive with function names rather than addresses.
+    # After the build, not after compilation: the script reads the app's own
+    # GoogleService-Info.plist out of the bundle, which is not there yet when a
+    # post-compile phase runs.
+    postBuildScripts:
+      - name: Upload dSYMs to Crashlytics
+        script: |
+          # The uploader cannot find the app id on its own, so it is pointed at
+          # the plist by hand. The file is git-ignored and optional — the app
+          # runs without Firebase, solo play included — so a checkout that has
+          # not been configured still builds.
+          GSP="${SRCROOT}/Sources/GoogleService-Info.plist"
+          if [ -f "$GSP" ]; then
+            "${BUILD_DIR%Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run" -gsp "$GSP"
+          fi
+        # Its work depends on the build, not on file timestamps.
+        basedOnDependencyAnalysis: false
+        # Declared so the script sandbox lets it read the file.
+        inputFiles:
+          - $(SRCROOT)/Sources/GoogleService-Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: party.vibegames.VibeGames

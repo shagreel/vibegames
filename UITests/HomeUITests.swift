@@ -181,15 +181,25 @@ final class HomeUITests: XCTestCase {
                        "an empty note should not be sendable")
 
         box.tap()
-        box.typeText("The trio animation is a lovely touch.")
+        // This walks the real path and posts to the live inbox on purpose — a
+        // form that only ever works against a stub proves nothing. A client
+        // cannot delete what it wrote, so the note is marked instead, and
+        // Tools/feedback_to_issues.py leaves anything marked alone.
+        box.typeText("[test] The trio animation is a lovely touch.")
 
         let send = app.buttons["feedback.send"]
         XCTAssertTrue(send.isEnabled, "and a written one should be")
         attach(app, named: "73-feedback-form")
         send.tap()
 
-        XCTAssertTrue(app.descendants(matching: .any)["feedback.sent"].waitForExistence(timeout: 20),
-                      "sending should say so rather than failing quietly")
+        // Generous on purpose. The thank-you appears only once the database has
+        // acknowledged the write — the form deliberately does not claim success
+        // before it is true — and that round trip goes through App Check, so it
+        // can take far longer than it usually does. Twenty seconds was enough
+        // most runs and not others.
+        XCTAssertTrue(app.descendants(matching: .any)["feedback.sent"].waitForExistence(timeout: 60),
+                      "sending should say so rather than failing quietly; a "
+                      + "feedback.problem element here means the write was refused")
         attach(app, named: "74-feedback-sent")
     }
 

@@ -16,6 +16,11 @@ An entry is never turned into two issues: the issue body carries a
 `feedback-id` marker, and anything already carrying that marker is skipped. That
 also means re-running after a failure is safe.
 
+Crashes — reports the browser sent on its own, with `kind` of `crash` — arrive
+here too, labelled and titled differently so they are not mistaken for something
+a person wrote. Notes from the UI test start with `[test]` and are skipped
+outright, so a test run can never open an issue.
+
 Usage:
     GH_TOKEN=... python3 Tools/feedback_to_issues.py [--repo owner/name]
                                                      [--database URL]
@@ -32,9 +37,13 @@ from typing import Optional
 
 DEFAULT_REPO = "shagreel/vibegames"
 DEFAULT_DATABASE = "https://vibe-words-party-default-rtdb.firebaseio.com"
-LABEL = "feedback"
+LABELS = {"feedback": "feedback", "crash": "crash"}
 
 MARKER = "feedback-id"
+
+# The prefix the UI test puts on the note it sends, so that a test run never
+# turns into a public issue.
+TEST_MARKER = "[test]"
 
 
 def call(url: str, token: Optional[str], method: str = "GET", body=None):
@@ -84,24 +93,41 @@ def already_synced(repo: str, token: str) -> set[str]:
     return seen
 
 
-def ensure_label(repo: str, token: str) -> None:
-    status, _ = call(f"https://api.github.com/repos/{repo}/labels/{LABEL}", token)
+def ensure_label(repo: str, token: str, label: str, colour: str, description: str) -> None:
+    status, _ = call(f"https://api.github.com/repos/{repo}/labels/{label}", token)
     if status == 404:
         call(
             f"https://api.github.com/repos/{repo}/labels",
             token,
             method="POST",
-            body={"name": LABEL, "color": "ff6b85",
-                  "description": "Sent from inside the app"},
+            body={"name": label, "color": colour, "description": description},
         )
+
+
+def is_crash(entry: dict) -> bool:
+    return entry.get("kind") == "crash"
+
+
+def is_test_entry(entry: dict) -> bool:
+    """True for a note the UI test sent down the real path.
+
+    The test deliberately posts to the live inbox, because a form that only ever
+    works against a stub proves nothing. It cannot delete what it wrote — the
+    rules refuse a delete from any client — so it marks the note instead and the
+    drain leaves it alone.
+    """
+    return str(entry.get("text", "")).lstrip().startswith(TEST_MARKER)
 
 
 def title_for(entry: dict) -> str:
     """A short, single-line title. GitHub caps these at 256 characters."""
-    text = " ".join(str(entry.get("text", "")).split())
+    # A crash report's first line is the exception, which makes a better title
+    # than the top of its stack.
+    text = " ".join(str(entry.get("text", "")).splitlines()[0:1]).strip()
     if len(text) > 70:
         text = text[:67].rstrip() + "…"
-    return f"Feedback: {text}" if text else "Feedback"
+    prefix = "Crash: " if is_crash(entry) else "Feedback: "
+    return prefix + text if text else ("Crash" if is_crash(entry) else "Feedback")
 
 
 def body_for(key: str, entry: dict) -> str:
@@ -113,14 +139,27 @@ def body_for(key: str, entry: dict) -> str:
     except (TypeError, ValueError, OSError):
         when = "unknown"
 
-    where = "iPhone or iPad" if entry.get("source") == "ios" else "a browser"
+    phone = entry.get("source") == "ios"
+    where = "an iPhone or iPad" if phone else "a browser"
     if entry.get("game"):
-        where += f" · {entry['game']}"
+        where += f", in {entry['game']}"
+
+    # Two separate sentences on purpose: the first says what kind of report this
+    # is, the second says which of the two apps it came from.
+    if is_crash(entry):
+        lead = (
+            "The app hit this on its own — nobody typed it in."
+            if phone
+            else "The browser hit this on its own — nobody typed it in."
+        )
+    else:
+        lead = "Someone typed this in and sent it."
 
     return (
         f"{entry.get('text', '').strip()}\n\n"
         "---\n\n"
-        f"Sent from the app, on {where}. Received {when}.\n\n"
+        f"{lead}\n\n"
+        f"Came from {where}. Received {when}.\n\n"
         f"<!-- {MARKER}: {key} -->\n"
     )
 
@@ -147,13 +186,25 @@ def main() -> None:
         print("The inbox is empty. Nothing to do.")
         return
 
+    # The UI test walks the real path on purpose — a form that only works
+    # against a stub is not evidence of anything — so its note lands in the live
+    # inbox. It is marked, and marked notes never become issues.
+    skipped = [
+        key for key, entry in inbox.items()
+        if isinstance(entry, dict) and is_test_entry(entry)
+    ]
+    if skipped:
+        print(f"{len(skipped)} test note(s) in the inbox, left alone.")
+
     synced = already_synced(args.repo, token) if token else set()
 
     # Oldest first, so a backlog arrives in the order it was sent.
     pending = [
         (key, entry)
         for key, entry in sorted(inbox.items(), key=lambda item: item[1].get("createdAt", 0))
-        if isinstance(entry, dict) and key not in synced
+        if isinstance(entry, dict)
+        and key not in synced
+        and not is_test_entry(entry)
     ]
 
     print(f"{len(inbox)} in the inbox, {len(synced)} already turned into issues, "
@@ -167,7 +218,10 @@ def main() -> None:
         pending = pending[: args.limit]
 
     if token:
-        ensure_label(args.repo, token)
+        ensure_label(args.repo, token, LABELS["feedback"], "ff6b85",
+                     "Sent from inside the app")
+        ensure_label(args.repo, token, LABELS["crash"], "b60205",
+                     "Something the app hit on its own")
 
     opened = 0
     for key, entry in pending:
@@ -181,7 +235,11 @@ def main() -> None:
             f"https://api.github.com/repos/{args.repo}/issues",
             token,
             method="POST",
-            body={"title": title, "body": body, "labels": [LABEL]},
+            body={
+                "title": title,
+                "body": body,
+                "labels": [LABELS["crash"] if is_crash(entry) else LABELS["feedback"]],
+            },
         )
         if status >= 400:
             # Leave the entry alone so the next run tries again.

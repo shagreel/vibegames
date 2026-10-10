@@ -123,6 +123,8 @@ final class VibeWordsModel: ObservableObject {
             session = .shared(gameID: gameID, isHost: true)
             beginObserving(gameID: gameID)
         } catch {
+            // Shown to the player, and recorded so it is findable later.
+            FirebaseBootstrapper.record(error, during: "Could not create the game")
             message = "Could not create the game: \(error.localizedDescription)"
         }
     }
@@ -144,6 +146,8 @@ final class VibeWordsModel: ObservableObject {
             session = .shared(gameID: gameID, isHost: isHost)
             beginObserving(gameID: gameID)
         } catch {
+            // Shown to the player, and recorded so it is findable later.
+            FirebaseBootstrapper.record(error, during: "Could not join that game")
             message = "Could not join that game: \(error.localizedDescription)"
         }
     }
@@ -153,6 +157,8 @@ final class VibeWordsModel: ObservableObject {
         do {
             try await service.startGame(gameID: gameID)
         } catch {
+            // Shown to the player, and recorded so it is findable later.
+            FirebaseBootstrapper.record(error, during: "Could not start the game")
             message = "Could not start the game: \(error.localizedDescription)"
         }
     }
@@ -287,6 +293,8 @@ final class VibeWordsModel: ObservableObject {
             do {
                 try await service.beginRestart(gameID: gameID, word: word)
             } catch {
+                // Shown to the player, and recorded so it is findable later.
+                FirebaseBootstrapper.record(error, during: "Could not start the next round")
                 message = "Could not start the next round: \(error.localizedDescription)"
             }
         } else {

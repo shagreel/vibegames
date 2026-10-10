@@ -28,13 +28,14 @@ handed round a table.
 
 ## 🧪 Test Suite
 
-**139 passing tests.**
+**152 passing tests.**
 
 ```bash
 ✓ src/test/trioEngine.test.ts     (35 tests)   the rule, and agreement with iOS
 ✓ src/test/sudokuGenerator.test.ts (34 tests)  21 boards matched against iOS
 ✓ src/test/gameLogic.test.ts    (17 tests)
 ✓ src/test/fiveModel.test.ts    (16 tests)   rounds, the clock, the packs
+✓ src/test/errors.test.ts       (13 tests)   the crash reporter
 ✓ src/test/localStorage.test.ts  (9 tests)
 ✓ src/test/integration.test.ts   (8 tests)
 ✓ src/test/multiDevice.test.ts   (7 tests)
@@ -119,12 +120,33 @@ Works on all modern browsers and devices:
 - ✅ Safari (desktop & mobile)
 - ✅ Edge
 
+## 💥 When Something Breaks
+
+A crash is the one failure nobody can report: the page stops working, so there
+is no form left to type in. `src/errors.ts` catches what escapes — a render that
+throws, a promise nobody handled — and posts it down the same path as feedback,
+where it becomes an issue on the repository with a `crash` label.
+
+It is deliberately quiet and bounded. Each distinct failure is sent once per
+session (keyed on the message, so the same exception at a hundred moments is one
+report) and a session stops after five. Sends are fire-and-forget: if the report
+itself cannot be posted, nothing is shown, because complaining about the failure
+path would be a crash reporter crashing.
+
+One caveat worth knowing: a failure inside a **cross-origin** script reaches the
+handler as just `Script error.` with no stack. That is the browser withholding
+detail, not the reporter losing it, and it does not apply to the app's own
+bundle. The page and browser are still recorded, which is usually enough to
+place it.
+
 ## 🔐 Privacy & Data
 
 - User data stored in browser localStorage
 - Each device gets a unique browser ID
 - No personal information collected
 - Game data stored in Firebase Realtime Database
+- Crash reports carry the error, the page and the browser's user-agent string,
+  and are published as public issues on the repository
 
 ## 📄 License
 

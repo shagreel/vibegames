@@ -273,6 +273,13 @@ not a trio, which is exactly the mistake the game is built to punish.
   seed and a list of takes — never a board.
 - **It deals out of dead ends.** If the table has no trio and the deck still has
   cards, three more are dealt automatically, so the game can never stall.
+- **Which means the opening table is not always twelve.** The first twelve cards
+  occasionally hold no trio, and then a row is dealt before anybody sees it.
+  Across 20,000 seeds, 622 — about one in thirty-two — open larger: 15 cards for
+  most, 18 for a few. The table is therefore 12 + 3n and never unplayable. A test
+  asserting a flat twelve passes most runs and fails about three times in a
+  hundred, which is exactly often enough to be written off as flake, so the
+  engine is checked across a run of seeds instead.
 - **One board, shared.** A race is not two people playing the same deal side by
   side: it is one table, and a trio taken by anybody is gone for everybody. The
   board is rebuilt from the seed plus the takes the server accepted, in the
@@ -488,10 +495,15 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   image in the bundle, the file numbering runs in deck order, and no two cards
   read out the same. A card whose artwork had gone missing would render as a
   placeholder, which is the sort of thing that is easy to ship and hard to see.
-- `UITests/` — 34 UI tests driving the real screens in a simulator, attaching a
+- `UITests/` — 36 UI tests driving the real screens in a simulator, attaching a
   screenshot at each step to the result bundle. Four of them exist to shoot the
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
+
+**153 tests in all: 117 unit and 36 UI.** They are what the numbers above are
+worth — the grade-matching figures, the 85,320 triples, the fixture agreement
+with iOS — because each of those is measured by a test rather than asserted in
+prose.
 
 Four tests talk to the **real backend** (creating a shared Vibe Words game, a
 shared Sudoku game, a shared Vibe Trio game, and taking a trio and rejoining to
@@ -736,10 +748,57 @@ Two consequences worth knowing:
   anything already carrying one is skipped, so a failed run can simply be run
   again, and a missed schedule costs nothing.
 
+**Test notes are marked and never become issues.** The UI test that sends
+feedback walks the real path on purpose — a form that only ever works against a
+stub proves nothing — so its note lands in the live inbox. A client cannot delete
+what it wrote (the rules refuse a delete from any client, deliberately), so the
+test prefixes its note with `[test]` and the drain skips anything starting with
+it. No test run can open an issue on the repository.
+
+That leaves the inbox append-only: entries accumulate and nothing expires them,
+because the only thing with delete rights is the admin CLI. Pruning is
+occasional housekeeping rather than a chore, but it is worth knowing the command:
+
+```bash
+cd firebase && firebase database:remove /feedback --project vibe-words-party
+```
+
 The rules were probed before anything was built on them — nine cases, two that
 should be allowed and seven that should be refused — and the whole path was then
 walked end to end, from typing in a real browser and on a real phone through to
 issues appearing on the repository.
+
+### Crashes, which nobody can type in a box
+
+A crash is the one failure the heart cannot catch: the page or the app stops
+working, so there is no form left to fill in. Both halves report them on their
+own, down the same pipe as feedback, arriving as issues labelled `crash` and
+titled `Crash: …` rather than `Feedback: …`.
+
+**On the phone**, via Firebase Crashlytics. `FirebaseBootstrapper` turns
+collection on and exports `record(_:during:)`, which twelve catch blocks call
+wherever the app gives up on something — a board that will not load, a claim
+that will not send. An `Upload dSYMs to Crashlytics` build phase runs
+Crashlytics' own `run` script, which needs two things that are easy to get
+wrong: it must run *after* compiling (in `postBuildScripts`, not
+`postCompileScripts`) and it must be told where the plist is (`-gsp`), because
+script sandboxing otherwise blocks it from finding one. Both are in `project.yml`.
+
+**In the browser**, via `web/src/errors.ts`, which listens for `error` and
+`unhandledrejection`. It is built to stay quiet: each distinct failure is sent
+once per session, keyed on its message, and a session stops after five, because
+a loop that throws on every frame would otherwise post thousands of copies of one
+bug and bury every real report. Sends are fire-and-forget — if the report cannot
+be posted, nothing is shown, since complaining about the failure path would be a
+crash reporter crashing.
+
+The two are bounded differently on purpose. Crashlytics is a real crash reporter
+with symbolication and its own retention, and is the better tool for a native
+crash; the browser reporter is small because the alternative was nothing at all.
+One limitation is worth knowing rather than discovering: a failure inside a
+**cross-origin** script arrives as `Script error.` with no stack. That is the
+browser withholding detail, not the reporter losing it — it does not apply to the
+app's own bundle, and the page and browser are still recorded.
 
 ### Your name, and where it is asked for
 

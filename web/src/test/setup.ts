@@ -31,11 +31,12 @@ const localStorageMock = (() => {
 
 define('localStorage', localStorageMock);
 
-// Mock navigator (for clipboard API)
+// Mock navigator (for clipboard API, and the user agent a crash report records)
 define('navigator', {
   clipboard: {
     writeText: vi.fn(() => Promise.resolve()),
   },
+  userAgent: 'Mozilla/5.0 (Test) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36',
 });
 
 // A window with enough of a URL and an event target to test the router, which
