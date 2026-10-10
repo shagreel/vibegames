@@ -157,6 +157,28 @@
           ".validate": false
         }
       }
+    },
+    "feedback": {
+      ".read": true,
+      "$entryId": {
+        ".write": "!data.exists()",
+        ".validate": "newData.hasChildren(['text', 'source', 'createdAt'])",
+        "text": {
+          ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 2000"
+        },
+        "source": {
+          ".validate": "newData.isString() && newData.val().matches(/^(ios|web)$/)"
+        },
+        "game": {
+          ".validate": "newData.val() === null || (newData.isString() && newData.val().length <= 40)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     }
   }
 }

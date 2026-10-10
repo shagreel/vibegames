@@ -1,0 +1,45 @@
+name: Feedback to issues
+
+# Turns whatever people leave in the app's feedback inbox into issues here, so
+# nobody has to have a GitHub account to report a problem.
+#
+# The inbox is a write-only node in the Realtime Database that the apps post to;
+# it is publicly readable, which is fine because everything in it is about to
+# become a public issue. Nothing secret is stored anywhere for this: the only
+# credential is the GITHUB_TOKEN every workflow is handed for free.
+#
+# Runs on a schedule rather than instantly — a GitHub-hosted delay of a few
+# minutes is the price of not running a server. It is safe to run at any time,
+# and safe to run twice: an entry that already has an issue is skipped.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  # So it can be run by hand from the Actions tab, or by `gh workflow run`.
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Most issues to open in this run
+        required: false
+        default: '10'
+
+permissions:
+  issues: write
+  contents: read
+
+# A slow run should not overlap the next one.
+concurrency:
+  group: feedback-to-issues
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Turn new feedback into issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 Tools/feedback_to_issues.py --limit "${{ inputs.limit || 10 }}"
