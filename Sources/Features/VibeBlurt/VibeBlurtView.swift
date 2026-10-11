@@ -201,7 +201,7 @@ struct VibeBlurtView: View {
                     Button {
                         Task { await model.startGame() }
                     } label: {
-                        Text("Deal the teams")
+                        Text("Start")
                             .font(.system(size: 17, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -217,7 +217,7 @@ struct VibeBlurtView: View {
                     .disabled(!model.canStart)
                     .accessibilityIdentifier("blurt.start")
 
-                    Text(model.canStart ? model.startHint : model.startHint)
+                    Text(model.startHint)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(VibeTheme.tertiaryText)
                         .multilineTextAlignment(.center)
@@ -407,26 +407,58 @@ struct VibeBlurtView: View {
         .padding(.bottom, 18)
     }
 
+    /// The two teams, their scores, and **who is on them**.
+    ///
+    /// The names matter as much as the scores: with four people passing one word
+    /// around, the first thing anybody asks is which side they are on, and a
+    /// scoreboard that only says "Team One: 3" does not answer it.
     private func scoreboard(_ play: BlurtPlay) -> some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             ForEach(BlurtTeam.allCases, id: \.rawValue) { team in
                 let mine = model.myTeam == team
-                VStack(spacing: 2) {
+                VStack(spacing: 3) {
                     Text(team.title.uppercased())
                         .font(.system(size: 11, weight: .black, design: .rounded))
                         .kerning(1.2)
+
                     Text("\(model.score(of: team))")
                         .font(.system(size: 30, weight: .black, design: .rounded))
+
+                    Text(model.names(on: team).joined(separator: ", "))
+                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .opacity(0.9)
+
+                    if mine {
+                        Text("YOUR TEAM")
+                            .font(.system(size: 9.5, weight: .black, design: .rounded))
+                            .kerning(0.8)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background { Capsule().fill(.white.opacity(0.25)) }
+                            .padding(.top, 2)
+                    }
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
+                .padding(.horizontal, 6)
                 .background {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(VibeTheme.blurtTeam(team).opacity(mine ? 1 : 0.5))
+                        .fill(VibeTheme.blurtTeam(team).opacity(mine ? 1 : 0.45))
+                }
+                .overlay {
+                    if mine {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(.white.opacity(0.7), lineWidth: 2)
+                    }
                 }
                 .accessibilityIdentifier("blurt.score.\(team.rawValue)")
-                .accessibilityLabel("\(team.title): \(model.score(of: team))")
+                .accessibilityLabel("\(team.title): \(model.score(of: team)), "
+                                    + "\(model.names(on: team).joined(separator: ", "))"
+                                    + (mine ? ", your team" : ""))
             }
         }
         .padding(.horizontal, 20)
@@ -617,6 +649,15 @@ struct VibeBlurtView: View {
             Text(model.isDescriber ? "You're up" : "\(model.describerName) is up")
                 .font(.system(size: 30, weight: .black, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
+
+            // Which side *you* are on, said outright. The scoreboard above shows
+            // it, but this is the screen everyone is looking at between rounds.
+            if let mine = model.myTeam {
+                Text(mine == play.team ? "You're on \(mine.title) — guessing" : "You're on \(mine.title) — watching")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(VibeTheme.blurtTeam(mine))
+                    .accessibilityIdentifier("blurt.myTeam")
+            }
 
             Text(model.isDescriber
                  ? "Hold the phone so only you can see it, then start the clock."

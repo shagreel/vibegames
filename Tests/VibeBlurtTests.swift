@@ -312,6 +312,123 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertNotNil(value["state"])
     }
 
+    // MARK: - The room, against the real database
+
+    /// The roster comes back with everybody's **name** in it.
+    ///
+    /// This is the one that was wrong: the observer stored a flag instead of the
+    /// value, so `snapshot.players` was always empty — the room looked empty,
+    /// and the Start button never became available on the phone while the
+    /// browser was fine. It needs the real database, so it skips without a
+    /// Firebase config, like the other back-end tests.
+    func testTheRoomComesBackWithEverybodysNameInIt() async throws {
+        try XCTSkipUnless(FirebaseBootstrapper.isConfigured, "No Firebase config bundled")
+
+        let service = VibeBlurtService.shared
+        let gameID = "zz" + UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased()
+        let names = ["Alex", "Sam", "Jo", "Robin"]
+
+        try await service.createGame(gameID: gameID,
+                                     seed: 1,
+                                     creatorName: names[0],
+                                     playerID: "test-player-1",
+                                     packs: Set(BlurtPack.allCases),
+                                     turnSeconds: 60)
+        for (index, name) in names.dropFirst().enumerated() {
+            try await service.joinGame(gameID: gameID,
+                                       playerID: "test-player-\(index + 2)",
+                                       name: name)
+        }
+
+        let snapshot = await VibeBlurtTests.waitForRoom(service, gameID: gameID,
+                                                        count: names.count)
+
+        let room = try XCTUnwrap(snapshot, "the room never reported everybody who joined")
+        XCTAssertEqual(room.players.count, names.count)
+        XCTAssertEqual(room.players.values.sorted(), names.sorted(),
+                       "the roster came back without names in it")
+        XCTAssertFalse(room.started, "a room nobody has started")
+
+        // And it is enough people to start, which is what enables the button.
+        XCTAssertGreaterThanOrEqual(room.players.count, BlurtRules.minimumPlayers)
+    }
+
+    func testTheRoomHandsBackTheTeamsItWasDealt() async throws {
+        try XCTSkipUnless(FirebaseBootstrapper.isConfigured, "No Firebase config bundled")
+
+        let service = VibeBlurtService.shared
+        let gameID = "zz" + UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased()
+        let names = ["Alex", "Sam", "Jo", "Robin"]
+        let short = { (index: Int) in
+            VibeBlurtService.shortID(playerID: "test-player-\(index)", gameID: gameID)
+        }
+
+        try await service.createGame(gameID: gameID,
+                                     seed: 7,
+                                     creatorName: names[0],
+                                     playerID: "test-player-1",
+                                     packs: [.food, .play],
+                                     turnSeconds: 30)
+        for index in 2...4 {
+            try await service.joinGame(gameID: gameID,
+                                       playerID: "test-player-\(index)",
+                                       name: names[index - 1])
+        }
+
+        try await service.startGame(gameID: gameID, seed: 7)
+        let snapshot = await VibeBlurtTests.waitForRoom(service, gameID: gameID,
+                                                        count: names.count,
+                                                        needsTeams: true)
+
+        let room = try XCTUnwrap(snapshot)
+        XCTAssertTrue(room.started)
+        XCTAssertEqual(room.turnSeconds, 30, "the room kept its own turn length")
+        XCTAssertEqual(room.packs, Set([.food, .play]), "and its own packs")
+        XCTAssertEqual(room.teams.count, 4, "everybody was put on a team")
+        XCTAssertEqual(BlurtRules.members(of: .one, in: room.teams).count, 2)
+        XCTAssertEqual(BlurtRules.members(of: .two, in: room.teams).count, 2)
+        // Which side anybody lands on is the shuffle's business, so the test
+        // asserts the split is *complete* rather than who is where.
+        let everyTeamMember = BlurtRules.members(of: .one, in: room.teams)
+            + BlurtRules.members(of: .two, in: room.teams)
+        XCTAssertEqual(Set(everyTeamMember), Set((1...4).map(short)))
+
+        let play = try XCTUnwrap(room.play, "the first word was dealt")
+        XCTAssertEqual(play.state, .ready, "the round waits for the describer")
+        XCTAssertTrue(room.teams.values.contains(play.team))
+        XCTAssertNotNil(room.teams[play.describer], "the describer is on a team")
+    }
+
+    /// Waits for the observer to report a room of at least `count` people,
+    /// giving up after ten seconds rather than hanging the suite.
+    @MainActor
+    private static func waitForRoom(_ service: VibeBlurtService,
+                                    gameID: String,
+                                    count: Int,
+                                    needsTeams: Bool = false) async -> BlurtSnapshot? {
+        final class Box: @unchecked Sendable { var done = false }
+        let box = Box()
+
+        return await withCheckedContinuation { continuation in
+            let observation = service.observe(gameID: gameID) { snapshot in
+                // A complete room: everybody present *and* the teams dealt, so
+                // the test cannot pass on a half-arrived snapshot.
+                guard snapshot.players.count >= count,
+                      !needsTeams || snapshot.teams.count >= count,
+                      !box.done else { return }
+                box.done = true
+                continuation.resume(returning: snapshot)
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(10))
+                guard !box.done else { return }
+                box.done = true
+                service.stopObserving(observation)
+                continuation.resume(returning: nil)
+            }
+        }
+    }
+
     func testNonsenseFromTheDatabaseIsRefusedRatherThanCrashing() {
         XCTAssertNil(BlurtPlay(value: nil))
         XCTAssertNil(BlurtPlay(value: "not a dictionary"))

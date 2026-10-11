@@ -74,6 +74,8 @@ async function roleOf(page) {
       .$eval(".blurt__clock > span", (el) => Number(el.textContent.trim()))
       .catch(() => null),
     scores: await page.$$eval(".blurt__score strong", (els) => els.map((e) => e.textContent.trim())),
+    teamNames: await page.$$eval(".blurt__score-names", (els) => els.map((e) => e.textContent.trim())),
+    teamsMine: await page.$$eval(".blurt__score-mine", (els) => els.length),
   };
 }
 
@@ -132,6 +134,25 @@ check(
   guessers.length > 0 && guessers.every((g) => g.role.ownWord === null && g.role.watchedWord === null),
   "the guesser cannot see the word",
 );
+
+// Every player can see who is on which team, and which one is theirs.
+for (const player of players) {
+  const role = await roleOf(player.page);
+  const listed = role.teamNames
+    .flatMap((names) => names.split(","))
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .sort();
+  check(
+    JSON.stringify(listed) === JSON.stringify([...names].sort()),
+    `${player.name} can see who is on each team`,
+  );
+  check(role.teamsMine === 1, `${player.name} has exactly one team marked as theirs`);
+  check(
+    role.scores.length === 2,
+    `${player.name} can see both team names and scores`,
+  );
+}
 
 const before = await roleOf(firstDescriber.player.page);
 check(before.clock !== null, `the clock is running (${before.clock}s)`);

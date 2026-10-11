@@ -282,10 +282,10 @@
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  padding: 0.6rem 0;
+  padding: 0.6rem 0.4rem;
   border-radius: 1.1rem;
   color: #fff;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .blurt__score--1 {
@@ -298,6 +298,7 @@
 
 .blurt__score.is-mine {
   opacity: 1;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.7);
 }
 
 .blurt__score span {
@@ -309,6 +310,40 @@
 .blurt__score strong {
   font-size: 1.9rem;
   line-height: 1;
+}
+
+.blurt__score-names {
+  padding: 0 0.3rem;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  opacity: 0.92;
+}
+
+.blurt__score-mine {
+  margin-top: 0.15rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.25);
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.blurt__my-team {
+  font-weight: 700;
+}
+
+.blurt__my-team--1 {
+  color: var(--blurt-team-one);
+}
+
+.blurt__my-team--2 {
+  color: var(--blurt-team-two);
 }
 
 .blurt__result {

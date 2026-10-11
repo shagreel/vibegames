@@ -23,6 +23,7 @@ import {
   createGame,
   endTurn,
   joinGame,
+  namesOn,
   observeGame,
   passWord,
   playAgain,
@@ -373,7 +374,7 @@ function VibeBlurt() {
                 onClick={() => void startGame(gameId, snapshot.seed ?? randomSeed())}
                 disabled={Object.keys(snapshot.players).length < MINIMUM_PLAYERS}
               >
-                Deal the teams
+                Start
               </button>
               <p className="blurt__hint">{startHint}</p>
             </>
@@ -400,6 +401,8 @@ function VibeBlurt() {
     <div className="blurt">
       <BlurtHeader onLeave={leave} gameId={gameId} />
 
+      {/* The names matter as much as the scores: with four people passing one
+          word around, the first thing anybody asks is which side they are on. */}
       <div className="blurt__scores">
         {TEAMS.map((team) => (
           <div
@@ -408,6 +411,8 @@ function VibeBlurt() {
           >
             <span>{teamTitle(team)}</span>
             <strong>{playScore(play, team)}</strong>
+            <em className="blurt__score-names">{namesOn(snapshot, team).join(', ')}</em>
+            {myTeam === team && <em className="blurt__score-mine">Your team</em>}
           </div>
         ))}
       </div>
@@ -492,6 +497,13 @@ function VibeBlurt() {
             {teamTitle(play.team)}
           </span>
           <h2>{isDescriber ? "You're up" : `${snapshot.players[play.describer] ?? 'Someone'} is up`}</h2>
+          {/* Which side *you* are on, said outright. The scoreboard shows it,
+              but this is the screen everyone looks at between rounds. */}
+          {myTeam !== null && (
+            <p className={`blurt__my-team blurt__my-team--${myTeam}`}>
+              You&rsquo;re on {teamTitle(myTeam)} — {myTeam === play.team ? 'guessing' : 'watching'}
+            </p>
+          )}
           <p>
             {isDescriber
               ? 'Hold the phone so only you can see it, then start the clock.'

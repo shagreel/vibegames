@@ -138,8 +138,15 @@ final class BlurtObservation {
     fileprivate var teams: Any?
     fileprivate var play: Any?
     fileprivate var onChange: ((BlurtSnapshot) -> Void)?
+    /// Which of the four parts have reported at least once. They arrive
+    /// separately, and a snapshot assembled from half of them would show a room
+    /// with people in it, no teams, and a Start button that does nothing — so
+    /// nothing is handed over until all four have been heard from.
+    fileprivate var heard: Set<String> = []
 
     fileprivate func emit() {
+        guard heard.count == 4 else { return }
+
         var snapshot = BlurtSnapshot()
         if let meta = meta as? [String: Any] {
             snapshot.seed = (meta["seed"] as? NSNumber).map { UInt32(truncating: $0) }
@@ -183,11 +190,13 @@ final class VibeBlurtService {
         database?.reference(withPath: "blurt/\(gameID)")
     }
 
-    static func shortID(playerID: String, gameID: String) -> String {
+    /// Pure, so it does not need the main actor — which lets it be called from
+    /// anywhere, including the tests.
+    nonisolated static func shortID(playerID: String, gameID: String) -> String {
         ShortID.of(playerID: playerID, gameID: gameID)
     }
 
-    static func milliseconds(_ date: Date) -> Int { Int(date.timeIntervalSince1970 * 1000) }
+    nonisolated static func milliseconds(_ date: Date) -> Int { Int(date.timeIntervalSince1970 * 1000) }
 
     // MARK: - Observing
 
@@ -200,12 +209,17 @@ final class VibeBlurtService {
         let meta = reference.child("meta")
         observation.handles.append((meta, meta.observe(.value) { [weak observation] snapshot in
             observation?.meta = snapshot.value
+            observation?.heard.insert("meta")
             observation?.emit()
         }))
 
         let players = reference.child("players")
         observation.handles.append((players, players.observe(.childAdded) { [weak observation] snapshot in
-            observation?.players[snapshot.key] = true
+            // The value, not `true`: a roster entry is the player's name, and
+            // storing a flag here left `snapshot.players` empty, which is why
+            // the room always looked empty and Start never became enabled.
+            observation?.players[snapshot.key] = snapshot.value
+            observation?.heard.insert("players")
             observation?.emit()
         }))
         observation.handles.append((players, players.observe(.childRemoved) { [weak observation] snapshot in
@@ -217,6 +231,7 @@ final class VibeBlurtService {
         let teams = reference.child("teams")
         observation.handles.append((teams, teams.observe(.value) { [weak observation] snapshot in
             observation?.teams = snapshot.value
+            observation?.heard.insert("teams")
             observation?.emit()
         }))
 
@@ -225,6 +240,7 @@ final class VibeBlurtService {
         let play = reference.child("play")
         observation.handles.append((play, play.observe(.value) { [weak observation] snapshot in
             observation?.play = snapshot.value
+            observation?.heard.insert("play")
             observation?.emit()
         }))
 
