@@ -493,23 +493,30 @@ function VibeBlurt() {
           <div className="blurt__buzz-team">
             <span className="blurt__word-label">Watch for it</span>
             <strong className="blurt__watched-word">{currentWord}</strong>
-            <p className="blurt__hint">
-              {snapshot.players[play.describer] ?? 'Someone'} is describing
+            {/* The rule, said as a rule and with the name in it: the button is
+                only for one thing, and it is easy to press out of excitement. */}
+            <p className="blurt__buzz-rule">
+              Watch close — if {snapshot.players[play.describer] ?? 'they'} says the word above, buzz
+              them!
             </p>
             <button type="button" className="blurt__buzz" onClick={() => void endTurn(gameId, 'blurt')}>
               <strong>BUZZ</strong>
             </button>
-            <p className="blurt__hint">Only if they say the word itself</p>
+            <p className="blurt__hint">Saying any part of it counts too.</p>
           </div>
         ) : (
           /* The holding team's other members: guessing, and the one screen in
              the room the word must never reach. */
           <div className="blurt__guessing">
             <span className="blurt__word-label">Guess it</span>
-            <h2>{snapshot.players[play.describer] ?? 'Someone'} is describing to you</h2>
+            <h2>{snapshot.players[play.describer] ?? 'Someone'} is describing a word to you</h2>
+            {/* The headline says what is happening; this says what to do about
+                it, in the team's own colour so it reads as your job. */}
+            <strong className={`blurt__guessing-call blurt__my-team--${myTeam ?? 1}`}>
+              Shout it out!
+            </strong>
             <p>
-              Shout it out. Get it right and the word goes to the other team — the clock does not
-              stop.
+              Get it right and the word passes to the other team — the clock keeps running.
             </p>
           </div>
         )

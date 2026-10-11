@@ -620,6 +620,19 @@
   color: #c9c9d1;
 }
 
+.blurt__guessing-call {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.blurt__buzz-rule {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #fff;
+}
+
 .blurt__watched-word {
   width: 100%;
   padding: 0.9rem 1rem;

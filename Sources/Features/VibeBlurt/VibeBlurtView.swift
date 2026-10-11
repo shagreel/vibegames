@@ -518,7 +518,9 @@ struct VibeBlurtView: View {
                         .fill(VibeTheme.surface)
                         .overlay {
                             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .stroke(VibeTheme.blurtTeam(.one).opacity(0.35), lineWidth: 2)
+                                .stroke(VibeTheme.blurtTeam(model.describingTeam ?? .one)
+                                            .opacity(0.35),
+                                        lineWidth: 2)
                         }
                 }
                 .accessibilityIdentifier("blurt.word")
@@ -581,9 +583,14 @@ struct VibeBlurtView: View {
                     }
             }
 
-            Text("\(model.describerName) is describing")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
+            // The rule, said as a rule and with the name in it: the button is
+            // only for one thing, and it is easy to press out of excitement.
+            Text("Watch close — if \(model.describerName) says the word above, buzz them!")
+                .font(.system(size: 16.5, weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("blurt.buzzRule")
 
             Button {
                 Task { await model.buzz() }
@@ -598,9 +605,9 @@ struct VibeBlurtView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("blurt.buzz")
-            .accessibilityLabel("Buzz — they said the word")
+            .accessibilityLabel("Buzz — \(model.describerName) said the word")
 
-            Text("Only if they say the word itself")
+            Text("Saying any part of it counts too.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
         }
@@ -610,18 +617,28 @@ struct VibeBlurtView: View {
     /// The holding team's other members. They are guessing, so this is the one
     /// screen in the room the word must never reach.
     private var guessingCard: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             Text("GUESS IT")
                 .font(.system(size: 13, weight: .black, design: .rounded))
                 .kerning(2.4)
-                .foregroundStyle(VibeTheme.blurtTeam(.one))
-            Text("\(model.describerName) is describing to you")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(myTint)
+
+            Text("\(model.describerName) is describing a word to you")
+                .font(.system(size: 25, weight: .black, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
                 .multilineTextAlignment(.center)
-            Text("Shout it out. Get it right and the word goes to the other team — "
-                 + "the clock does not stop.")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .fixedSize(horizontal: false, vertical: true)
+
+            // The instruction, said as an instruction. The headline above says
+            // what is happening; this says what to do about it, in the team's
+            // own colour so it reads as your job rather than as description.
+            Text("Shout it out!")
+                .font(.system(size: 21, weight: .black, design: .rounded))
+                .foregroundStyle(myTint)
+                .accessibilityIdentifier("blurt.guessingCall")
+
+            Text("Get it right and the word passes to the other team — the clock keeps running.")
+                .font(.system(size: 13.5, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -631,6 +648,9 @@ struct VibeBlurtView: View {
         // now the one screen with no name to look it up by.
         .accessibilityIdentifier("blurt.guessing")
     }
+
+    /// This player's team colour, which is not always team one's.
+    private var myTint: Color { VibeTheme.blurtTeam(model.myTeam ?? .one) }
 
     private func resultBanner(_ play: BlurtPlay) -> some View {
         let scored = play.scorer
