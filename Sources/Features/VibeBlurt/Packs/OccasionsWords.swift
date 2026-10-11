@@ -1,0 +1,43 @@
+import Foundation
+
+/// Things to describe in the Celebrations & Weather pack.
+enum OccasionsWords {
+    static let all: [String] = [
+        "Wedding",
+        "Christmas tree",
+        "Easter egg",
+        "Halloween",
+        "Fireworks",
+        "Birthday card",
+        "Party hat",
+        "Balloon",
+        "Presents",
+        "Christmas dinner",
+        "New Year",
+        "Bonfire",
+        "Parade",
+        "Carnival",
+        "Sleet",
+        "Gale",
+        "Snowman",
+        "Thunderstorm",
+        "Lightning",
+        "Breeze",
+        "Fog",
+        "Hail",
+        "Sunshine",
+        "Snowflake",
+        "Puddle",
+        "Icicle",
+        "Frost",
+        "Birthday party",
+        "Rainbow",
+        "Heatwave",
+        "Flood",
+        "Mist",
+        "Drizzle",
+        "Blizzard",
+        "Eclipse",
+        "Fairy lights",
+    ]
+}

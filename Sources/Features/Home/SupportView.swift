@@ -15,7 +15,7 @@ enum Support {
     static let heading = "Made with love"
 
     static let blurb = """
-        I built these four games for my own family. We play them in the evenings \
+        I built these games for my own family. We play them in the evenings \
         — it is how we wind down together and stay close — and I wanted to share \
         that with other families.
 

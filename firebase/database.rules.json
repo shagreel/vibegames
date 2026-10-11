@@ -206,6 +206,16 @@
             ".write": true,
             ".validate": "newData.isBoolean()"
           },
+          "turnSeconds": {
+            ".write": true,
+            ".validate": "newData.isNumber() && newData.val() >= 10 && newData.val() <= 600"
+          },
+          "packs": {
+            ".write": true,
+            "$pack": {
+              ".validate": "newData.val() === true && $pack.matches(/^(food|animals|places|household|people|play|actions|occasions)$/)"
+            }
+          },
           "$other": {
             ".validate": false
           }

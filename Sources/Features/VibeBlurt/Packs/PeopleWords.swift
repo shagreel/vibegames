@@ -1,0 +1,43 @@
+import Foundation
+
+/// Things to describe in the Jobs & People pack.
+enum PeopleWords {
+    static let all: [String] = [
+        "Teacher",
+        "Doctor",
+        "Chef",
+        "Firefighter",
+        "Police officer",
+        "Farmer",
+        "Builder",
+        "Plumber",
+        "Electrician",
+        "Dentist",
+        "Nurse",
+        "Postman",
+        "Librarian",
+        "Bus driver",
+        "Pilot",
+        "Sailor",
+        "Astronaut",
+        "Clown",
+        "Magician",
+        "Ventriloquist",
+        "Artist",
+        "Photographer",
+        "Journalist",
+        "Judge",
+        "Referee",
+        "Hairdresser",
+        "Baker",
+        "Butcher",
+        "Waiter",
+        "Beekeeper",
+        "Lifeguard",
+        "Tour guide",
+        "Window cleaner",
+        "Dustman",
+        "Scientist",
+        "Vet",
+    ]
+}

@@ -4,7 +4,7 @@ import FirebaseAnalytics
 /// What the app tells Analytics, in one place.
 ///
 /// A single file earns its keep twice over. The events cannot drift apart
-/// between four games — a report is only worth reading if a game start is
+/// between the games — a report is only worth reading if a game start is
 /// spelled the same way everywhere — and the values match the ones the web
 /// client sends, so the two can be read side by side.
 ///
@@ -22,7 +22,7 @@ import FirebaseAnalytics
 /// duplicate would only be a worse version of the same number.
 enum AppAnalytics {
 
-    /// The four games. The raw values are the web client's route names, so
+    /// Every game. The raw values are the web client's route names, so
     /// `vibe-trio` means one thing across both apps rather than three.
     enum Game: String {
         case five = "vibe-five"
@@ -84,7 +84,7 @@ enum AppAnalytics {
         ])
     }
 
-    /// The same, for the four games, so the name cannot be misspelled at the
+    /// The same, for a game, so the name cannot be misspelled at the
     /// call site and matches the web client's.
     static func screen(_ game: Game) {
         screen(game.rawValue)

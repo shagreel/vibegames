@@ -26,16 +26,63 @@ enum BlurtEnd: String, Equatable, Sendable {
     case blurt
 }
 
-/// The deck, laid out from the game's seed.
+/// How long a turn lasts. Chosen in the lobby, because a table of adults and a
+/// table with a nine-year-old want very different amounts of it.
+enum BlurtDuration: Int, CaseIterable, Identifiable, Sendable {
+    case brisk = 30
+    case standard = 60
+    case generous = 90
+    case long = 120
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .brisk: return "30 seconds"
+        case .standard: return "1 minute"
+        case .generous: return "90 seconds"
+        case .long: return "2 minutes"
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .brisk: return "Frantic. Words come round again."
+        case .standard: return "The one the box would have picked."
+        case .generous: return "Room to think, and to get stuck."
+        case .long: return "For a big table and slow clues."
+        }
+    }
+
+    static let `default` = BlurtDuration.standard
+
+    /// Anything the database hands back that is not one of ours becomes the
+    /// default rather than a crash or a zero-length turn.
+    static func nearest(to seconds: Int) -> BlurtDuration {
+        allCases.min(by: { abs($0.rawValue - seconds) < abs($1.rawValue - seconds) }) ?? .default
+    }
+}
+
+/// The deck, laid out from the game's seed and the packs the room chose.
 ///
-/// The database never carries the words — only a seed and how far into the deck
-/// the game has got. Every phone derives the same list, and only the describer's
-/// screen shows the one that is in play.
+/// The database never carries the words — only a seed, a round and which packs
+/// are on. Every phone derives the same list, and only the describer's screen
+/// shows the one that is in play.
 enum BlurtDeck {
 
-    static func shuffled(seed: UInt32) -> [String] {
+    /// Every word in the chosen packs, in pack order.
+    ///
+    /// Pack order rather than the order they were ticked in: the deck has to
+    /// come out the same on every phone, and two people ticking the same boxes
+    /// in a different order is not a difference worth having.
+    static func words(in packs: Set<BlurtPack>) -> [String] {
+        let chosen = packs.isEmpty ? Set(BlurtPack.allCases) : packs
+        return BlurtPack.allCases.filter { chosen.contains($0) }.flatMap(\.words)
+    }
+
+    static func shuffled(seed: UInt32, packs: Set<BlurtPack>) -> [String] {
         var generator = SeededGenerator(seed: seed)
-        var deck = BlurtWords.all
+        var deck = words(in: packs)
         deck.shuffle(using: &generator)
         return deck
     }
@@ -45,8 +92,8 @@ enum BlurtDeck {
     /// A room keeps one seed; "play again" advances the round rather than
     /// rewriting it, so the reset stays a single transaction and the words still
     /// come out different the second time.
-    static func shuffled(seed: UInt32, round: Int) -> [String] {
-        shuffled(seed: seed &+ UInt32(truncatingIfNeeded: round))
+    static func shuffled(seed: UInt32, round: Int, packs: Set<BlurtPack>) -> [String] {
+        shuffled(seed: seed &+ UInt32(truncatingIfNeeded: round), packs: packs)
     }
 
     /// The word for a turn.

@@ -111,6 +111,14 @@ struct BlurtSnapshot: Equatable {
     var players: [String: String] = [:]
     var teams: [String: BlurtTeam] = [:]
     var play: BlurtPlay?
+    /// Which packs the room is playing from. Held in the room, not on each
+    /// phone: the deck is derived from the seed *and* these, so two devices
+    /// disagreeing about them would deal two different decks.
+    var packs: Set<BlurtPack> = Set(BlurtPack.allCases)
+    var turnSeconds: Int = BlurtDuration.default.rawValue
+
+    var duration: BlurtDuration { BlurtDuration.nearest(to: turnSeconds) }
+    var allPacksOn: Bool { packs.count == BlurtPack.allCases.count }
 
     /// A room that has been created but not started.
     var isWaiting: Bool { !started }
@@ -137,6 +145,12 @@ final class BlurtObservation {
             snapshot.seed = (meta["seed"] as? NSNumber).map { UInt32(truncating: $0) }
             snapshot.started = meta["started"] as? Bool ?? false
             snapshot.creator = meta["creator"] as? String
+            if let packs = meta["packs"] as? [String: Any] {
+                snapshot.packs = Set(packs.keys.compactMap(BlurtPack.init(rawValue:)))
+            }
+            if let seconds = meta["turnSeconds"] as? NSNumber {
+                snapshot.turnSeconds = seconds.intValue
+            }
         }
         for (player, value) in players {
             if let name = value as? String { snapshot.players[player] = name }
@@ -157,9 +171,9 @@ final class VibeBlurtService {
     static let shared = VibeBlurtService()
     private init() {}
 
-    /// How long a turn lasts. Fixed rather than random: the phone shows the
-    /// clock, so a hidden one would only be a lie about how much time is left.
-    static let turnSeconds: TimeInterval = 60
+    /// Used only when a room somehow has no duration of its own; the lobby
+    /// always writes one.
+    static let fallbackTurnSeconds: TimeInterval = TimeInterval(BlurtDuration.default.rawValue)
 
     var isAvailable: Bool { FirebaseBootstrapper.database != nil }
 
@@ -231,7 +245,9 @@ final class VibeBlurtService {
     func createGame(gameID: String,
                     seed: UInt32,
                     creatorName: String,
-                    playerID: String) async throws {
+                    playerID: String,
+                    packs: Set<BlurtPack>,
+                    turnSeconds: Int) async throws {
         guard let reference = gameReference(gameID) else { return }
 
         try await reference.child("meta").setValue([
@@ -239,8 +255,28 @@ final class VibeBlurtService {
             "creator": creatorName,
             "createdAt": Self.milliseconds(Date()),
             "started": false,
+            "turnSeconds": turnSeconds,
+            "packs": Self.packValue(packs),
         ])
         try await markPresent(gameID: gameID, playerID: playerID, name: creatorName)
+    }
+
+    /// How long a turn is and which packs are in play.
+    ///
+    /// Held in the room so the lobby shows everyone the same thing, and so the
+    /// choice cannot drift per device between the lobby and the start.
+    func updateSettings(gameID: String, packs: Set<BlurtPack>, turnSeconds: Int) async throws {
+        guard let reference = gameReference(gameID) else { return }
+        try await reference.child("meta").updateChildValues([
+            "turnSeconds": turnSeconds,
+            "packs": Self.packValue(packs),
+        ])
+    }
+
+    nonisolated static func packValue(_ packs: Set<BlurtPack>) -> [String: Bool] {
+        var value: [String: Bool] = [:]
+        for pack in packs { value[pack.rawValue] = true }
+        return value
     }
 
     func joinGame(gameID: String, playerID: String, name: String) async throws {
@@ -306,13 +342,13 @@ final class VibeBlurtService {
     // MARK: - Playing
 
     /// Starts the clock, when the describer has the phone in their hand.
-    func beginTurn(gameID: String) async throws {
+    func beginTurn(gameID: String, seconds: TimeInterval) async throws {
         guard let reference = gameReference(gameID)?.child("play") else { return }
         let now = Date()
         try await reference.updateChildValues([
             "state": BlurtState.running.rawValue,
             "startedAt": Self.milliseconds(now),
-            "endsAt": Self.milliseconds(now.addingTimeInterval(Self.turnSeconds)),
+            "endsAt": Self.milliseconds(now.addingTimeInterval(seconds)),
         ])
     }
 

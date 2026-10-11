@@ -26,6 +26,11 @@ final class VibeBlurtModel: ObservableObject {
     /// from one place.
     @Published private(set) var now = Date()
     @Published var errorMessage: String?
+    /// The host's own preference, remembered between games and written into the
+    /// room when they make one. Not read from the room once a game exists — the
+    /// room is the authority then, so everyone deals the same deck.
+    @Published var preferredPacks: Set<BlurtPack> = BlurtModelSettings.loadPacks()
+    @Published var preferredSeconds: Int = BlurtModelSettings.loadSeconds()
 
     private var observation: BlurtObservation?
     private var tickTask: Task<Void, Never>?
@@ -75,11 +80,17 @@ final class VibeBlurtModel: ObservableObject {
         return snapshot.teams[me]
     }
 
-    /// The deck this round. Derived, never stored.
+    /// The deck this round. Derived from the seed, the round and the room's
+    /// packs, never stored.
     var deck: [String] {
         guard let seed = snapshot.seed else { return [] }
-        return BlurtDeck.shuffled(seed: seed, round: play?.round ?? 0)
+        return BlurtDeck.shuffled(seed: seed, round: play?.round ?? 0, packs: snapshot.packs)
     }
+
+    var duration: BlurtDuration { snapshot.duration }
+
+    /// Only the host sets the room up, and only before the start.
+    var canChangeSettings: Bool { isHost && !hasStarted }
 
     /// The word in play. Only the describer's screen is allowed to render it.
     var currentWord: String {
@@ -155,7 +166,9 @@ final class VibeBlurtModel: ObservableObject {
             try await service.createGame(gameID: gameID,
                                          seed: seed,
                                          creatorName: playerName,
-                                         playerID: PlayerIdentity.id)
+                                         playerID: PlayerIdentity.id,
+                                         packs: preferredPacks,
+                                         turnSeconds: preferredSeconds)
             UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
             session = .shared(gameID: gameID, isHost: true)
             beginObserving(gameID: gameID)
@@ -206,6 +219,16 @@ final class VibeBlurtModel: ObservableObject {
 
     // MARK: - Running the game
 
+    /// Writes the room's settings, so the lobby shows everybody the same thing
+    /// and the start does not have to carry them.
+    func updateSettings(packs: Set<BlurtPack>, seconds: Int) async {
+        guard let gameID = sharedGameID, isHost, !hasStarted else { return }
+        preferredPacks = packs
+        preferredSeconds = seconds
+        BlurtModelSettings.save(packs: packs, seconds: seconds)
+        try? await service.updateSettings(gameID: gameID, packs: packs, turnSeconds: seconds)
+    }
+
     /// Registers the room: splits it into teams and deals the first turn.
     func startGame() async {
         guard let gameID = sharedGameID, isHost, canStart else { return }
@@ -220,7 +243,8 @@ final class VibeBlurtModel: ObservableObject {
     /// The describer has the phone in their hand; start the clock.
     func beginTurn() async {
         guard let gameID = sharedGameID, isDescriber, play?.state == .ready else { return }
-        try? await service.beginTurn(gameID: gameID)
+        let seconds = TimeInterval(snapshot.turnSeconds)
+        try? await service.beginTurn(gameID: gameID, seconds: seconds)
     }
 
     /// The team got it. Earns nothing — it only hands the risk on with a new word.
@@ -318,5 +342,32 @@ final class VibeBlurtModel: ObservableObject {
 
     private enum StoredKey {
         static let hostedGame = "blurt.hostedGame"
+    }
+}
+
+/// The host's own lobby choices, remembered between games.
+enum BlurtModelSettings {
+    private static let packsKey = "blurt.packs"
+    private static let secondsKey = "blurt.seconds"
+
+    static func loadPacks() -> Set<BlurtPack> {
+        guard let stored = UserDefaults.standard.array(forKey: packsKey) as? [String] else {
+            return Set(BlurtPack.allCases)
+        }
+        let packs = Set(stored.compactMap(BlurtPack.init(rawValue:)))
+        // Unticking everything is not a choice anybody means; it would deal an
+        // empty deck.
+        return packs.isEmpty ? Set(BlurtPack.allCases) : packs
+    }
+
+    static func loadSeconds() -> Int {
+        let stored = UserDefaults.standard.integer(forKey: secondsKey)
+        guard stored > 0 else { return BlurtDuration.default.rawValue }
+        return BlurtDuration.nearest(to: stored).rawValue
+    }
+
+    static func save(packs: Set<BlurtPack>, seconds: Int) {
+        UserDefaults.standard.set(packs.map(\.rawValue).sorted(), forKey: packsKey)
+        UserDefaults.standard.set(seconds, forKey: secondsKey)
     }
 }

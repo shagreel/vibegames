@@ -17,6 +17,7 @@ struct VibeBlurtView: View {
 
     @State private var joinCode = ""
     @State private var showingNamePrompt = false
+    @State private var showingSettings = false
     @State private var pendingAction: (() -> Void)?
 
     var body: some View {
@@ -35,6 +36,13 @@ struct VibeBlurtView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task { AppAnalytics.screen(.blurt) }
         .onDisappear { model.endSession() }
+        .sheet(isPresented: $showingSettings) {
+            VibeBlurtSettingsView(packs: model.snapshot.packs,
+                                  seconds: model.snapshot.turnSeconds,
+                                  isEditable: model.canChangeSettings) { packs, seconds in
+                Task { await model.updateSettings(packs: packs, seconds: seconds) }
+            }
+        }
         .sheet(isPresented: $showingNamePrompt) {
             NamePromptView(accent: VibeTheme.vibeBlurt,
                            symbol: "bubble.left.and.exclamationmark.bubble.right.fill",
@@ -174,44 +182,147 @@ struct VibeBlurtView: View {
     // MARK: - Before the start
 
     private var waitingForStart: some View {
-        VStack(spacing: 20) {
-            header(title: "VIBE BLURT", subtitle: "Waiting to start")
-            roster
-            Spacer()
-            if model.isHost {
-                Button {
-                    Task { await model.startGame() }
-                } label: {
-                    Text("Deal the teams")
-                        .font(.system(size: 17, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(model.canStart
-                                      ? AnyShapeStyle(VibeTheme.vibeBlurt)
-                                      : AnyShapeStyle(VibeTheme.surfaceStrong))
-                        }
-                }
-                .buttonStyle(.plain)
-                .disabled(!model.canStart)
-                .accessibilityIdentifier("blurt.start")
+        ScrollView {
+            VStack(spacing: 16) {
+                header(title: "VIBE BLURT", subtitle: "Waiting to start")
 
-                Text(model.canStart
-                     ? "Teams are picked at random, so nobody can argue."
-                     : "You need at least two people. Share the code above.")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("Waiting for the host to start.")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.secondaryText)
+                codeCard
+                roster
+                settingsCard
+
+                if model.isHost {
+                    Button {
+                        Task { await model.startGame() }
+                    } label: {
+                        Text("Deal the teams")
+                            .font(.system(size: 17, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(model.canStart
+                                          ? AnyShapeStyle(VibeTheme.vibeBlurt)
+                                          : AnyShapeStyle(VibeTheme.surfaceStrong))
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!model.canStart)
+                    .accessibilityIdentifier("blurt.start")
+
+                    Text(model.canStart
+                         ? "Teams are picked at random, so nobody can argue."
+                         : "You need at least two people — read the code out.")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.tertiaryText)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Waiting for \(model.snapshot.creator ?? "the host") to start.")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                }
             }
-            Spacer()
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
-        .padding(.horizontal, 20)
+    }
+
+    /// The code, big enough to read out across a room.
+    ///
+    /// Everybody joining does it by ear — nobody is going to type a code into
+    /// somebody else's phone — so it is the largest thing on the screen, spaced
+    /// out so eight characters cannot be misheard in a noisy kitchen, and
+    /// selectable in case somebody would rather text it.
+    private var codeCard: some View {
+        VStack(spacing: 10) {
+            Text("READ THIS OUT")
+                .font(.system(size: 11, weight: .black, design: .rounded))
+                .kerning(1.8)
+                .foregroundStyle(VibeTheme.tertiaryText)
+
+            Text((model.sharedGameID ?? "").uppercased())
+                .font(.system(size: 40, weight: .black, design: .monospaced))
+                .kerning(6)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+                .foregroundStyle(VibeTheme.primaryText)
+                .textSelection(.enabled)
+                .accessibilityIdentifier("blurt.gameCode")
+                .accessibilityLabel("Game code \((model.sharedGameID ?? "").uppercased())")
+
+            Text("Everyone else: Vibe Blurt → Join with a code")
+                .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(VibeTheme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(VibeTheme.hairline, lineWidth: 1)
+                }
+        }
+    }
+
+    /// What the room is playing: how long a turn is and what gets described.
+    /// Read-only for everybody but the host, and read-only for the host once the
+    /// game is under way.
+    private var settingsCard: some View {
+        Button {
+            guard model.canChangeSettings else { return }
+            showingSettings = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(VibeTheme.vibeBlurt)
+                    }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Settings")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(VibeTheme.primaryText)
+                    Text("\(model.duration.title) · \(packSummary)")
+                        .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                }
+
+                Spacer(minLength: 0)
+
+                if model.canChangeSettings {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(VibeTheme.tertiaryText)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(VibeTheme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(VibeTheme.hairline, lineWidth: 1)
+                    }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!model.canChangeSettings)
+        .accessibilityIdentifier("blurt.settings")
+    }
+
+    private var packSummary: String {
+        model.snapshot.allPacksOn
+            ? "all \(BlurtPack.allCases.count) packs"
+            : "\(model.snapshot.packs.count) of \(BlurtPack.allCases.count) packs"
     }
 
     private var roster: some View {

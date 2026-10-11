@@ -29,27 +29,31 @@ final class VibeBlurtTests: XCTestCase {
     // MARK: - The deck
 
     func testTheSameSeedDealsTheSameWordsEverywhere() {
-        let first = BlurtDeck.shuffled(seed: 42)
-        let second = BlurtDeck.shuffled(seed: 42)
+        let all = Set(BlurtPack.allCases)
+        let first = BlurtDeck.shuffled(seed: 42, round: 0, packs: all)
+        let second = BlurtDeck.shuffled(seed: 42, round: 0, packs: all)
 
         XCTAssertEqual(first, second, "a shared game depends on this being stable")
         XCTAssertEqual(Set(first).count, BlurtWords.all.count, "a shuffle, not a filter")
     }
 
     func testDifferentSeedsDealDifferentHands() {
-        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 1), BlurtDeck.shuffled(seed: 2))
+        let all = Set(BlurtPack.allCases)
+        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 1, round: 0, packs: all),
+                          BlurtDeck.shuffled(seed: 2, round: 0, packs: all))
     }
 
     func testPlayAgainDealsFromADifferentPlaceWithoutANewSeed() {
         // The round, not a new seed, is what makes the second game different.
-        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 7, round: 0),
-                          BlurtDeck.shuffled(seed: 7, round: 1))
-        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, round: 1),
-                       BlurtDeck.shuffled(seed: 7, round: 1))
+        let all = Set(BlurtPack.allCases)
+        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 7, round: 0, packs: all),
+                          BlurtDeck.shuffled(seed: 7, round: 1, packs: all))
+        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, round: 1, packs: all),
+                       BlurtDeck.shuffled(seed: 7, round: 1, packs: all))
     }
 
     func testTheDeckWrapsRatherThanRunningOut() {
-        let deck = BlurtDeck.shuffled(seed: 3)
+        let deck = BlurtDeck.shuffled(seed: 3, round: 0, packs: Set(BlurtPack.allCases))
 
         XCTAssertEqual(BlurtDeck.word(at: 0, in: deck), deck[0])
         XCTAssertEqual(BlurtDeck.word(at: deck.count, in: deck), deck[0], "wrapped round")
@@ -57,6 +61,67 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertEqual(BlurtDeck.word(at: -1, in: deck), deck[deck.count - 1],
                        "a negative index must not crash a live game")
         XCTAssertEqual(BlurtDeck.word(at: 0, in: []), "")
+    }
+
+    // MARK: - Packs
+
+    func testEveryPackHasWordsAndTheyAddUpToTheWholeDeck() {
+        var total = 0
+        for pack in BlurtPack.allCases {
+            XCTAssertFalse(pack.words.isEmpty, "\(pack.rawValue) has no words")
+            XCTAssertFalse(pack.title.isEmpty)
+            XCTAssertFalse(pack.blurb.isEmpty)
+            total += pack.words.count
+        }
+        XCTAssertEqual(total, BlurtWords.all.count)
+        XCTAssertEqual(BlurtWords.all.count, 300)
+    }
+
+    func testTheWordsAreGroupedInPackOrderNotSelectionOrder() {
+        // Two people ticking the same boxes in a different order must get the
+        // same deck, or they would be describing different things at each other.
+        let one: Set<BlurtPack> = [.food, .play]
+        let two: Set<BlurtPack> = [.play, .food]
+
+        XCTAssertEqual(BlurtDeck.words(in: one), BlurtDeck.words(in: two))
+        XCTAssertEqual(BlurtDeck.words(in: one), FoodWords.all + PlayWords.all)
+    }
+
+    func testChoosingNoPacksPlaysWithAllOfThem() {
+        // An empty set is what a corrupt read looks like, not a choice.
+        XCTAssertEqual(BlurtDeck.words(in: []), BlurtWords.all)
+    }
+
+    func testANarrowDeckOnlyContainsTheChosenPacks() {
+        let deck = BlurtDeck.shuffled(seed: 11, round: 0, packs: [.food])
+        XCTAssertEqual(Set(deck), Set(FoodWords.all))
+    }
+
+    func testTheDeckDependsOnThePacksAsWellAsTheSeed() {
+        let all = BlurtDeck.shuffled(seed: 5, round: 0, packs: Set(BlurtPack.allCases))
+        let some = BlurtDeck.shuffled(seed: 5, round: 0, packs: [.food])
+        XCTAssertNotEqual(all, some)
+    }
+
+    // MARK: - Turn length
+
+    func testTheOfferedTurnLengthsAreSensible() {
+        XCTAssertFalse(BlurtDuration.allCases.isEmpty)
+        for option in BlurtDuration.allCases {
+            XCTAssertGreaterThanOrEqual(option.rawValue, 10, "a turn nobody could play")
+            XCTAssertLessThanOrEqual(option.rawValue, 600, "a turn nobody would wait for")
+            XCTAssertFalse(option.title.isEmpty)
+            XCTAssertFalse(option.blurb.isEmpty)
+        }
+        XCTAssertEqual(BlurtDuration.default, .standard)
+    }
+
+    func testAnUnexpectedDurationBecomesTheNearestOneOffered() {
+        XCTAssertEqual(BlurtDuration.nearest(to: 0), .brisk)
+        XCTAssertEqual(BlurtDuration.nearest(to: 30), .brisk)
+        XCTAssertEqual(BlurtDuration.nearest(to: 45), .brisk, "equidistant, and the shorter wins")
+        XCTAssertEqual(BlurtDuration.nearest(to: 61), .standard)
+        XCTAssertEqual(BlurtDuration.nearest(to: 600), .long)
     }
 
     // MARK: - Teams
