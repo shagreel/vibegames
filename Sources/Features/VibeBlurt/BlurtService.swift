@@ -381,7 +381,15 @@ final class VibeBlurtService {
     /// inside it, because the block has to be pure.
     private func rotation(gameID: String) async -> (one: [String], two: [String], offsets: (one: Int, two: Int))? {
         guard let reference = gameReference(gameID) else { return nil }
-        guard let seed = (try? await reference.child("meta/seed").getData().value) as? NSNumber else {
+
+        // Read `meta` and take the seed out of it, rather than reading
+        // `meta/seed` directly. Asking `getData()` for a leaf two segments down
+        // hands back the *parent* dictionary on iOS — the snapshot's key is
+        // "seed" but its value is all of `meta` — so the cast to a number failed
+        // and this returned nil, which silently refused every pass and every
+        // buzz on the phone while the browser was fine.
+        guard let meta = (try? await reference.child("meta").getData().value) as? [String: Any],
+              let seed = (meta["seed"] as? NSNumber).map({ UInt32(truncating: $0) }) else {
             return nil
         }
         let raw = (try? await reference.child("teams").getData().value) as? [String: Any] ?? [:]
@@ -393,7 +401,7 @@ final class VibeBlurtService {
         let two = BlurtRules.members(of: .two, in: teams)
         let offsets = BlurtRules.describerOffsets(oneMembers: one.count,
                                                   twoMembers: two.count,
-                                                  seed: UInt32(truncating: seed))
+                                                  seed: seed)
         return (one, two, offsets)
     }
 
@@ -436,6 +444,11 @@ final class VibeBlurtService {
                 current.value = play.value
                 return TransactionResult.success(withValue: current)
             }, andCompletionBlock: { error, committed, _ in
+                if error != nil || !committed {
+                    // A refusal used to be completely silent, which is what made
+                    // the phone's dead "got it" button take so long to find.
+                    print("Blurt pass refused: \(error?.localizedDescription ?? "not committed")")
+                }
                 continuation.resume(returning: error == nil && committed)
             })
         }
@@ -480,6 +493,9 @@ final class VibeBlurtService {
                 current.value = play.value
                 return TransactionResult.success(withValue: current)
             }, andCompletionBlock: { error, committed, _ in
+                if error != nil || !committed {
+                    print("Blurt buzz refused: \(error?.localizedDescription ?? "not committed")")
+                }
                 continuation.resume(returning: error == nil && committed)
             })
         }

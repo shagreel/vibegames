@@ -575,7 +575,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**184 tests in all: 148 unit and 36 UI.** They are what the numbers above are
+**186 tests in all: 150 unit and 36 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.

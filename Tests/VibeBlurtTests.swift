@@ -399,23 +399,18 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertNotNil(room.teams[play.describer], "the describer is on a team")
     }
 
-    /// Waits for the observer to report a room of at least `count` people,
-    /// giving up after ten seconds rather than hanging the suite.
+    /// Waits for the observer to report a snapshot matching `matching`, giving
+    /// up after ten seconds rather than hanging the suite.
     @MainActor
-    private static func waitForRoom(_ service: VibeBlurtService,
-                                    gameID: String,
-                                    count: Int,
-                                    needsTeams: Bool = false) async -> BlurtSnapshot? {
+    private static func waitForSnapshot(_ service: VibeBlurtService,
+                                        gameID: String,
+                                        matching: @escaping (BlurtSnapshot) -> Bool) async -> BlurtSnapshot? {
         final class Box: @unchecked Sendable { var done = false }
         let box = Box()
 
         return await withCheckedContinuation { continuation in
             let observation = service.observe(gameID: gameID) { snapshot in
-                // A complete room: everybody present *and* the teams dealt, so
-                // the test cannot pass on a half-arrived snapshot.
-                guard snapshot.players.count >= count,
-                      !needsTeams || snapshot.teams.count >= count,
-                      !box.done else { return }
+                guard matching(snapshot), !box.done else { return }
                 box.done = true
                 continuation.resume(returning: snapshot)
             }
@@ -427,6 +422,87 @@ final class VibeBlurtTests: XCTestCase {
                 continuation.resume(returning: nil)
             }
         }
+    }
+
+    /// A complete room: everybody present, and optionally the teams dealt.
+    @MainActor
+    private static func waitForRoom(_ service: VibeBlurtService,
+                                    gameID: String,
+                                    count: Int,
+                                    needsTeams: Bool = false) async -> BlurtSnapshot? {
+        await waitForSnapshot(service, gameID: gameID) { snapshot in
+            snapshot.players.count >= count && (!needsTeams || snapshot.teams.count >= count)
+        }
+    }
+
+    /// Sets up a started room of four and hands back the game id and the word.
+    @MainActor
+    private static func startedRoom(_ service: VibeBlurtService,
+                                    seed: UInt32 = 7) async throws -> (gameID: String, play: BlurtPlay) {
+        let gameID = "zz" + UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased()
+        let names = ["Alex", "Sam", "Jo", "Robin"]
+        try await service.createGame(gameID: gameID,
+                                     seed: seed,
+                                     creatorName: names[0],
+                                     playerID: "test-player-1",
+                                     packs: Set(BlurtPack.allCases),
+                                     turnSeconds: 60)
+        for index in 2...4 {
+            try await service.joinGame(gameID: gameID, playerID: "test-player-\(index)", name: names[index - 1])
+        }
+        try await service.startGame(gameID: gameID, seed: seed)
+        let room = await waitForRoom(service, gameID: gameID, count: 4, needsTeams: true)
+        let snapshot = try XCTUnwrap(room, "the room was never dealt")
+        return (gameID, try XCTUnwrap(snapshot.play))
+    }
+
+    /// "Got it — pass it on" moves the word to the other team.
+    ///
+    /// This is the one that was doing nothing on the phone while working in the
+    /// browser, which made it worth reproducing against the real database rather
+    /// than reasoning about.
+    func testPassingTheWordMovesItToTheOtherTeam() async throws {
+        try XCTSkipUnless(FirebaseBootstrapper.isConfigured, "No Firebase config bundled")
+
+        let service = VibeBlurtService.shared
+        let (gameID, before) = try await VibeBlurtTests.startedRoom(service)
+        try await service.beginTurn(gameID: gameID, seconds: 60)
+
+        let passed = await service.passWord(gameID: gameID)
+        XCTAssertTrue(passed, "the pass was refused")
+
+        let moved = await VibeBlurtTests.waitForSnapshot(service, gameID: gameID) {
+            ($0.play?.turn ?? -1) > before.turn
+        }
+        let after = try XCTUnwrap(moved?.play, "the word never moved")
+
+        XCTAssertEqual(after.turn, before.turn + 1)
+        XCTAssertEqual(after.word, before.word + 1, "the next word")
+        XCTAssertEqual(after.team, before.team.other, "it went to the other team")
+        XCTAssertNotEqual(after.describer, before.describer, "and to a different person")
+        XCTAssertEqual(after.state, .running, "and the clock kept running")
+    }
+
+    /// BUZZ ends the round and pays the team that pressed it.
+    func testBuzzingEndsTheRoundAndPaysTheOtherTeam() async throws {
+        try XCTSkipUnless(FirebaseBootstrapper.isConfigured, "No Firebase config bundled")
+
+        let service = VibeBlurtService.shared
+        let (gameID, before) = try await VibeBlurtTests.startedRoom(service)
+        try await service.beginTurn(gameID: gameID, seconds: 60)
+
+        let ended = await service.endTurn(gameID: gameID, reason: .blurt)
+        XCTAssertTrue(ended, "the buzz was refused")
+
+        let endedRoom = await VibeBlurtTests.waitForSnapshot(service, gameID: gameID) {
+            $0.play?.state == .ended
+        }
+        let after = try XCTUnwrap(endedRoom?.play, "the round never ended")
+
+        XCTAssertEqual(after.reason, .blurt)
+        XCTAssertEqual(after.scorer, before.team.other, "the team that was not holding it")
+        XCTAssertEqual(after.score(of: before.team), 0)
+        XCTAssertEqual(after.score(of: before.team.other), 1)
     }
 
     func testNonsenseFromTheDatabaseIsRefusedRatherThanCrashing() {
