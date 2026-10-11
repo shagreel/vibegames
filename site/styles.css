@@ -17,6 +17,7 @@
   --words-a:  #21b8a8;  --words-b:  #4585f5;
   --sudoku-a: #8549f0;  --sudoku-b: #db54c2;
   --trio-a:   #f7b929;  --trio-b:   #85d647;
+  --blurt-a:  #f54d6b;  --blurt-b:  #fd8c3d;
 
   --radius: 26px;
   --wrap: 1120px;
@@ -322,6 +323,7 @@ code {
 .game--words  { --a: var(--words-a);  --b: var(--words-b); }
 .game--sudoku { --a: var(--sudoku-a); --b: var(--sudoku-b); }
 .game--trio   { --a: var(--trio-a);   --b: var(--trio-b); }
+.game--blurt  { --a: var(--blurt-a);  --b: var(--blurt-b); }
 
 .game__tag {
   font-size: 1.2rem;

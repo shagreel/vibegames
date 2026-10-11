@@ -22,7 +22,7 @@ const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 mkdirSync(outDir, { recursive: true });
 
-const SECTIONS = ["#play", "#vibe-five", "#vibe-words", "#vibe-sudoku", "#vibe-trio", "#people"];
+const SECTIONS = ["#play", "#vibe-five", "#vibe-words", "#vibe-sudoku", "#vibe-trio", "#vibe-blurt"];
 const SCHEMES = ["light", "dark"];
 
 const browser = await puppeteer.launch({

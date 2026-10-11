@@ -98,6 +98,20 @@ The attachment names are listed in the exported `manifest.json`. Then resize the
 captures you want into `site/assets/screens/` — the simulator shoots at
 1206×2622, and the page expects 414×900:
 
+Vibe Blurt needs four players, which one simulator cannot be, so
+`VibeBlurtScreenshots` assembles the room by writing it straight into the
+database: the app makes the game, the test fills the other three seats, deals the
+teams and sets the turn to whichever screen is being photographed. It also pins
+the room's seed to one whose first word is "Rainbow", so the screenshots show a
+word worth reading rather than whatever came up. Like the other back-end tests it
+skips itself when the database is unreachable.
+
+    xcodebuild test -project VibeGames.xcodeproj -scheme VibeGames \
+      -only-testing:VibeGamesUITests/VibeBlurtScreenshots \
+      -resultBundlePath .build/BlurtShots.xcresult
+    xcrun xcresulttool export attachments --path .build/BlurtShots.xcresult \
+      --output-path .build/blurt-attachments
+
 ```sh
 sips -z 900 414 --setProperty format jpeg --setProperty formatOptions 84 in.png --out out.jpg
 ```
