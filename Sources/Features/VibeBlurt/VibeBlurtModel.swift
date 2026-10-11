@@ -1,0 +1,322 @@
+import Combine
+import Foundation
+
+/// Drives a game of Vibe Blurt.
+///
+/// The database holds a seed, a roster, the teams and one `play` node. The words
+/// themselves are never sent: every phone derives the same deck from the seed
+/// and the round, so the only thing that has to travel is how far into it the
+/// game has got. That is why the describer can be the only person who *sees* a
+/// word without the word being hidden anywhere.
+@MainActor
+final class VibeBlurtModel: ObservableObject {
+
+    enum Session: Equatable {
+        case lobby
+        case shared(gameID: String, isHost: Bool)
+    }
+
+    // MARK: Published state
+
+    @Published private(set) var session: Session = .lobby
+    @Published private(set) var playerName: String = PlayerIdentity.name ?? ""
+    @Published private(set) var hasName: Bool = PlayerIdentity.name?.isEmpty == false
+    @Published private(set) var snapshot = BlurtSnapshot()
+    /// Ticks while a turn is running, so the clock and the timeout both come
+    /// from one place.
+    @Published private(set) var now = Date()
+    @Published var errorMessage: String?
+
+    private var observation: BlurtObservation?
+    private var tickTask: Task<Void, Never>?
+    /// Set while a timeout is in flight, so one phone does not fire it twice.
+    private var endingTurn = false
+    private var endedTurnNumber = -1
+    /// Somebody who joined after the start asks for a team once, not on every
+    /// snapshot that arrives.
+    private var askedForTeam = false
+
+    private var service: VibeBlurtService { .shared }
+
+    /// Why the shared game is unavailable, if it is. Solo play does not exist
+    /// here, so this is the difference between a game and a lonely lobby.
+    var backendUnavailableMessage: String? {
+        FirebaseBootstrapper.unavailableReason?.explanation
+    }
+
+    // MARK: Identity
+
+    var isShared: Bool {
+        if case .shared = session { return true }
+        return false
+    }
+
+    var isHost: Bool {
+        if case .shared(_, let isHost) = session { return isHost }
+        return false
+    }
+
+    var sharedGameID: String? {
+        if case .shared(let gameID, _) = session { return gameID }
+        return nil
+    }
+
+    var myShortID: String? {
+        guard let gameID = sharedGameID else { return nil }
+        return VibeBlurtService.shortID(playerID: PlayerIdentity.id, gameID: gameID)
+    }
+
+    // MARK: The game
+
+    var play: BlurtPlay? { snapshot.play }
+
+    var myTeam: BlurtTeam? {
+        guard let me = myShortID else { return nil }
+        return snapshot.teams[me]
+    }
+
+    /// The deck this round. Derived, never stored.
+    var deck: [String] {
+        guard let seed = snapshot.seed else { return [] }
+        return BlurtDeck.shuffled(seed: seed, round: play?.round ?? 0)
+    }
+
+    /// The word in play. Only the describer's screen is allowed to render it.
+    var currentWord: String {
+        guard let play else { return "" }
+        return BlurtDeck.word(at: play.word, in: deck)
+    }
+
+    var describingTeam: BlurtTeam? { play?.team }
+
+    var isDescriber: Bool {
+        guard let play, let me = myShortID else { return false }
+        return play.describer == me
+    }
+
+    /// The other team, which is the one allowed to call a blurt.
+    var canCallBlurt: Bool {
+        guard let play, let mine = myTeam else { return false }
+        return play.state == .running && mine != play.team
+    }
+
+    var scoreOne: Int { play?.one ?? 0 }
+    var scoreTwo: Int { play?.two ?? 0 }
+
+    var winner: BlurtTeam? { play?.winner }
+
+    var hasStarted: Bool { snapshot.started }
+
+    /// Everyone on a team, by name, for the scoreboard and the handover.
+    func names(on team: BlurtTeam) -> [String] {
+        BlurtRules.members(of: team, in: snapshot.teams).compactMap { snapshot.players[$0] }
+    }
+
+    func score(of team: BlurtTeam) -> Int {
+        team == .one ? scoreOne : scoreTwo
+    }
+
+    var describerName: String {
+        guard let play else { return "" }
+        return snapshot.players[play.describer] ?? "Someone"
+    }
+
+    /// Seconds left in the turn, or nil when it is not running.
+    var secondsLeft: Int? {
+        guard let play, play.state == .running, let endsAt = play.endsAt else { return nil }
+        return max(0, Int(endsAt.timeIntervalSince(now).rounded(.up)))
+    }
+
+    /// How far through the turn, for the bar. 1 at the start, 0 at the buzzer.
+    var turnProgress: Double {
+        guard let play, play.state == .running,
+              let start = play.startedAt, let end = play.endsAt else { return 0 }
+        let total = end.timeIntervalSince(start)
+        guard total > 0 else { return 0 }
+        return max(0, min(1, end.timeIntervalSince(now) / total))
+    }
+
+    /// Whether the room has enough people to make a game of it.
+    ///
+    /// Two is the floor, and the split is worked out at the start — so this
+    /// cannot ask whether both teams have somebody in them yet, because before
+    /// the start there are no teams to ask about.
+    var canStart: Bool { snapshot.players.count >= 2 }
+
+    // MARK: - Session control
+
+    func createGame() async {
+        guard service.isAvailable, hasName else { return }
+
+        let gameID = VibeWordsModel.makeGameID()
+        let seed = SudokuGenerator.randomSeed()
+
+        do {
+            try await service.createGame(gameID: gameID,
+                                         seed: seed,
+                                         creatorName: playerName,
+                                         playerID: PlayerIdentity.id)
+            UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
+            session = .shared(gameID: gameID, isHost: true)
+            beginObserving(gameID: gameID)
+        } catch {
+            FirebaseBootstrapper.record(error, during: "Could not create the game")
+            errorMessage = "Could not create the game: \(error.localizedDescription)"
+        }
+    }
+
+    func joinGame(code: String) async {
+        guard service.isAvailable, hasName else { return }
+
+        let gameID = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !gameID.isEmpty else { return }
+
+        do {
+            let isHost = UserDefaults.standard.string(forKey: StoredKey.hostedGame) == gameID
+            try await service.joinGame(gameID: gameID, playerID: PlayerIdentity.id, name: playerName)
+            session = .shared(gameID: gameID, isHost: isHost)
+            beginObserving(gameID: gameID)
+        } catch {
+            FirebaseBootstrapper.record(error, during: "Could not join that game")
+            errorMessage = "Could not join that game: \(error.localizedDescription)"
+        }
+    }
+
+    /// Back to the lobby, leaving the room.
+    func leaveGame() {
+        stopClock()
+        observation.map { service.stopObserving($0) }
+        observation = nil
+        session = .lobby
+        snapshot = BlurtSnapshot()
+        askedForTeam = false
+    }
+
+    func endSession() {
+        stopClock()
+    }
+
+    func submitName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        PlayerIdentity.name = trimmed
+        playerName = trimmed
+        hasName = true
+    }
+
+    // MARK: - Running the game
+
+    /// Registers the room: splits it into teams and deals the first turn.
+    func startGame() async {
+        guard let gameID = sharedGameID, isHost, canStart else { return }
+        do {
+            try await service.startGame(gameID: gameID, seed: snapshot.seed ?? SudokuGenerator.randomSeed())
+        } catch {
+            FirebaseBootstrapper.record(error, during: "Could not start the game")
+            errorMessage = "Could not start the game: \(error.localizedDescription)"
+        }
+    }
+
+    /// The describer has the phone in their hand; start the clock.
+    func beginTurn() async {
+        guard let gameID = sharedGameID, isDescriber, play?.state == .ready else { return }
+        try? await service.beginTurn(gameID: gameID)
+    }
+
+    /// The team got it. Earns nothing — it only hands the risk on with a new word.
+    func gotIt() async {
+        guard let gameID = sharedGameID, isDescriber, play?.state == .running else { return }
+        await service.advanceWord(gameID: gameID)
+    }
+
+    /// Somebody on the other team says the rules were broken.
+    ///
+    /// Ends the turn at once and pays the calling team. The service refuses the
+    /// second press of two, so a room that all shouts at once still scores once.
+    func callBlurt() async {
+        guard let gameID = sharedGameID, canCallBlurt else { return }
+        await service.endTurn(gameID: gameID, reason: .blurt)
+    }
+
+    func playAgain() async {
+        guard let gameID = sharedGameID, let seed = snapshot.seed else { return }
+        endingTurn = false
+        endedTurnNumber = -1
+        await service.playAgain(gameID: gameID, seed: seed)
+    }
+
+    // MARK: - Observing
+
+    private func beginObserving(gameID: String) {
+        observation.map { service.stopObserving($0) }
+
+        observation = service.observe(gameID: gameID) { [weak self] snapshot in
+            guard let self else { return }
+            self.apply(snapshot)
+        }
+    }
+
+    private func apply(_ newSnapshot: BlurtSnapshot) {
+        let previous = snapshot
+        snapshot = newSnapshot
+
+        // A turn that has moved on is not being ended any more.
+        if previous.play?.turn != newSnapshot.play?.turn {
+            endingTurn = false
+        }
+
+        if newSnapshot.play?.state == .running {
+            startClock()
+        } else {
+            stopClock()
+        }
+
+        // Somebody who arrived after the start — a phone that slept through it,
+        // or a spectator who picked the game up — has no team and cannot play
+        // until they are given one.
+        if newSnapshot.started, myTeam == nil, !askedForTeam, let gameID = sharedGameID {
+            askedForTeam = true
+            Task { [weak self] in
+                try? await self?.service.assignTeam(gameID: gameID, playerID: PlayerIdentity.id)
+            }
+        }
+    }
+
+    // MARK: - The clock
+
+    private func startClock() {
+        guard tickTask == nil else { return }
+        tickTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                self.tick()
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+    }
+
+    private func stopClock() {
+        tickTask?.cancel()
+        tickTask = nil
+    }
+
+    private func tick() {
+        now = Date()
+
+        // Any phone can call time, and the transaction decides which of them
+        // counted — so the turn still ends if the describer's app is asleep.
+        guard let play, play.state == .running, let endsAt = play.endsAt else { return }
+        guard now >= endsAt, !endingTurn, endedTurnNumber != play.turn else { return }
+        guard let gameID = sharedGameID else { return }
+
+        endingTurn = true
+        endedTurnNumber = play.turn
+        Task { [weak self] in
+            await self?.service.endTurn(gameID: gameID, reason: .time)
+        }
+    }
+
+    private enum StoredKey {
+        static let hostedGame = "blurt.hostedGame"
+    }
+}

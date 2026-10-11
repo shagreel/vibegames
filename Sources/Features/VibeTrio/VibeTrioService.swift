@@ -132,19 +132,9 @@ final class VibeTrioService {
 
     // MARK: - Player identity
 
-    /// A short, game-scoped id.
-    ///
-    /// The global id is a 32-character UUID. At a hundred players that length is
-    /// paid on every presence entry and every take, so each game uses an
-    /// eight-character id derived from the two. Different games give different
-    /// ids, and the global identity is untouched.
+    /// A short, game-scoped id. See `ShortID`.
     static func shortID(playerID: String, gameID: String) -> String {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325          // FNV-1a
-        for byte in Array((playerID + "|" + gameID).utf8) {
-            hash ^= UInt64(byte)
-            hash = hash &* 0x0000_0100_0000_01b3
-        }
-        return String(String(hash, radix: 16).suffix(8)).paddingLeft(to: 8, with: "0")
+        ShortID.of(playerID: playerID, gameID: gameID)
     }
 
     // MARK: - Observing
@@ -303,10 +293,4 @@ enum TrioClaim: Equatable {
     case takenBySomeoneElse
     /// The write did not reach the server.
     case failed
-}
-
-private extension String {
-    func paddingLeft(to width: Int, with character: Character) -> String {
-        count >= width ? self : String(repeating: character, count: width - count) + self
-    }
 }

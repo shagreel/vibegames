@@ -75,6 +75,8 @@ struct RootView: View {
                         VibeSudokuView()
                     case .vibeTrio:
                         VibeTrioView()
+                    case .vibeBlurt:
+                        VibeBlurtView()
                     }
                 }
         }

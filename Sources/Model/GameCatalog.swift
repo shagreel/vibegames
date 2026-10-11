@@ -6,6 +6,7 @@ enum GameRoute: Hashable {
     case vibeWords
     case vibeSudoku
     case vibeTrio
+    case vibeBlurt
 }
 
 /// A tile on the hub home screen.
@@ -52,6 +53,14 @@ struct GameEntry: Identifiable {
             tagline: "Three cards where every feature matches or differs.",
             symbol: "square.on.square.dashed",
             gradient: VibeTheme.vibeTrio
+        ),
+        GameEntry(
+            id: "vibe-blurt",
+            route: .vibeBlurt,
+            title: "Vibe Blurt",
+            tagline: "Describe it. Don't say it. Two teams, one word.",
+            symbol: "bubble.left.and.exclamationmark.bubble.right.fill",
+            gradient: VibeTheme.vibeBlurt
         ),
         GameEntry(
             id: "odd-one-out",

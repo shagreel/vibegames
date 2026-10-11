@@ -1,0 +1,693 @@
+import SwiftUI
+
+/// Vibe Blurt — the describing game.
+///
+/// Everyone is on their own phone in one room. Two teams; one person at a time
+/// is handed a word and has to get their team to say it without saying it
+/// themselves. Nobody scores for guessing: the point goes to whichever team is
+/// *not* holding the word when the clock stops, which is what makes the whole
+/// thing a race to get rid of it.
+///
+/// The word itself never reaches the other phones. It is not hidden in the
+/// payload — it is not in the payload at all: every device derives the same deck
+/// from the room's seed, and only the describer's screen renders the current one.
+struct VibeBlurtView: View {
+    @StateObject private var model = VibeBlurtModel()
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var joinCode = ""
+    @State private var showingNamePrompt = false
+    @State private var pendingAction: (() -> Void)?
+
+    var body: some View {
+        Group {
+            if !model.isShared {
+                lobby
+            } else if model.winner != nil {
+                finished
+            } else if let play = model.play {
+                turn(play)
+            } else {
+                waitingForStart
+            }
+        }
+        .vibeCanvas()
+        .toolbar(.hidden, for: .navigationBar)
+        .task { AppAnalytics.screen(.blurt) }
+        .onDisappear { model.endSession() }
+        .sheet(isPresented: $showingNamePrompt) {
+            NamePromptView(accent: VibeTheme.vibeBlurt,
+                           symbol: "bubble.left.and.exclamationmark.bubble.right.fill",
+                           message: "So your team knows who is describing.",
+                           identifierPrefix: "blurt") { chosen in
+                showingNamePrompt = false
+                if let chosen { model.submitName(chosen) }
+                let action = pendingAction
+                pendingAction = nil
+                action?()
+            }
+        }
+        .onChange(of: model.play?.turn) { _, _ in
+            AppAnalytics.gameStart(.blurt, mode: .shared)
+        }
+        .onChange(of: model.winner) { _, winner in
+            guard let winner else { return }
+            // A blurt game has no "won" for the describer: the score belongs to
+            // the team, and either way the game reached its own end.
+            AppAnalytics.gameFinish(.blurt,
+                                    mode: .shared,
+                                    outcome: .completed,
+                                    score: model.score(of: winner))
+        }
+    }
+
+    // MARK: - Lobby
+
+    private var lobby: some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                header(title: "VIBE BLURT",
+                       subtitle: "Describe it. Don't say it.")
+
+                if let warning = model.backendUnavailableMessage {
+                    banner(warning, symbol: "wifi.slash", tint: VibeTheme.warn)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("HOW IT GOES")
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .kerning(1.5)
+                        .foregroundStyle(VibeTheme.tertiaryText)
+
+                    Text("Two teams. One person gets a word and describes it until "
+                         + "their team says it — then the next word. Nobody scores "
+                         + "for guessing. When the clock stops, the point goes to "
+                         + "the team that was **not** holding the phone. First to "
+                         + "\(BlurtRules.target) wins.")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("If the describer says the word, or any part of it, the "
+                         + "other team can call it — and they take the point instead.")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(VibeTheme.surface)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(VibeTheme.hairline, lineWidth: 1)
+                        }
+                }
+
+                actionCard(title: "Start a game",
+                           subtitle: "Everyone joins on their own phone",
+                           symbol: "person.2.fill",
+                           identifier: "blurt.createGame",
+                           isEnabled: model.backendUnavailableMessage == nil) {
+                    requireName { Task { await model.createGame() } }
+                }
+
+                joinCard
+            }
+            .padding(20)
+        }
+    }
+
+    private var joinCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("JOIN WITH A CODE")
+                .font(.system(size: 12, weight: .black, design: .rounded))
+                .kerning(1.5)
+                .foregroundStyle(VibeTheme.tertiaryText)
+
+            HStack(spacing: 10) {
+                TextField("abc12345", text: $joinCode)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                    .foregroundStyle(VibeTheme.primaryText)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .padding(.horizontal, 16)
+                    .frame(height: 52)
+                    .background {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(VibeTheme.surfaceStrong)
+                    }
+                    .accessibilityIdentifier("blurt.joinField")
+
+                Button("Join") { join() }
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 22)
+                    .frame(height: 52)
+                    .background {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(VibeTheme.vibeBlurt)
+                    }
+                    .disabled(joinCode.trimmingCharacters(in: .whitespaces).isEmpty
+                              || model.backendUnavailableMessage != nil)
+                    .accessibilityIdentifier("blurt.joinButton")
+            }
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(VibeTheme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(VibeTheme.hairline, lineWidth: 1)
+                }
+        }
+    }
+
+    private func join() {
+        let code = joinCode
+        requireName { Task { await model.joinGame(code: code) } }
+    }
+
+    // MARK: - Before the start
+
+    private var waitingForStart: some View {
+        VStack(spacing: 20) {
+            header(title: "VIBE BLURT", subtitle: "Waiting to start")
+            roster
+            Spacer()
+            if model.isHost {
+                Button {
+                    Task { await model.startGame() }
+                } label: {
+                    Text("Deal the teams")
+                        .font(.system(size: 17, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(model.canStart
+                                      ? AnyShapeStyle(VibeTheme.vibeBlurt)
+                                      : AnyShapeStyle(VibeTheme.surfaceStrong))
+                        }
+                }
+                .buttonStyle(.plain)
+                .disabled(!model.canStart)
+                .accessibilityIdentifier("blurt.start")
+
+                Text(model.canStart
+                     ? "Teams are picked at random, so nobody can argue."
+                     : "You need at least two people. Share the code above.")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Waiting for the host to start.")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(VibeTheme.secondaryText)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var roster: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("IN THE ROOM (\(model.snapshot.players.count))")
+                .font(.system(size: 12, weight: .black, design: .rounded))
+                .kerning(1.5)
+                .foregroundStyle(VibeTheme.tertiaryText)
+
+            ForEach(model.snapshot.players.sorted(by: { $0.value < $1.value }), id: \.key) { player in
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(player.key == model.myShortID
+                              ? AnyShapeStyle(VibeTheme.vibeBlurt)
+                              : AnyShapeStyle(VibeTheme.surfaceStrong))
+                        .frame(width: 10, height: 10)
+                    Text(player.value)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(VibeTheme.primaryText)
+                    if player.key == model.myShortID {
+                        Text("you")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(VibeTheme.tertiaryText)
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(VibeTheme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(VibeTheme.hairline, lineWidth: 1)
+                }
+        }
+    }
+
+    // MARK: - A turn
+
+    @ViewBuilder
+    private func turn(_ play: BlurtPlay) -> some View {
+        VStack(spacing: 14) {
+            header(title: "VIBE BLURT", subtitle: "First to \(BlurtRules.target)")
+
+            scoreboard(play)
+
+            if play.state == .ended {
+                resultBanner(play)
+            }
+
+            if play.state == .running {
+                clock(play)
+            }
+
+            Spacer(minLength: 0)
+
+            if play.state == .running {
+                if model.isDescriber {
+                    describerCard
+                } else {
+                    waitingCard(play)
+                }
+            } else {
+                // `.ready` and `.ended` share this screen: the result of the last
+                // turn, then who is up next. One screen rather than two, because
+                // the handover is the same moment either way.
+                handoverCard(play)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.bottom, 18)
+    }
+
+    private func scoreboard(_ play: BlurtPlay) -> some View {
+        HStack(spacing: 10) {
+            ForEach(BlurtTeam.allCases, id: \.rawValue) { team in
+                let mine = model.myTeam == team
+                VStack(spacing: 2) {
+                    Text(team.title.uppercased())
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .kerning(1.2)
+                    Text("\(model.score(of: team))")
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(VibeTheme.blurtTeam(team).opacity(mine ? 1 : 0.5))
+                }
+                .accessibilityIdentifier("blurt.score.\(team.rawValue)")
+                .accessibilityLabel("\(team.title): \(model.score(of: team))")
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    /// The clock, and the bar under it. Shown to everyone: the describer needs
+    /// it, and so does the team waiting to pounce.
+    private func clock(_ play: BlurtPlay) -> some View {
+        let left = model.secondsLeft ?? 0
+        let urgent = left <= 10
+        return VStack(spacing: 8) {
+            Text("\(left)")
+                .font(.system(size: 44, weight: .black, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(urgent ? VibeTheme.blurtUrgent : VibeTheme.primaryText)
+                .accessibilityIdentifier("blurt.clock")
+                .accessibilityLabel("\(left) seconds left")
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(VibeTheme.surfaceStrong)
+                    Capsule()
+                        .fill(urgent ? VibeTheme.blurtUrgent : VibeTheme.blurtTeam(play.team))
+                        .frame(width: max(0, proxy.size.width * model.turnProgress))
+                }
+            }
+            .frame(height: 8)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    /// The describer's screen. This is the only place in the app the word is
+    /// drawn, and it is drawn from a deck derived on this device.
+    private var describerCard: some View {
+        VStack(spacing: 18) {
+            Text("YOUR WORD — DON'T SAY IT")
+                .font(.system(size: 12, weight: .black, design: .rounded))
+                .kerning(1.6)
+                .foregroundStyle(VibeTheme.tertiaryText)
+
+            Text(model.currentWord)
+                .font(.system(size: 44, weight: .black, design: .rounded))
+                .minimumScaleFactor(0.5)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(VibeTheme.primaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 26)
+                .padding(.horizontal, 18)
+                .background {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(VibeTheme.surface)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .stroke(VibeTheme.blurtTeam(.one).opacity(0.35), lineWidth: 2)
+                        }
+                }
+                .accessibilityIdentifier("blurt.word")
+
+            HStack(spacing: 12) {
+                Button {
+                    Task { await model.gotIt() }
+                } label: {
+                    Text("Got it")
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(VibeTheme.vibeBlurt)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("blurt.gotIt")
+
+                // The same call, and honestly so: a word nobody can get scores
+                // nothing either way, so skipping costs the describer's team
+                // nothing but the seconds it took to decide.
+                Button {
+                    Task { await model.gotIt() }
+                } label: {
+                    Text("Skip")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(VibeTheme.primaryText)
+                        .frame(width: 88)
+                        .frame(height: 60)
+                        .background {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(VibeTheme.surfaceStrong)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("blurt.skip")
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    /// Everyone else. No word, and the button that keeps the describer honest.
+    private func waitingCard(_ play: BlurtPlay) -> some View {
+        VStack(spacing: 14) {
+            Text(model.describerName)
+                .font(.system(size: 26, weight: .black, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+            Text("is describing for \(play.team.title)")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+
+            if model.canCallBlurt {
+                Button {
+                    Task { await model.callBlurt() }
+                } label: {
+                    VStack(spacing: 3) {
+                        Text("They said it")
+                            .font(.system(size: 20, weight: .black, design: .rounded))
+                        Text("ends the turn, and you take the point")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .opacity(0.85)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 72)
+                    .background {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(VibeTheme.blurtUrgent)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("blurt.blurt")
+            } else {
+                Text("Your team is describing.")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(VibeTheme.tertiaryText)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func resultBanner(_ play: BlurtPlay) -> some View {
+        let scored = play.scorer
+        let text: String = {
+            guard let scored else { return "Turn over" }
+            switch play.reason {
+            case .blurt: return "\(scored.title) takes the point — caught a blurt"
+            case .time, .none: return "\(scored.title) takes the point — the clock ran out"
+            }
+        }()
+        return Text(text)
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background {
+                Capsule().fill(scored.map { VibeTheme.blurtTeam($0) } ?? VibeTheme.surfaceStrong)
+            }
+            .padding(.horizontal, 20)
+            .accessibilityIdentifier("blurt.status")
+    }
+
+    private func handoverCard(_ play: BlurtPlay) -> some View {
+        VStack(spacing: 16) {
+            Text(play.team.title.uppercased())
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .kerning(2)
+                .foregroundStyle(VibeTheme.blurtTeam(play.team))
+
+            Text(model.isDescriber ? "You're up" : "\(model.describerName) is up")
+                .font(.system(size: 30, weight: .black, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+
+            Text(model.isDescriber
+                 ? "Hold the phone so only you can see it, then start the clock."
+                 : "Pass the phone to \(model.describerName). Everyone else, watch for the word.")
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if model.isDescriber {
+                Button {
+                    Task { await model.beginTurn() }
+                } label: {
+                    Text("Start the clock")
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(VibeTheme.vibeBlurt)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("blurt.ready")
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    // MARK: - Finished
+
+    private var finished: some View {
+        VStack(spacing: 18) {
+            header(title: "VIBE BLURT", subtitle: "That's the game")
+
+            Spacer()
+
+            if let winner = model.winner {
+                Text("\(winner.title) wins")
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .foregroundStyle(VibeTheme.blurtTeam(winner))
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("blurt.winner")
+            }
+
+            HStack(spacing: 10) {
+                ForEach(BlurtTeam.allCases, id: \.rawValue) { team in
+                    VStack(spacing: 4) {
+                        Text(team.title.uppercased())
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .kerning(1.2)
+                        Text("\(model.score(of: team))")
+                            .font(.system(size: 40, weight: .black, design: .rounded))
+                        Text(model.names(on: team).joined(separator: ", "))
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(VibeTheme.blurtTeam(team)
+                                .opacity(model.myTeam == team ? 1 : 0.5))
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            Spacer()
+
+            Button {
+                Task { await model.playAgain() }
+            } label: {
+                Text("Play again")
+                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 58)
+                    .background {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(VibeTheme.vibeBlurt)
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("blurt.playAgain")
+            .padding(.horizontal, 20)
+        }
+        .padding(.bottom, 20)
+    }
+
+    // MARK: - Shared pieces
+
+    private func header(title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                if model.isShared { model.leaveGame() } else { dismiss() }
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            .buttonStyle(VibeIconButtonStyle())
+            .accessibilityLabel(model.isShared ? "Leave game" : "Back to games")
+            .accessibilityIdentifier("blurt.back")
+
+            VStack(spacing: 3) {
+                Text(title)
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .kerning(3.5)
+                    .foregroundStyle(VibeTheme.primaryText)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+
+            HStack(spacing: 6) {
+                SupportButton(game: .blurt)
+
+                if let code = model.sharedGameID, !model.hasStarted {
+                    ShareLink(item: shareText(code)) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .buttonStyle(VibeIconButtonStyle())
+                    .accessibilityLabel("Share game code")
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+    }
+
+    private func shareText(_ code: String) -> String {
+        "Describe it, don't say it — Vibe Blurt. Open the app and enter code \(code.uppercased())"
+    }
+
+    /// Runs a shared-game action, collecting a name first if there is not one.
+    private func requireName(_ action: @escaping () -> Void) {
+        guard model.hasName else {
+            pendingAction = action
+            showingNamePrompt = true
+            return
+        }
+        action()
+    }
+
+    private func actionCard(title: String,
+                            subtitle: String,
+                            symbol: String,
+                            identifier: String,
+                            isEnabled: Bool = true,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: symbol)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .background {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(VibeTheme.vibeBlurt)
+                    }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(VibeTheme.primaryText)
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(VibeTheme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(VibeTheme.hairline, lineWidth: 1)
+                    }
+            }
+            .opacity(isEnabled ? 1 : 0.45)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func banner(_ text: String, symbol: String, tint: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol)
+            Text(text)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .lineLimit(2)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background { Capsule().fill(tint.opacity(0.85)) }
+        .padding(.horizontal, 20)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+}

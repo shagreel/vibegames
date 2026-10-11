@@ -182,6 +182,94 @@
           ".validate": false
         }
       }
+    },
+    "blurt": {
+      "$gameId": {
+        ".read": true,
+        ".write": "!data.exists()",
+        ".validate": "newData.hasChildren(['meta'])",
+        "meta": {
+          ".validate": "newData.hasChildren(['seed', 'creator', 'createdAt'])",
+          "seed": {
+            ".write": true,
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296"
+          },
+          "creator": {
+            ".write": "!data.exists()",
+            ".validate": "newData.isString() && newData.val().matches(/^.{1,24}$/)"
+          },
+          "createdAt": {
+            ".write": "!data.exists()",
+            ".validate": "newData.isNumber()"
+          },
+          "started": {
+            ".write": true,
+            ".validate": "newData.isBoolean()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "players": {
+          "$playerId": {
+            ".write": true,
+            ".validate": "newData.val() === null || (newData.isString() && newData.val().length >= 1 && newData.val().length <= 24)"
+          }
+        },
+        "teams": {
+          "$playerId": {
+            ".write": true,
+            ".validate": "newData.val() === null || newData.val() === 1 || newData.val() === 2"
+          }
+        },
+        "play": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['round', 'turn', 'team', 'describer', 'word', 'state', 'one', 'two'])",
+          "round": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "turn": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "team": {
+            ".validate": "newData.val() === 1 || newData.val() === 2"
+          },
+          "describer": {
+            ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9]{1,16}$/)"
+          },
+          "word": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "state": {
+            ".validate": "newData.val() === 'ready' || newData.val() === 'running' || newData.val() === 'ended'"
+          },
+          "startedAt": {
+            ".validate": "newData.val() === null || newData.isNumber()"
+          },
+          "endsAt": {
+            ".validate": "newData.val() === null || newData.isNumber()"
+          },
+          "reason": {
+            ".validate": "newData.val() === null || newData.val() === 'time' || newData.val() === 'blurt'"
+          },
+          "scorer": {
+            ".validate": "newData.val() === null || newData.val() === 1 || newData.val() === 2"
+          },
+          "one": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99"
+          },
+          "two": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99"
+          },
+          "finished": {
+            ".write": true,
+            ".validate": "newData.isBoolean()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
     }
   }
 }

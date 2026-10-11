@@ -124,6 +124,32 @@ enum VibeTheme {
     static let trioCardEdge = adaptive(light: Color.black.opacity(0.14),
                                        dark: Color.black.opacity(0.35))
 
+    // MARK: Vibe Blurt
+
+    /// Fifth accent. Warm and loud on purpose — this is the game where somebody
+    /// is talking over everybody else.
+    static let vibeBlurt = LinearGradient(
+        colors: [Color(red: 0.96, green: 0.30, blue: 0.42),
+                 Color(red: 0.99, green: 0.55, blue: 0.24)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// The clock running out, as it gets close. Between `vibeBlurt`'s warmth and
+    /// the danger red, so a turn in its last seconds reads as urgent rather than
+    /// broken.
+    static let blurtUrgent = Color(red: 1.00, green: 0.42, blue: 0.32)
+
+    /// The two teams. They have to be tellable apart at a glance across a room,
+    /// and they are deliberately not the game's own accent: the accent is the
+    /// game, the team colour is you.
+    static let blurtTeamOne = Color(red: 0.29, green: 0.55, blue: 0.98)
+    static let blurtTeamTwo = Color(red: 0.98, green: 0.45, blue: 0.30)
+
+    static func blurtTeam(_ team: BlurtTeam) -> Color {
+        team == .one ? blurtTeamOne : blurtTeamTwo
+    }
+
     /// Letter is in the right place.
     static let tileCorrect = Color(red: 0.24, green: 0.70, blue: 0.44)
     /// Letter is in the word, but in the wrong place.
