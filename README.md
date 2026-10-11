@@ -853,9 +853,30 @@ Two consequences worth knowing:
 - **It is not instant.** A GitHub-hosted scheduled run can be minutes late. That
   is the price of not running a server; if it ever matters, a small always-on
   endpoint would make it immediate and would need an account somewhere.
-- **Running it twice is safe.** Every issue carries a `feedback-id` marker and
-  anything already carrying one is skipped, so a failed run can simply be run
-  again, and a missed schedule costs nothing.
+- **Running it twice is safe — eventually.** Every issue carries a `feedback-id`
+  marker and anything already carrying one is skipped, so a failed run can
+  simply be run again and a missed schedule costs nothing. Two things had to be
+  true for that to hold, and neither was.
+
+  The marker was written into the body and read back with
+  `strip(" :->")` — which removes *characters* rather than a prefix, and every
+  key Firebase hands out begins with `-`. So the first character of every key
+  was eaten, nothing ever matched, and **every entry was filed again on every
+  scheduled run**: 39 issues for 10 actual notes, and the ten oldest entries
+  taken every time so the rest never got through at all.
+
+  And GitHub serves the issue list from a read replica, so an issue created a
+  second ago may not be in it yet. Two runs close together therefore both treat
+  an entry as unfiled and both file it. The drain now reads the marker with a
+  regex and looks a second time, after a short pause, before filing anything.
+
+  `Tools/test_feedback_to_issues.py` covers the round trip — write a marker,
+  read it back, and get the same key — which is the check that would have caught
+  the first of these on the day it was written:
+
+  ```bash
+  python3 Tools/test_feedback_to_issues.py
+  ```
 
 **Test notes are marked and never become issues.** The UI test that sends
 feedback walks the real path on purpose — a form that only ever works against a

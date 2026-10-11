@@ -30,7 +30,9 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from typing import Optional
@@ -41,9 +43,23 @@ LABELS = {"feedback": "feedback", "crash": "crash"}
 
 MARKER = "feedback-id"
 
+# The marker exactly as it is written into a body: `<!-- feedback-id: KEY -->`.
+#
+# A regex rather than splitting on the marker and stripping the punctuation off,
+# which is what this did and was wrong in a way that took a while to see:
+# `str.strip` removes *characters*, not a prefix, and every key Firebase hands
+# out begins with "-". So `strip(" :->")` ate the first character of every key,
+# nothing ever matched, and every entry was filed again on every run.
+MARKER_PATTERN = re.compile(r"<!--\s*feedback-id:\s*([^\s]+)\s*-->")
+
 # The prefix the UI test puts on the note it sends, so that a test run never
 # turns into a public issue.
 TEST_MARKER = "[test]"
+
+# How long to wait before looking for existing issues a second time. See the
+# note in `main`: GitHub's issue list can lag a moment behind an issue that was
+# just created.
+RE_LIST_DELAY_SECONDS = 5
 
 
 def call(url: str, token: Optional[str], method: str = "GET", body=None):
@@ -68,6 +84,11 @@ def fetch_inbox(database: str) -> dict:
     return payload or {}
 
 
+def marker_keys(text: str) -> set[str]:
+    """The feedback keys an issue body claims to be about."""
+    return set(MARKER_PATTERN.findall(text or ""))
+
+
 def already_synced(repo: str, token: str) -> set[str]:
     """The keys that already have an issue, open or closed."""
     seen: set[str] = set()
@@ -86,9 +107,7 @@ def already_synced(repo: str, token: str) -> set[str]:
             # Pull requests come back from this endpoint too.
             if "pull_request" in issue:
                 continue
-            for line in (issue.get("body") or "").splitlines():
-                if MARKER in line:
-                    seen.add(line.split(MARKER, 1)[1].strip(" :->"))
+            seen |= marker_keys(issue.get("body"))
         page += 1
     return seen
 
@@ -178,8 +197,11 @@ def main() -> None:
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if not token and not args.dry_run:
         raise SystemExit("No GH_TOKEN or GITHUB_TOKEN in the environment.")
-    if args.dry_run:
-        token = None
+
+    # A dry run keeps the token so it can still *read*. Throwing it away, which
+    # this used to do, also threw away the list of existing issues — so the one
+    # mode whose whole job is to say what would happen reported that nothing had
+    # been filed yet, every time, even when everything had.
 
     inbox = fetch_inbox(args.database)
     if not inbox:
@@ -213,11 +235,28 @@ def main() -> None:
     if not pending:
         return
 
+    # Look again before filing anything.
+    #
+    # GitHub serves the issue list from a read replica, so an issue created a
+    # second ago may not be in it yet. Two runs close together therefore both
+    # treat an entry as unfiled and both file it — which is exactly how a cleanup
+    # run managed to create five duplicates immediately after filing the five
+    # originals. On the usual run there is nothing pending and this costs
+    # nothing; when there is, a few seconds is far cheaper than a duplicate.
+    if token:
+        time.sleep(RE_LIST_DELAY_SECONDS)
+        synced |= already_synced(args.repo, token)
+        pending = [(key, entry) for key, entry in pending if key not in synced]
+        if not pending:
+            print("Everything pending turned out to be filed already; nothing to do.")
+            return
+
     if len(pending) > args.limit:
         print(f"Only doing the first {args.limit} this run; the rest wait for the next.")
         pending = pending[: args.limit]
 
-    if token:
+    if token and not args.dry_run:
+        # Creating a label is a write, so it waits for the real run.
         ensure_label(args.repo, token, LABELS["feedback"], "ff6b85",
                      "Sent from inside the app")
         ensure_label(args.repo, token, LABELS["crash"], "b60205",
