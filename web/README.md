@@ -28,7 +28,7 @@ handed round a table.
 
 ## 🧪 Test Suite
 
-**168 passing tests.**
+**189 passing tests.**
 
 ```bash
 ✓ src/test/trioEngine.test.ts     (35 tests)   the rule, and agreement with iOS
@@ -37,6 +37,7 @@ handed round a table.
 ✓ src/test/fiveModel.test.ts    (16 tests)   rounds, the clock, the packs
 ✓ src/test/errors.test.ts       (13 tests)   the crash reporter
 ✓ src/test/analytics.test.ts    (16 tests)   what gets counted, and what does not
+✓ src/test/blurtEngine.test.ts  (21 tests)  the deck, teams and scoring vs iOS
 ✓ src/test/localStorage.test.ts  (9 tests)
 ✓ src/test/integration.test.ts   (8 tests)
 ✓ src/test/multiDevice.test.ts   (7 tests)

@@ -432,6 +432,62 @@ test reads the board back off the screen, parses those labels, works out a real
 trio with the game's own rule, and taps it. If the renderer and the engine ever
 disagree about what a card *is*, that test fails.
 
+## Vibe Blurt
+
+The fifth game, and the only one that does not work on your own. Everyone joins
+on their own phone; the app splits the room into two teams at random and hands
+one person at a time a word to describe without saying it.
+
+The scoring is the whole game, and it is not what people expect:
+
+- **Nobody scores for guessing.** Guessing just gets you the next word, and the
+  clock keeps running.
+- **The point goes to the team *not* holding the word when the clock stops.**
+  Describing earns nothing; it only passes the risk on.
+- **A rule-break pays the other team.** If the describer says the word, or any
+  part of it, anyone on the other team can call it, which ends the turn on the
+  spot. Two people calling at once still score once.
+- **First to seven.**
+
+That makes the last ten seconds of a turn the tense part, and the app is built so
+they are tense on every phone rather than only on the describer's: the clock is
+on all of them.
+
+### The word is never sent anywhere
+
+This is the part worth knowing, because it is what makes the game work at all.
+A room stores a **seed**, a **round** and which **packs** are on — never a word.
+Every phone derives the same deck from those, and only the describer's screen
+renders the current entry. It is not hidden in the payload; it is not in the
+payload. Same trick as the Trio table and the Sudoku grid.
+
+Which is why the settings live in the room rather than on the phone. The deck
+depends on the seed *and* the packs, so two devices disagreeing about which packs
+were ticked would deal two different decks while the score ticked along — the
+describer describing one thing and every other screen scoring another. Pack
+*order*, not the order they were ticked in, decides the deck, for the same
+reason.
+
+### Ends are transactions
+
+Ending a turn awards a point, checks for a winner and sets up the next turn, and
+all three have to happen together or two people shouting "they said it" at the
+same moment would both be paid. It is one Realtime Database transaction on the
+`play` node, so the server decides which press counted. The clock running out
+goes through the same transaction, which is why any phone can call time and why
+the turn still ends if the describer's app has gone to sleep.
+
+### 300 things to describe, in eight packs
+
+Food and drink, animals and nature, places and travel, household things, jobs and
+people, sport and music, actions, and celebrations and weather. Written for this
+rather than borrowed — the physical game's list is somebody's copyright, and the
+name is kept out of the code and UI for the same reason the other one is.
+
+The turn length is the room's choice too: 30 seconds, a minute, 90 or two. A
+table of adults and a table with a nine-year-old want very different amounts of
+the same game, and there was no reason for the app to be the one deciding.
+
 ## Building
 
 The Xcode project is **generated** — `project.yml` is the source of truth, so
@@ -500,7 +556,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**153 tests in all: 117 unit and 36 UI.** They are what the numbers above are
+**179 tests in all: 143 unit and 36 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -598,6 +654,7 @@ Sources/
   Firebase/
     FirebaseBootstrapper.swift  Optional Firebase + App Check wiring
     AppAnalytics.swift          Every event name the app reports, in one place
+  Model/ShortID.swift           The per-game player id, shared by the games
   Features/
     Home/HomeView.swift         Hub screen
     Home/PreferencesView.swift  Name and appearance, from the hub's gear button

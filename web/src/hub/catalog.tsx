@@ -45,6 +45,13 @@ const IconTrio = (
   </svg>
 );
 
+const IconBlurt = (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M3 5.5h12.5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z" />
+    <path d="M18.6 3.2 21 5.6l-1.7 1.7-2.4-2.4z" opacity="0.55" />
+  </svg>
+);
+
 export const GAMES: GameEntry[] = [
   {
     id: 'five',
@@ -80,6 +87,15 @@ export const GAMES: GameEntry[] = [
     tagline: 'Three cards where every feature matches or differs.',
     accent: ['#f7b929', '#85d647'],
     symbol: IconTrio,
+    available: true,
+  },
+  {
+    id: 'blurt',
+    path: '/blurt',
+    title: 'Vibe Blurt',
+    tagline: "Describe it. Don't say it. Two teams, one word.",
+    accent: ['#f54d6b', '#fd8c3d'],
+    symbol: IconBlurt,
     available: true,
   },
 ];

@@ -1,0 +1,668 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import BackToGames from '../../hub/BackToGames';
+import { SupportButton } from '../../hub/Support';
+import { hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
+import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
+import { shortId } from '../../lib/shortId';
+import {
+  DEFAULT_SECONDS,
+  DURATIONS,
+  TARGET,
+  TEAMS,
+  nearestDuration,
+  shuffled,
+  teamTitle,
+  wordAt,
+  type Team,
+} from './engine';
+import {
+  EMPTY_SNAPSHOT,
+  advanceWord,
+  assignTeam,
+  beginTurn,
+  createGame,
+  endTurn,
+  joinGame,
+  observeGame,
+  playAgain,
+  playScore,
+  startGame,
+  updateSettings,
+  winningTeam,
+  type BlurtSnapshot,
+} from './service';
+import { PACKS, PACK_ORDER, PACK_WORDS } from './words.generated';
+import './VibeBlurt.css';
+
+/**
+ * Vibe Blurt on the web.
+ *
+ * Everyone is on their own phone in one room. Two teams; one person at a time is
+ * handed a word and has to get their team to say it without saying it themselves.
+ * Nobody scores for guessing — the point goes to whichever team is *not* holding
+ * the word when the clock stops, which is what makes it a race to get rid of it.
+ *
+ * The word never reaches the other screens. It is not hidden in the payload: the
+ * room stores a seed and how far into the deck the game has got, every device
+ * derives the same deck from those, and only the describer's screen renders the
+ * current entry.
+ */
+
+const PACKS_KEY = 'blurt.packs';
+const SECONDS_KEY = 'blurt.seconds';
+
+function loadPacks(): string[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PACKS_KEY) ?? 'null');
+    if (Array.isArray(stored)) {
+      const valid = stored.filter((id: unknown): id is string =>
+        typeof id === 'string' && PACK_ORDER.includes(id),
+      );
+      if (valid.length > 0) return valid;
+    }
+  } catch {
+    // A corrupt value is not worth crashing a game over.
+  }
+  return [...PACK_ORDER];
+}
+
+function loadSeconds(): number {
+  const stored = Number(localStorage.getItem(SECONDS_KEY));
+  return stored > 0 ? nearestDuration(stored).seconds : DEFAULT_SECONDS;
+}
+
+function VibeBlurt() {
+  const id = useMemo(() => playerId(), []);
+
+  const [name, setName] = useState(() => playerName());
+  const [askingForName, setAskingForName] = useState(false);
+  // The name is passed *into* the action rather than read from state by the
+  // closure: an action parked here was created on a render where `name` was
+  // still empty, so reading it back after the prompt would send a blank name
+  // and the rules would refuse the write.
+  const pendingAction = useRef<((who: string) => void) | null>(null);
+
+  // Read from the URL once, at first render, rather than in an effect: arriving
+  // on a shared link should not paint the lobby for a frame before the game.
+  const [gameId, setGameId] = useState<string | null>(() => arrivedAt());
+  const [isHost, setIsHost] = useState(() => {
+    const wanted = arrivedAt();
+    return wanted ? isHosting(wanted) : false;
+  });
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [snapshot, setSnapshot] = useState<BlurtSnapshot>(EMPTY_SNAPSHOT);
+
+  const [now, setNow] = useState(() => Date.now());
+  const [showSettings, setShowSettings] = useState(false);
+  const [packs, setPacks] = useState<string[]>(loadPacks);
+  const [seconds, setSeconds] = useState<number>(loadSeconds);
+
+  const myShortId = gameId ? shortId(id, gameId) : null;
+  const play = snapshot.play;
+  const myTeam: Team | null = myShortId ? (snapshot.teams[myShortId] ?? null) : null;
+  const winner = winningTeam(play);
+  const isDescriber = play !== null && myShortId !== null && play.describer === myShortId;
+
+  // MARK: - Joining
+
+  useEffect(() => {
+    if (!gameId) return;
+    return observeGame(gameId, setSnapshot);
+  }, [gameId]);
+
+  const requireName = useCallback(
+    (action: (who: string) => void) => {
+      if (!name) {
+        pendingAction.current = action;
+        setAskingForName(true);
+        return;
+      }
+      action(name);
+    },
+    [name],
+  );
+
+  const submitName = (chosen: string | null) => {
+    setAskingForName(false);
+    const who = chosen ?? name;
+    if (chosen) {
+      setPlayerName(chosen);
+      setName(chosen);
+    }
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    action?.(who);
+  };
+
+  // Somebody who followed a link has a code but is not in the room yet, and may
+  // not have a name either. Registering them is what puts them on the roster —
+  // without it they would watch a game they could not join.
+  const arrivalHandled = useRef(false);
+  useEffect(() => {
+    if (arrivalHandled.current || !gameId) return;
+    arrivalHandled.current = true;
+    const register = (who: string) => {
+      void joinGame(gameId, id, who).catch(() =>
+        setJoinError('That game could not be joined. Check the code.'),
+      );
+    };
+    if (name) register(name);
+    // Opening the name prompt is a state change from an effect, which the rule
+    // rightly mistrusts in general. It is the point here: the effect exists to
+    // react to arriving with a code, and the only thing it can do about a player
+    // who has no name is ask for one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    else requireName(register);
+  }, [gameId, name, id, requireName]);
+
+  // Somebody who arrived after the start — or whose phone slept through it —
+  // needs a team before they can play. Asked once, not on every snapshot.
+  const askedForTeam = useRef(false);
+  useEffect(() => {
+    if (!gameId || !snapshot.started || !myShortId) return;
+    if (snapshot.teams[myShortId] || askedForTeam.current) return;
+    askedForTeam.current = true;
+    void assignTeam(gameId, id);
+  }, [gameId, snapshot.started, snapshot.teams, myShortId, id]);
+
+  // MARK: - The clock
+
+  const endingTurn = useRef(-1);
+  useEffect(() => {
+    if (play?.state !== 'running') return;
+    const timer = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(timer);
+  }, [play?.state]);
+
+  useEffect(() => {
+    if (!gameId || play?.state !== 'running' || play.endsAt === null) return;
+    if (now < play.endsAt || endingTurn.current === play.turn) return;
+    // Any phone can call time, and the transaction decides which of them
+    // counted — so the turn still ends if the describer's app has gone to sleep.
+    endingTurn.current = play.turn;
+    void endTurn(gameId, 'time');
+  }, [gameId, play?.state, play?.endsAt, play?.turn, now]);
+
+  // MARK: - Analytics
+
+  const reportedTurn = useRef<number | null>(null);
+  useEffect(() => {
+    if (!play) return;
+    if (play.state === 'running' && reportedTurn.current !== play.turn) {
+      reportedTurn.current = play.turn;
+      trackGameStart(GAMES.blurt, { mode: 'shared', round: play.turn + 1 });
+    }
+  }, [play]);
+
+  useEffect(() => {
+    if (!winner || !play) return;
+    trackGameFinish(GAMES.blurt, {
+      mode: 'shared',
+      outcome: 'completed',
+      score: playScore(play, winner),
+    });
+  }, [winner, play]);
+
+  // MARK: - Playing
+
+  const create = () =>
+    requireName((who) => {
+      const newId = makeGameId();
+      const seed = randomSeed();
+      void createGame(newId, seed, who, id, packs, seconds)
+        .then(() => {
+          hostedGame(newId);
+          window.history.replaceState({}, '', `/blurt?game=${newId}`);
+          setGameId(newId);
+          setIsHost(true);
+        })
+        .catch(() => setJoinError('Could not start a game. Check your connection.'));
+    });
+
+  const join = () => {
+    const code = joinCode.trim().toLowerCase();
+    if (!code) return;
+    requireName((who) => {
+      void joinGame(code, id, who)
+        .then(() => {
+          window.history.replaceState({}, '', `/blurt?game=${code}`);
+          setGameId(code);
+          setIsHost(isHosting(code));
+        })
+        .catch(() => setJoinError('That code did not work. Check it and try again.'));
+    });
+  };
+
+  const leave = () => {
+    window.history.replaceState({}, '', '/blurt');
+    setGameId(null);
+    setSnapshot(EMPTY_SNAPSHOT);
+    setJoinError('');
+    askedForTeam.current = false;
+    endingTurn.current = -1;
+    reportedTurn.current = null;
+  };
+
+  const changeSettings = (nextPacks: string[], nextSeconds: number) => {
+    setPacks(nextPacks);
+    setSeconds(nextSeconds);
+    localStorage.setItem(PACKS_KEY, JSON.stringify(nextPacks));
+    localStorage.setItem(SECONDS_KEY, String(nextSeconds));
+    if (gameId && isHost && !snapshot.started) void updateSettings(gameId, nextPacks, nextSeconds);
+  };
+
+  const duration = nearestDuration(snapshot.turnSeconds);
+  const allPacksOn = snapshot.packs.length === PACK_ORDER.length;
+
+  // Derived, never stored.
+  const deck = useMemo(
+    () => (snapshot.seed === null ? [] : shuffled(snapshot.seed, play?.round ?? 0, snapshot.packs)),
+    [snapshot.seed, snapshot.packs, play?.round],
+  );
+  const currentWord = play ? wordAt(play.word, deck) : '';
+
+  const secondsLeft =
+    play?.state === 'running' && play.endsAt !== null
+      ? Math.max(0, Math.ceil((play.endsAt - now) / 1000))
+      : null;
+  const progress =
+    play?.state === 'running' && play.endsAt !== null && play.startedAt !== null
+      ? Math.max(0, Math.min(1, (play.endsAt - now) / (play.endsAt - play.startedAt)))
+      : 0;
+
+  // MARK: - Screens
+
+  if (!gameId) {
+    return (
+      <div className="blurt">
+        <BlurtHeader onLeave={null} gameId={null} />
+        <div className="blurt__lobby">
+          <p className="blurt__lede">
+            Two teams. One person gets a word and describes it until their team says it — then the
+            next word. Nobody scores for guessing: when the clock stops, the point goes to the team
+            that was <strong>not</strong> holding the phone. First to {TARGET} wins.
+          </p>
+          <p className="blurt__lede">
+            If the describer says the word, or any part of it, the other team can call it — and they
+            take the point instead.
+          </p>
+
+          <button type="button" className="blurt__primary" onClick={create}>
+            Start a game
+          </button>
+
+          <div className="blurt__join">
+            <label htmlFor="blurt-code">Join with a code</label>
+            <div className="blurt__join-row">
+              <input
+                id="blurt-code"
+                value={joinCode}
+                onChange={(event) => setJoinCode(event.target.value)}
+                placeholder="abc12345"
+                maxLength={12}
+                autoComplete="off"
+                autoCapitalize="none"
+              />
+              <button type="button" onClick={join} disabled={!joinCode.trim()}>
+                Join
+              </button>
+            </div>
+            {joinError && <p className="blurt__error">{joinError}</p>}
+          </div>
+        </div>
+        {askingForName && <NamePrompt onSubmit={submitName} />}
+      </div>
+    );
+  }
+
+  if (!snapshot.started || !play) {
+    return (
+      <div className="blurt">
+        <BlurtHeader onLeave={leave} gameId={gameId} />
+        <div className="blurt__lobby">
+          <div className="blurt__code">
+            <span className="blurt__code-label">Read this out</span>
+            <strong className="blurt__code-value">{gameId.toUpperCase()}</strong>
+            <span className="blurt__code-hint">
+              Everyone else: Vibe Blurt → Join with a code
+            </span>
+          </div>
+
+          <section className="blurt__panel">
+            <h2>In the room ({Object.keys(snapshot.players).length})</h2>
+            <ul className="blurt__roster">
+              {Object.entries(snapshot.players)
+                .sort((a, b) => a[1].localeCompare(b[1]))
+                .map(([playerId_, playerName_]) => (
+                  <li key={playerId_}>
+                    <span className={playerId_ === myShortId ? 'is-me' : ''}>{playerName_}</span>
+                    {playerId_ === myShortId && <em>you</em>}
+                  </li>
+                ))}
+            </ul>
+          </section>
+
+          <button
+            type="button"
+            className="blurt__settings"
+            onClick={() => isHost && setShowSettings(true)}
+            disabled={!isHost}
+          >
+            <span>Settings</span>
+            <span className="blurt__settings-value">
+              {duration.title} · {allPacksOn ? `all ${PACK_ORDER.length} packs` : `${snapshot.packs.length} of ${PACK_ORDER.length} packs`}
+            </span>
+          </button>
+
+          {isHost ? (
+            <>
+              <button
+                type="button"
+                className="blurt__primary"
+                onClick={() => void startGame(gameId, snapshot.seed ?? randomSeed())}
+                disabled={Object.keys(snapshot.players).length < 2}
+              >
+                Deal the teams
+              </button>
+              <p className="blurt__hint">
+                {Object.keys(snapshot.players).length < 2
+                  ? 'You need at least two people — read the code out.'
+                  : 'Teams are picked at random, so nobody can argue.'}
+              </p>
+            </>
+          ) : (
+            <p className="blurt__hint">Waiting for {snapshot.creator ?? 'the host'} to start.</p>
+          )}
+        </div>
+
+        {showSettings && (
+          <SettingsSheet
+            packs={snapshot.packs}
+            seconds={snapshot.turnSeconds}
+            editable={isHost && !snapshot.started}
+            onChange={changeSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+        {askingForName && <NamePrompt onSubmit={submitName} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="blurt">
+      <BlurtHeader onLeave={leave} gameId={gameId} />
+
+      <div className="blurt__scores">
+        {TEAMS.map((team) => (
+          <div
+            key={team}
+            className={`blurt__score blurt__score--${team}${myTeam === team ? ' is-mine' : ''}`}
+          >
+            <span>{teamTitle(team)}</span>
+            <strong>{playScore(play, team)}</strong>
+          </div>
+        ))}
+      </div>
+
+      {play.state === 'ended' && (
+        <p className={`blurt__result blurt__result--${play.scorer ?? 1}`}>
+          {play.scorer ? teamTitle(play.scorer) : 'Nobody'} takes the point —{' '}
+          {play.reason === 'blurt' ? 'caught a blurt' : 'the clock ran out'}
+        </p>
+      )}
+
+      {play.state === 'running' && play.endsAt !== null && (
+        <div className="blurt__clock">
+          <span className={secondsLeft !== null && secondsLeft <= 10 ? 'is-urgent' : ''}>
+            {secondsLeft}
+          </span>
+          <div className="blurt__bar">
+            <div
+              className={`blurt__bar-fill blurt__bar-fill--${play.team}${
+                secondsLeft !== null && secondsLeft <= 10 ? ' is-urgent' : ''
+              }`}
+              style={{ width: `${progress * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {winner !== null ? (
+        <div className="blurt__finished">
+          <h2>{teamTitle(winner)} wins</h2>
+          <p>
+            {play.one} – {play.two}
+          </p>
+          <button
+            type="button"
+            className="blurt__primary"
+            onClick={() => void playAgain(gameId, snapshot.seed ?? randomSeed())}
+          >
+            Play again
+          </button>
+        </div>
+      ) : play.state === 'running' ? (
+        isDescriber ? (
+          <div className="blurt__describer">
+            <span className="blurt__word-label">Your word — don&rsquo;t say it</span>
+            <strong className="blurt__word">{currentWord}</strong>
+            <div className="blurt__describer-actions">
+              <button type="button" className="blurt__primary" onClick={() => void advanceWord(gameId)}>
+                Got it
+              </button>
+              {/* The same call, honestly so: a word nobody can get scores
+                  nothing either way, so skipping costs only the seconds. */}
+              <button type="button" className="blurt__skip" onClick={() => void advanceWord(gameId)}>
+                Skip
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="blurt__waiting">
+            <h2>{snapshot.players[play.describer] ?? 'Someone'}</h2>
+            <p>is describing for {teamTitle(play.team)}</p>
+            {myTeam !== null && myTeam !== play.team ? (
+              <button
+                type="button"
+                className="blurt__blurt"
+                onClick={() => void endTurn(gameId, 'blurt')}
+              >
+                <strong>They said it</strong>
+                <span>ends the turn, and you take the point</span>
+              </button>
+            ) : (
+              <p className="blurt__hint">Your team is describing.</p>
+            )}
+          </div>
+        )
+      ) : (
+        <div className="blurt__handover">
+          <span className={`blurt__team-tag blurt__team-tag--${play.team}`}>
+            {teamTitle(play.team)}
+          </span>
+          <h2>{isDescriber ? "You're up" : `${snapshot.players[play.describer] ?? 'Someone'} is up`}</h2>
+          <p>
+            {isDescriber
+              ? 'Hold the phone so only you can see it, then start the clock.'
+              : `Pass the phone to ${snapshot.players[play.describer] ?? 'them'}. Everyone else, watch for the word.`}
+          </p>
+          {isDescriber && (
+            <button
+              type="button"
+              className="blurt__primary"
+              onClick={() => void beginTurn(gameId, snapshot.turnSeconds)}
+            >
+              Start the clock
+            </button>
+          )}
+        </div>
+      )}
+
+      {askingForName && <NamePrompt onSubmit={submitName} />}
+    </div>
+  );
+}
+
+// MARK: - Pieces
+
+function BlurtHeader({
+  onLeave,
+  gameId,
+}: {
+  onLeave: (() => void) | null;
+  gameId: string | null;
+}) {
+  return (
+    <header className="blurt__header">
+      {onLeave ? (
+        <button type="button" className="blurt__back" onClick={onLeave} aria-label="Leave game">
+          ‹
+        </button>
+      ) : (
+        <BackToGames />
+      )}
+      <div className="blurt__titles">
+        <strong>Vibe Blurt</strong>
+        <span>{gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}</span>
+      </div>
+      <SupportButton game="blurt" />
+    </header>
+  );
+}
+
+function SettingsSheet({
+  packs,
+  seconds,
+  editable,
+  onChange,
+  onClose,
+}: {
+  packs: string[];
+  seconds: number;
+  editable: boolean;
+  onChange: (packs: string[], seconds: number) => void;
+  onClose: () => void;
+}) {
+  const chosen = new Set(packs);
+  const wordCount = PACK_ORDER.filter((id) => chosen.has(id)).reduce(
+    (total, id) => total + PACK_WORDS[id].length,
+    0,
+  );
+
+  return (
+    <div className="blurt__overlay" role="dialog" aria-label="Game settings">
+      <div className="blurt__sheet">
+        <h2>Game settings</h2>
+
+        <h3>Turn length</h3>
+        {DURATIONS.map((option) => (
+          <button
+            key={option.seconds}
+            type="button"
+            className={`blurt__option${seconds === option.seconds ? ' is-on' : ''}`}
+            onClick={() => editable && onChange(packs, option.seconds)}
+            disabled={!editable}
+          >
+            <strong>{option.title}</strong>
+            <span>{option.blurb}</span>
+          </button>
+        ))}
+
+        <h3>Words</h3>
+        {PACK_ORDER.map((packId) => (
+          <button
+            key={packId}
+            type="button"
+            className={`blurt__option${chosen.has(packId) ? ' is-on' : ''}`}
+            onClick={() => {
+              if (!editable) return;
+              const next = new Set(chosen);
+              if (next.has(packId)) {
+                // Leaving nothing ticked would deal an empty deck.
+                if (next.size <= 1) return;
+                next.delete(packId);
+              } else {
+                next.add(packId);
+              }
+              onChange([...next], seconds);
+            }}
+            disabled={!editable}
+          >
+            <strong>{PACKS[packId].title}</strong>
+            <span>{PACKS[packId].blurb}</span>
+            <em>{chosen.has(packId) ? '✓' : ''}</em>
+          </button>
+        ))}
+        <p className="blurt__hint">{wordCount} words in the deck</p>
+
+        <p className="blurt__hint">
+          {editable
+            ? 'Everyone in the room gets these, so you will all be describing the same things.'
+            : 'Only the host can change these, and only before the game starts.'}
+        </p>
+
+        <button type="button" className="blurt__primary" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NamePrompt({ onSubmit }: { onSubmit: (name: string | null) => void }) {
+  const [draft, setDraft] = useState('');
+  const trimmed = draft.trim();
+
+  return (
+    <div className="blurt__overlay">
+      <form
+        className="blurt__sheet"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (trimmed) onSubmit(trimmed);
+        }}
+      >
+        <h2>What should we call you?</h2>
+        <p>So your team knows who is describing.</p>
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Your name"
+          maxLength={24}
+          autoFocus
+          autoComplete="off"
+        />
+        <button type="submit" className="blurt__primary" disabled={!trimmed}>
+          Save
+        </button>
+        <button type="button" className="blurt__skip" onClick={() => onSubmit(null)}>
+          Not now
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// MARK: - Small helpers
+
+/** The game code in the link, if somebody arrived on one. */
+function arrivedAt(): string | null {
+  return new URLSearchParams(window.location.search).get('game');
+}
+
+function makeGameId(): string {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const values = new Uint32Array(8);
+  crypto.getRandomValues(values);
+  return [...values].map((value) => alphabet[value % alphabet.length]).join('');
+}
+
+function randomSeed(): number {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0];
+}
+
+export default VibeBlurt;

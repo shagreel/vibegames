@@ -227,6 +227,7 @@
           }
         },
         "teams": {
+          ".write": true,
           "$playerId": {
             ".write": true,
             ".validate": "newData.val() === null || newData.val() === 1 || newData.val() === 2"

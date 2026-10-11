@@ -8,6 +8,7 @@ import {
   set,
   type Unsubscribe,
 } from 'firebase/database';
+import { shortId } from '../../lib/shortId';
 import { database } from '../../firebase';
 import { replay, wouldFormTrioByIds } from './engine';
 
@@ -90,18 +91,7 @@ export function takesFrom(entries: Record<string, TakenEntry> | null): TrioTake[
  * presence entry and every take. Eight characters is plenty for one game, and
  * different games give different ids.
  */
-export function shortId(playerId: string, gameId: string): string {
-  // FNV-1a, 64-bit, in BigInt so the whole thing is exact — a 32-bit hash would
-  // start colliding at a few tens of thousands of players and silently merge two
-  // people's scores.
-  let hash = 0xcbf29ce484222325n;
-  const bytes = new TextEncoder().encode(`${playerId}|${gameId}`);
-  for (const byte of bytes) {
-    hash ^= BigInt(byte);
-    hash = (hash * 0x00000100000001b3n) & 0xffffffffffffffffn;
-  }
-  return hash.toString(16).padStart(16, '0').slice(-8);
-}
+export { shortId };
 
 // MARK: - Observing
 

@@ -39,6 +39,7 @@ export const GAMES = {
   words: 'vibe-words',
   sudoku: 'vibe-sudoku',
   trio: 'vibe-trio',
+  blurt: 'vibe-blurt',
 } as const;
 
 export type GameName = (typeof GAMES)[keyof typeof GAMES];
@@ -62,6 +63,7 @@ const SCREENS: Record<string, string> = {
   '/words': GAMES.words,
   '/sudoku': GAMES.sudoku,
   '/trio': GAMES.trio,
+  '/blurt': GAMES.blurt,
 };
 
 type Sender = (name: string, params?: Record<string, unknown>) => void;
