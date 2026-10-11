@@ -417,27 +417,33 @@ export async function endTurn(gameId: string, reason: EndReason): Promise<boolea
   return result.committed;
 }
 
-/** Same room, same teams, fresh deck and scoreboard. */
-export async function playAgain(gameId: string, seed: number): Promise<boolean> {
-  const teamsSnapshot = await get(ref(database, `blurt/${gameId}/teams`));
-  const teams = parseTeams((teamsSnapshot.val() as Record<string, number> | null) ?? null);
-  const one = Object.keys(teams).filter((id) => teams[id] === 1).sort();
-  const two = Object.keys(teams).filter((id) => teams[id] === 2).sort();
+/**
+ * Same room, same teams, scoreboard back to nil — and **the next word**, not the
+ * first one again.
+ *
+ * The deck belongs to the room and is walked from end to end, so a table playing
+ * several games in a sitting never sees a word twice. The rotation carries on
+ * too, so the next person to describe is the one after whoever was holding it
+ * when the last game ended.
+ */
+export async function playAgain(gameId: string): Promise<boolean> {
+  const spin = await rotation(gameId);
+  if (!spin) return false;
 
   const result = await runTransaction(
     ref(database, `blurt/${gameId}/play`),
     (current: BlurtPlay | null) => {
       if (!current) return; // abort
-      const round = current.round + 1;
-      const offsets = describerOffsets(one.length, two.length, (seed + round) >>> 0);
-      const first = describingTeam(0);
+      const turn = current.turn + 1;
+      const team = describingTeam(turn);
+      const members = team === 1 ? spin.one : spin.two;
+      const offset = team === 1 ? spin.offsets.one : spin.offsets.two;
       return {
-        round,
-        turn: 0,
-        team: first,
-        describer:
-          describerFor(first === 1 ? one : two, 0, first === 1 ? offsets.one : offsets.two) ?? '',
-        word: 0,
+        round: current.round + 1,
+        turn,
+        team,
+        describer: describerFor(members, turn, offset) ?? '',
+        word: current.word + 1,
         state: 'ready',
         startedAt: null,
         endsAt: null,

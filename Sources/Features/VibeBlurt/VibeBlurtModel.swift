@@ -26,6 +26,12 @@ final class VibeBlurtModel: ObservableObject {
     /// from one place.
     @Published private(set) var now = Date()
     @Published var errorMessage: String?
+    /// Bumped when somebody catches *me* holding the word.
+    ///
+    /// A counter rather than a flag, because SwiftUI's `.sensoryFeedback` fires
+    /// on a change and a flag that has to be reset is a state machine waiting to
+    /// get stuck. The view watches this and buzzes the phone.
+    @Published private(set) var caughtCount = 0
     /// The host's own preference, remembered between games and written into the
     /// room when they make one. Not read from the room once a game exists — the
     /// room is the authority then, so everyone deals the same deck.
@@ -80,11 +86,11 @@ final class VibeBlurtModel: ObservableObject {
         return snapshot.teams[me]
     }
 
-    /// The deck this round. Derived from the seed, the round and the room's
-    /// packs, never stored.
+    /// The room's deck — one per room, walked from start to finish across as
+    /// many games as the table plays. Derived, never stored.
     var deck: [String] {
         guard let seed = snapshot.seed else { return [] }
-        return BlurtDeck.shuffled(seed: seed, round: play?.round ?? 0, packs: snapshot.packs)
+        return BlurtDeck.shuffled(seed: seed, packs: snapshot.packs)
     }
 
     var duration: BlurtDuration { snapshot.duration }
@@ -319,8 +325,24 @@ final class VibeBlurtModel: ObservableObject {
         }
     }
 
+    /// Whether a buzz just landed on me.
+    ///
+    /// Pure and static so it can be tested without a network, and so the rule is
+    /// readable in one place: the round ended on a blurt, I had the word when it
+    /// did, and it is news to me. The clock running out deliberately does *not*
+    /// count — everybody can see the clock, but a buzz is the one thing the
+    /// person mid-sentence is not looking at.
+    nonisolated static func caughtMe(previous: BlurtPlay?, next: BlurtPlay?, me: String?) -> Bool {
+        guard let me, previous?.state == .running, next?.state == .ended else { return false }
+        guard next?.reason == .blurt else { return false }
+        return previous?.describer == me
+    }
+
     private func apply(_ newSnapshot: BlurtSnapshot) {
         let previous = snapshot
+        if Self.caughtMe(previous: previous.play, next: newSnapshot.play, me: myShortID) {
+            caughtCount += 1
+        }
         snapshot = newSnapshot
 
         // A turn that has moved on is not being ended any more.

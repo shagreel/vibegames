@@ -27,15 +27,11 @@ for pack in BlurtPack.allCases {
 
 var decks: [String: [String]] = [:]
 for seed in seeds {
-    decks["\(seed)"] = BlurtDeck.shuffled(seed: seed, round: 0, packs: allPacks)
+    decks["\(seed)"] = BlurtDeck.shuffled(seed: seed, packs: allPacks)
 }
 var subsetDecks: [String: [String]] = [:]
 for seed in seeds {
-    subsetDecks["\(seed)"] = BlurtDeck.shuffled(seed: seed, round: 0, packs: somePacks)
-}
-var roundDecks: [String: [String]] = [:]
-for round in 0..<3 {
-    roundDecks["\(round)"] = BlurtDeck.shuffled(seed: 42, round: round, packs: allPacks)
+    subsetDecks["\(seed)"] = BlurtDeck.shuffled(seed: seed, packs: somePacks)
 }
 
 var splits: [String: [String: Int]] = [:]
@@ -95,7 +91,6 @@ let out: [String: Any] = [
     "packsChosen": somePacks.map(\.rawValue).sorted(),
     "decks": decks,
     "subsetDecks": subsetDecks,
-    "roundDecks": roundDecks,
     "durations": durations,
     "nearestDuration": nearest,
     "splits": splits,

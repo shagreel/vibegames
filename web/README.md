@@ -28,13 +28,13 @@ handed round a table.
 
 ## 🧪 Test Suite
 
-**192 passing tests.**
+**194 passing tests.**
 
 ```bash
 ✓ src/test/trioEngine.test.ts     (35 tests)   the rule, and agreement with iOS
 ✓ src/test/sudokuGenerator.test.ts (34 tests)  21 boards matched against iOS
 ✓ src/test/gameLogic.test.ts    (17 tests)
-✓ src/test/fiveModel.test.ts    (16 tests)   rounds, the clock, the packs
+✓ src/test/fiveModel.test.ts    (19 tests)   rounds, the clock, the packs
 ✓ src/test/errors.test.ts       (13 tests)   the crash reporter
 ✓ src/test/analytics.test.ts    (16 tests)   what gets counted, and what does not
 ✓ src/test/blurtEngine.test.ts  (24 tests)  the deck, rotation and scoring vs iOS

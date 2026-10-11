@@ -501,50 +501,43 @@ final class VibeBlurtService {
         }
     }
 
-    /// Same room, same teams, fresh deck and scoreboard.
+    /// Same room, same teams, scoreboard back to nil — and **the next word**,
+    /// not the first one again.
     ///
-    /// The round number, not a new seed, is what makes the words different: the
-    /// deck is derived from the room's seed advanced by the round, so nothing
-    /// has to be written to `meta` and the reset stays a single transaction.
+    /// The deck belongs to the room and is walked from end to end, so a table
+    /// playing several games in a sitting never sees a word twice. The rotation
+    /// carries on too, which also means the next person to describe is the one
+    /// after whoever was holding it when the last game ended.
     @discardableResult
     func playAgain(gameID: String, seed: UInt32) async -> Bool {
-        guard let reference = gameReference(gameID) else { return false }
-
-        // Read what the reset needs first, so the transaction only has to swap
-        // one node. Teams do not change between rounds.
-        let teamsValue = (try? await reference.child("teams").getData().value) as? [String: Any] ?? [:]
-        var teams: [String: BlurtTeam] = [:]
-        for (player, raw) in teamsValue {
-            if let n = raw as? Int, let team = BlurtTeam(rawValue: n) { teams[player] = team }
-        }
-        let one = BlurtRules.members(of: .one, in: teams)
-        let two = BlurtRules.members(of: .two, in: teams)
+        guard let reference = gameReference(gameID),
+              let rotation = await rotation(gameID: gameID) else { return false }
 
         return await withCheckedContinuation { continuation in
             reference.child("play").runTransactionBlock({ current in
-                guard let existing = BlurtPlay(value: current.value) else { return TransactionResult.abort() }
-
-                let round = existing.round + 1
-                let roundSeed = seed &+ UInt32(truncatingIfNeeded: round)
-                let offsets = BlurtRules.describerOffsets(oneMembers: one.count,
-                                                          twoMembers: two.count,
-                                                          seed: roundSeed)
+                guard let existing = BlurtPlay(value: current.value) else {
+                    return TransactionResult.abort()
+                }
 
                 var next = BlurtPlay()
-                next.round = round
-                next.turn = 0
-                next.team = BlurtRules.describingTeam(turn: 0)
-                let members = next.team == .one ? one : two
-                let offset = next.team == .one ? offsets.one : offsets.two
+                next.round = existing.round + 1
+                next.state = .ready
+                next.turn = existing.turn + 1
+                next.word = existing.word + 1
+                next.team = BlurtRules.describingTeam(turn: next.turn)
+                let members = next.team == .one ? rotation.one : rotation.two
+                let offset = next.team == .one ? rotation.offsets.one : rotation.offsets.two
                 next.describer = BlurtRules.describer(for: next.team,
                                                       members: members,
-                                                      turn: 0,
+                                                      turn: next.turn,
                                                       offset: offset) ?? ""
-                next.state = .ready
 
                 current.value = next.value
                 return TransactionResult.success(withValue: current)
             }, andCompletionBlock: { error, committed, _ in
+                if error != nil || !committed {
+                    print("Blurt play again refused: \(error?.localizedDescription ?? "not committed")")
+                }
                 continuation.resume(returning: error == nil && committed)
             })
         }

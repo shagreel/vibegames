@@ -59,11 +59,20 @@ final class VibeFiveModel: ObservableObject {
         static let sound = "vibefive.sound"
         static let haptics = "vibefive.haptics"
         static let packs = "vibefive.packs"
+        static let seen = "vibefive.seen"
     }
 
     private let defaults = UserDefaults.standard
     private var deck: [VibeCategory] = []
     private var deckIndex = 0
+    /// Prompts already dealt to this player, so a second game does not deal the
+    /// first one's prompts again.
+    ///
+    /// Kept across restarts, across deck rebuilds and across launches, because
+    /// "a session" means an evening of playing rather than one visit to the
+    /// screen. Persisting it costs a few kilobytes and is the difference between
+    /// a promise and a hope.
+    private var seenPrompts: Set<String> = []
     private var ticker: Task<Void, Never>?
     private var lastWholeSecond: Int?
 
@@ -256,13 +265,31 @@ final class VibeFiveModel: ObservableObject {
         }
         let drawn = deck[deckIndex]
         deckIndex += 1
+        markSeen(drawn)
         return drawn
     }
 
-    /// Reshuffles the pool of enabled prompts, avoiding an immediate repeat of
-    /// the category currently on screen.
+    private func markSeen(_ drawn: VibeCategory) {
+        guard !seenPrompts.contains(drawn.id) else { return }
+        seenPrompts.insert(drawn.id)
+        defaults.set(Array(seenPrompts), forKey: Key.seen)
+    }
+
+    /// Reshuffles the pool of enabled prompts, leaving out everything already
+    /// dealt.
+    ///
+    /// A fresh shuffle of the whole pool would repeat: ten prompts out of a
+    /// hundreds-strong pack twice shares one every few rounds, which is often
+    /// enough that people notice and say so. The used-up prompts only come back
+    /// once the pool is genuinely exhausted, which is the only honest way to do
+    /// it without making the pools shorter.
     func rebuildDeck() {
-        var pool = CategoryLibrary.categories(in: enabledPacks)
+        let everything = CategoryLibrary.categories(in: enabledPacks)
+        var pool = everything.filter { !seenPrompts.contains($0.id) }
+        if pool.isEmpty {
+            seenPrompts.removeAll()
+            pool = everything
+        }
         pool.shuffle()
 
         if pool.count > 1,
@@ -341,6 +368,8 @@ final class VibeFiveModel: ObservableObject {
         if defaults.object(forKey: Key.haptics) != nil {
             hapticsEnabled = defaults.bool(forKey: Key.haptics)
         }
+
+        seenPrompts = Set(defaults.stringArray(forKey: Key.seen) ?? [])
 
         if let raw = defaults.array(forKey: Key.packs) as? [String] {
             let restored = raw.compactMap(CategoryPack.init(rawValue:))

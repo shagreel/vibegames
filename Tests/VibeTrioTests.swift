@@ -334,21 +334,39 @@ final class TrioSharedTableTests: XCTestCase {
     /// than remove a card that is not there — this is what a lost race looks
     /// like when the server hands the block a newer board.
     func testReplayIgnoresATakeThatLosesItsCards() {
-        var table = TrioTable(seed: 1)
-        guard let first = table.availableTrios.first else { return XCTFail("no trio") }
-        let firstIDs = first.map { table.visible[$0].id }.sorted()
-        var secondIDs: [Int] = []
-        if let second = table.availableTrios.dropFirst().first {
-            secondIDs = second.map { table.visible[$0].id }.sorted()
+        guard let board = Self.twoDisjointTrios() else {
+            return XCTFail("no board with two disjoint trios to test with")
         }
-        guard !secondIDs.isEmpty else { return }
 
         // The loser's take is replayed second, after the cards it wanted are gone.
-        let replayed = TrioTable.replay(seed: 1, takes: [firstIDs, firstIDs])
+        let replayed = TrioTable.replay(seed: board.seed, takes: [board.first, board.first])
         XCTAssertEqual(replayed.triosTaken, 1, "the same cards must not score twice")
 
-        let sane = TrioTable.replay(seed: 1, takes: [firstIDs, secondIDs])
+        let sane = TrioTable.replay(seed: board.seed, takes: [board.first, board.second])
         XCTAssertEqual(sane.triosTaken, 2)
+    }
+
+    /// A board with two trios sharing no cards.
+    ///
+    /// Not every deal has one, and which seeds do is a property of the shuffle
+    /// rather than of the rule under test — so this looks for one instead of
+    /// naming a seed. Pinning seed 1 meant the test broke when the seeded
+    /// generator was fixed, for a reason that had nothing to do with replays.
+    private static func twoDisjointTrios() -> (seed: UInt32, first: [Int], second: [Int])? {
+        for seed in UInt32(1)...200 {
+            let table = TrioTable(seed: seed)
+            let trios = table.availableTrios
+            guard let first = trios.first else { continue }
+            let firstIDs = first.map { table.visible[$0].id }.sorted()
+
+            let second = trios.dropFirst().first { candidate in
+                Set(candidate.map { table.visible[$0].id }).isDisjoint(with: firstIDs)
+            }
+            if let second {
+                return (seed, firstIDs, second.map { table.visible[$0].id }.sorted())
+            }
+        }
+        return nil
     }
 }
 

@@ -6,6 +6,7 @@ import {
   countIn,
 } from '../games/five/packs';
 import {
+  promptKey,
   ROUND_DURATION,
   TICK_WINDOW,
   advance,
@@ -204,5 +205,32 @@ describe('the round', () => {
     expect(state.roundNumber).toBe(130);
     expect(seen.size).toBeGreaterThan(1);
     expect([...seen].every((text) => PROMPTS.food.includes(text))).toBe(true);
+  });
+
+  describe('deck memory', () => {
+    it('leaves out the prompts already dealt', () => {
+      const all = shuffled(['food'], null);
+      const exclude = new Set(all.slice(0, 20).map(promptKey));
+      const next = shuffled(['food'], null, exclude);
+
+      expect(next.some((category) => exclude.has(promptKey(category)))).toBe(false);
+      expect(next).toHaveLength(all.length - exclude.size);
+    });
+
+    it('starts again once the whole pool has been dealt', () => {
+      // An exhausted pool has to deal something: a blank card would be worse
+      // than a repeat.
+      const all = shuffled(['food'], null);
+      const exclude = new Set(all.map(promptKey));
+      expect(shuffled(['food'], null, exclude)).toHaveLength(all.length);
+    });
+
+    it('uses the same key for the same prompt across decks', () => {
+      const all = shuffled(['food'], null);
+      const again = shuffled(['food', 'animals'], null);
+      const food = again.find((category) => category.pack === 'food');
+      expect(food).toBeDefined();
+      expect(all.map(promptKey)).toContain(promptKey(food!));
+    });
   });
 });

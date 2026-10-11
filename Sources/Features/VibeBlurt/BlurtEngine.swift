@@ -87,14 +87,11 @@ enum BlurtDeck {
         return deck
     }
 
-    /// The deck for a round.
-    ///
-    /// A room keeps one seed; "play again" advances the round rather than
-    /// rewriting it, so the reset stays a single transaction and the words still
-    /// come out different the second time.
-    static func shuffled(seed: UInt32, round: Int, packs: Set<BlurtPack>) -> [String] {
-        shuffled(seed: seed &+ UInt32(truncatingIfNeeded: round), packs: packs)
-    }
+    // Note: there is deliberately no per-round deck. A room has *one* deck and
+    // "play again" carries on through it rather than shuffling a new one, so a
+    // table playing several games in a sitting never gets a word twice. Drawing
+    // a fresh shuffle each game only looks random — 10 words out of 300 twice
+    // shares one word every third game or so, which is often enough to notice.
 
     /// The word for a turn.
     ///

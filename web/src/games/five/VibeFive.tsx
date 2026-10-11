@@ -9,6 +9,9 @@ import {
   primaryHint,
   primaryAction,
   progressAt,
+  promptKey,
+  loadSeen,
+  saveSeen,
   remainingAt,
   resetToReady,
   shuffled,
@@ -84,7 +87,12 @@ function VibeFive() {
   const [soundOn, setSoundOn] = useState(() => loadFlag(SOUND_KEY, true));
   const [hapticsOn, setHapticsOn] = useState(() => loadFlag(HAPTICS_KEY, true));
 
-  const [state, setState] = useState<FiveState>(() => initialState(loadPacks()));
+  // Prompts already dealt to this player, kept across games and launches so a
+  // second game does not deal the first one's cards again. Held in state purely
+  // for the lazy initialiser — it is never rendered, so it is only ever read and
+  // written in place.
+  const [seen] = useState(() => loadSeen());
+  const [state, setState] = useState<FiveState>(() => initialState(loadPacks(), seen));
   const [now, setNow] = useState(() => Date.now());
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -111,6 +119,16 @@ function VibeFive() {
     },
     [soundOn, hapticsOn],
   );
+
+  // Remember every card as it is dealt, so the next game can avoid it.
+  useEffect(() => {
+    const drawn = state.category;
+    if (!drawn) return;
+    const key = promptKey(drawn);
+    if (seen.has(key)) return;
+    seen.add(key);
+    saveSeen(seen);
+  }, [state.category, seen]);
 
   // MARK: - The clock
 
@@ -148,7 +166,7 @@ function VibeFive() {
     localStorage.setItem(PACKS_KEY, JSON.stringify(next));
     // The deck is rebuilt from the new pool, so a disabled pack stops appearing
     // straight away rather than after the current deck runs out.
-    apply({ ...resetToReady(stateRef.current), deck: shuffled(next, null), deckIndex: 0 });
+    apply({ ...resetToReady(stateRef.current), deck: shuffled(next, null, seen), deckIndex: 0 });
   };
 
   const togglePack = (id: PackId) => {
@@ -169,7 +187,7 @@ function VibeFive() {
 
   const onPrimary = () => {
     sound.current.warmUp(); // Browsers need a gesture before audio will start.
-    const { state: next, cues } = primaryAction(stateRef.current, enabled, Date.now());
+    const { state: next, cues } = primaryAction(stateRef.current, enabled, Date.now(), seen);
     apply(next);
     for (const cue of cues) playCue(cue);
   };

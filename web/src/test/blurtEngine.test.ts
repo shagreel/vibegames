@@ -67,26 +67,18 @@ describe('the word packs', () => {
 describe('the deck', () => {
   it('comes out exactly as the app lays it out, for every seed', () => {
     for (const [seed, deck] of Object.entries(fixtures.decks)) {
-      expect(shuffled(Number(seed), 0, ALL), `seed ${seed}`).toEqual(deck);
+      expect(shuffled(Number(seed), ALL), `seed ${seed}`).toEqual(deck);
     }
   });
 
   it('agrees with the app when only some packs are on', () => {
     for (const [seed, deck] of Object.entries(fixtures.subsetDecks)) {
-      expect(shuffled(Number(seed), 0, fixtures.packsChosen), `seed ${seed}`).toEqual(deck);
+      expect(shuffled(Number(seed), fixtures.packsChosen), `seed ${seed}`).toEqual(deck);
     }
-  });
-
-  it('agrees with the app about what "play again" deals', () => {
-    for (const [round, deck] of Object.entries(fixtures.roundDecks)) {
-      expect(shuffled(42, Number(round), ALL), `round ${round}`).toEqual(deck);
-    }
-    // The round, not a new seed, is what makes the second game different.
-    expect(fixtures.roundDecks['0']).not.toEqual(fixtures.roundDecks['1']);
   });
 
   it('wraps rather than running out mid-turn', () => {
-    const deck = shuffled(3, 0, ALL);
+    const deck = shuffled(3, ALL);
     expect(wordAt(0, deck)).toBe(deck[0]);
     expect(wordAt(deck.length, deck)).toBe(deck[0]);
     expect(wordAt(-1, deck)).toBe(deck[deck.length - 1]);

@@ -35,25 +35,68 @@ export interface FiveState {
   lastWholeSecond: number | null;
 }
 
-export function initialState(enabled: readonly PackId[]): FiveState {
+export function initialState(enabled: readonly PackId[], exclude: ReadonlySet<string> = new Set()): FiveState {
   return {
     phase: 'ready',
     category: null,
     roundNumber: 0,
     startedAt: null,
     frozenRemaining: 0,
-    deck: shuffled(enabled, null),
+    deck: shuffled(enabled, null, exclude),
     deckIndex: 0,
     lastWholeSecond: null,
   };
 }
 
+/** How a prompt is named when remembering which ones have been dealt. */
+export function promptKey(category: { text: string; pack: string }): string {
+  return `${category.pack}|${category.text}`;
+}
+
+const SEEN_KEY = 'vibefive.seen';
+
 /**
- * Reshuffles the enabled prompts, avoiding an immediate repeat of the category
- * currently on screen — dealing the same card twice in a row reads as a bug.
+ * The prompts this player has already been dealt.
+ *
+ * Kept in localStorage rather than in the game state, because it has to outlive
+ * a game: "a session" is an evening of playing, and a second game dealing the
+ * first one's prompts again is what people notice and complain about. It is
+ * also why `shuffled` takes an exclusion set at all.
  */
-export function shuffled(enabled: readonly PackId[], current: VibeCategory | null): VibeCategory[] {
-  const pool = categoriesIn(enabled);
+export function loadSeen(): Set<string> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(SEEN_KEY) ?? '[]');
+    if (Array.isArray(stored)) return new Set(stored.filter((k): k is string => typeof k === 'string'));
+  } catch {
+    // A corrupt value is not worth crashing over.
+  }
+  return new Set();
+}
+
+export function saveSeen(seen: ReadonlySet<string>): void {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+  } catch {
+    // Storage full or blocked: the game still works, it just may repeat.
+  }
+}
+
+/**
+ * Reshuffles the enabled prompts, leaving out everything already dealt and
+ * avoiding an immediate repeat of the card currently on screen.
+ *
+ * A fresh shuffle of the whole pool repeats: ten prompts out of a pack-sized
+ * pool twice shares one every few rounds, which is often enough that people
+ * notice. Used-up prompts only come back once the pool is genuinely exhausted.
+ */
+export function shuffled(
+  enabled: readonly PackId[],
+  current: VibeCategory | null,
+  exclude: ReadonlySet<string> = new Set(),
+): VibeCategory[] {
+  const everything = categoriesIn(enabled);
+  const unseen = everything.filter((category) => !exclude.has(promptKey(category)));
+  const pool = unseen.length === 0 ? everything : unseen;
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -86,11 +129,15 @@ export function progressAt(state: FiveState, now: number): number {
   return remainingAt(state, now) / ROUND_DURATION;
 }
 
-function drawCategory(state: FiveState, enabled: readonly PackId[]): [VibeCategory, FiveState] {
+function drawCategory(
+  state: FiveState,
+  enabled: readonly PackId[],
+  exclude: ReadonlySet<string>,
+): [VibeCategory, FiveState] {
   let deck = state.deck;
   let deckIndex = state.deckIndex;
   if (deckIndex >= deck.length) {
-    deck = shuffled(enabled, state.category);
+    deck = shuffled(enabled, state.category, exclude);
     deckIndex = 0;
   }
   if (deckIndex >= deck.length) {
@@ -104,8 +151,9 @@ function drawCategory(state: FiveState, enabled: readonly PackId[]): [VibeCatego
 export function revealCategory(
   state: FiveState,
   enabled: readonly PackId[],
+  exclude: ReadonlySet<string> = new Set(),
 ): FiveState {
-  const [category, next] = drawCategory(state, enabled);
+  const [category, next] = drawCategory(state, enabled, exclude);
   return {
     ...next,
     category,
@@ -143,12 +191,13 @@ export function primaryAction(
   state: FiveState,
   enabled: readonly PackId[],
   now: number,
+  exclude: ReadonlySet<string> = new Set(),
 ): { state: FiveState; cues: Cue[] } {
   switch (state.phase) {
     case 'ready':
     case 'stopped':
     case 'buzzed':
-      return { state: revealCategory(state, enabled), cues: [] };
+      return { state: revealCategory(state, enabled, exclude), cues: [] };
     case 'revealed':
       return beginCountdown(state, now);
     case 'running':

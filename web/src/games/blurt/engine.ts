@@ -87,8 +87,16 @@ export function wordsIn(packs: readonly string[]): string[] {
   return PACK_ORDER.filter((id) => chosen.has(id)).flatMap((id) => PACK_WORDS[id] ?? []);
 }
 
-export function shuffled(seed: number, round: number, packs: readonly string[]): string[] {
-  const generator = new SeededGenerator((seed + round) >>> 0);
+/**
+ * The room's deck — one per room, walked from start to finish across as many
+ * games as the table plays.
+ *
+ * There is deliberately no per-round deck. Shuffling afresh for each game only
+ * looks random: 10 words out of 300 twice shares a word every third game or so,
+ * which is often enough to notice.
+ */
+export function shuffled(seed: number, packs: readonly string[]): string[] {
+  const generator = new SeededGenerator(seed >>> 0);
   const deck = wordsIn(packs);
   shuffle(deck, generator);
   return deck;

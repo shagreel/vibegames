@@ -9,8 +9,17 @@ struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
 
     init(seed: UInt32) {
-        // Any non-zero scramble works; this one just spreads low seeds out.
-        state = UInt64(seed) &* 0x9E37_79B9_7F4A_7C15 &+ 0x2545_F491_4F6C_DD1D
+        // The seed *is* the state; `next()` does the add-and-mix, which is how
+        // SplitMix64 is defined.
+        //
+        // This used to pre-scramble it — `seed * gamma + constant` — which looks
+        // like it only spreads low seeds out and is in fact much worse: because
+        // `next()` adds the gamma again, seed `n + 1` produced the *same stream
+        // as seed `n`, one draw later*. A game that derives a second shuffle
+        // from `seed + 1` therefore got almost the same deck back, which is
+        // exactly what Vibe Blurt's "play again" did: measured at 10 of the
+        // first 20 words shared, against 1.3 by chance.
+        state = UInt64(seed)
     }
 
     mutating func next() -> UInt64 {

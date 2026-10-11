@@ -188,6 +188,27 @@ function VibeBlurt() {
     void endTurn(gameId, 'time');
   }, [gameId, play?.state, play?.endsAt, play?.turn, now]);
 
+  // MARK: - Being caught
+
+  // The phone of whoever is holding the word buzzes when the other team catches
+  // them: they are mid-sentence and not looking at their screen. Tracked from
+  // the *last running* snapshot rather than the ended one, because the service
+  // moves the rotation on behind the result — the ended snapshot already names
+  // the next person, so asking it who was holding the word gives the wrong
+  // answer.
+  const wasHolding = useRef(false);
+  useEffect(() => {
+    if (!play) return;
+    if (play.state === 'running') {
+      wasHolding.current = play.describer === myShortId;
+      return;
+    }
+    if (play.state === 'ended' && play.reason === 'blurt' && wasHolding.current) {
+      wasHolding.current = false;
+      navigator.vibrate?.([0, 90, 60, 140]);
+    }
+  }, [play, myShortId]);
+
   // MARK: - Analytics
 
   const reportedTurn = useRef<number | null>(null);
@@ -267,9 +288,10 @@ function VibeBlurt() {
   const allPacksOn = snapshot.packs.length === PACK_ORDER.length;
 
   // Derived, never stored.
+  // One deck per room, walked across however many games the table plays.
   const deck = useMemo(
-    () => (snapshot.seed === null ? [] : shuffled(snapshot.seed, play?.round ?? 0, snapshot.packs)),
-    [snapshot.seed, snapshot.packs, play?.round],
+    () => (snapshot.seed === null ? [] : shuffled(snapshot.seed, snapshot.packs)),
+    [snapshot.seed, snapshot.packs],
   );
   const currentWord = play ? wordAt(play.word, deck) : '';
 
@@ -449,7 +471,7 @@ function VibeBlurt() {
           <button
             type="button"
             className="blurt__primary"
-            onClick={() => void playAgain(gameId, snapshot.seed ?? randomSeed())}
+            onClick={() => void playAgain(gameId)}
           >
             Play again
           </button>

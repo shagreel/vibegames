@@ -24,8 +24,10 @@ export class SeededGenerator {
   private state: bigint;
 
   constructor(seed: number) {
-    this.state =
-      (BigInt(seed) * 0x9e3779b97f4a7c15n + 0x2545f4914f6cdd1dn) & 0xffffffffffffffffn;
+    // The seed *is* the state; `next()` does the add-and-mix, which is how
+    // SplitMix64 is defined. See `SeededGenerator.swift` for why pre-scrambling
+    // it here made consecutive seeds replay the same stream one draw apart.
+    this.state = BigInt(seed) & 0xffffffffffffffffn;
   }
 
   next(): bigint {

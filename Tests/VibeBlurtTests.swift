@@ -30,8 +30,8 @@ final class VibeBlurtTests: XCTestCase {
 
     func testTheSameSeedDealsTheSameWordsEverywhere() {
         let all = Set(BlurtPack.allCases)
-        let first = BlurtDeck.shuffled(seed: 42, round: 0, packs: all)
-        let second = BlurtDeck.shuffled(seed: 42, round: 0, packs: all)
+        let first = BlurtDeck.shuffled(seed: 42, packs: all)
+        let second = BlurtDeck.shuffled(seed: 42, packs: all)
 
         XCTAssertEqual(first, second, "a shared game depends on this being stable")
         XCTAssertEqual(Set(first).count, BlurtWords.all.count, "a shuffle, not a filter")
@@ -39,21 +39,39 @@ final class VibeBlurtTests: XCTestCase {
 
     func testDifferentSeedsDealDifferentHands() {
         let all = Set(BlurtPack.allCases)
-        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 1, round: 0, packs: all),
-                          BlurtDeck.shuffled(seed: 2, round: 0, packs: all))
+        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 1, packs: all),
+                          BlurtDeck.shuffled(seed: 2, packs: all))
     }
 
-    func testPlayAgainDealsFromADifferentPlaceWithoutANewSeed() {
-        // The round, not a new seed, is what makes the second game different.
+    func testARoomHasOneDeckAndItNeverChanges() {
+        // One deck per room, walked across as many games as the table plays.
+        // Shuffling afresh for each game is what used to hand back nearly the
+        // same words: 10 out of 300 twice shares one every third game or so.
         let all = Set(BlurtPack.allCases)
-        XCTAssertNotEqual(BlurtDeck.shuffled(seed: 7, round: 0, packs: all),
-                          BlurtDeck.shuffled(seed: 7, round: 1, packs: all))
-        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, round: 1, packs: all),
-                       BlurtDeck.shuffled(seed: 7, round: 1, packs: all))
+        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, packs: all),
+                       BlurtDeck.shuffled(seed: 7, packs: all))
+        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, packs: all).count, 300)
+    }
+
+    func testConsecutiveSeedsDoNotDealNearlyTheSameDeck() {
+        // The bug that started this: the generator's seeding made seed `n + 1`
+        // replay seed `n`'s stream one draw late, so a deck derived from
+        // `seed + 1` came back almost identical. Two unrelated shuffles should
+        // share about 20 * 20 / 300 words over their first twenty.
+        let all = Set(BlurtPack.allCases)
+        var shared = 0
+        let trials = 60
+        for seed in UInt32(1000)..<UInt32(1000 + trials) {
+            let first = Set(BlurtDeck.shuffled(seed: seed, packs: all).prefix(20))
+            let second = BlurtDeck.shuffled(seed: seed + 1, packs: all).prefix(20)
+            shared += second.filter { first.contains($0) }.count
+        }
+        let average = Double(shared) / Double(trials)
+        XCTAssertLessThan(average, 6, "consecutive seeds are dealing nearly the same deck (\(average) of 20)")
     }
 
     func testTheDeckWrapsRatherThanRunningOut() {
-        let deck = BlurtDeck.shuffled(seed: 3, round: 0, packs: Set(BlurtPack.allCases))
+        let deck = BlurtDeck.shuffled(seed: 3, packs: Set(BlurtPack.allCases))
 
         XCTAssertEqual(BlurtDeck.word(at: 0, in: deck), deck[0])
         XCTAssertEqual(BlurtDeck.word(at: deck.count, in: deck), deck[0], "wrapped round")
@@ -93,13 +111,13 @@ final class VibeBlurtTests: XCTestCase {
     }
 
     func testANarrowDeckOnlyContainsTheChosenPacks() {
-        let deck = BlurtDeck.shuffled(seed: 11, round: 0, packs: [.food])
+        let deck = BlurtDeck.shuffled(seed: 11, packs: [.food])
         XCTAssertEqual(Set(deck), Set(FoodWords.all))
     }
 
     func testTheDeckDependsOnThePacksAsWellAsTheSeed() {
-        let all = BlurtDeck.shuffled(seed: 5, round: 0, packs: Set(BlurtPack.allCases))
-        let some = BlurtDeck.shuffled(seed: 5, round: 0, packs: [.food])
+        let all = BlurtDeck.shuffled(seed: 5, packs: Set(BlurtPack.allCases))
+        let some = BlurtDeck.shuffled(seed: 5, packs: [.food])
         XCTAssertNotEqual(all, some)
     }
 
@@ -310,6 +328,80 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertNil(value["scorer"])
         XCTAssertNotNil(value["turn"], "the required fields are always present")
         XCTAssertNotNil(value["state"])
+    }
+
+    // MARK: - The buzz you feel
+
+    private func running(describer: String) -> BlurtPlay {
+        var play = BlurtPlay()
+        play.turn = 3
+        play.team = .one
+        play.describer = describer
+        play.state = .running
+        return play
+    }
+
+    /// The state a finished round really leaves behind.
+    ///
+    /// The service moves the rotation on *behind* the result, so the ended
+    /// snapshot names the person who is up next — not the one who was just
+    /// caught. That is the whole reason "am I the describer?" is the wrong
+    /// question to ask of the new state, and leaving it out of this helper made
+    /// the test pass against a check that asked exactly that.
+    private func ended(_ play: BlurtPlay, reason: BlurtEnd) -> BlurtPlay {
+        var next = play
+        next.state = .ended
+        next.reason = reason
+        next.scorer = play.team.other
+        next.turn += 1
+        next.team = play.team.other
+        next.word += 1
+        next.describer = "next-person"
+        return next
+    }
+
+    func testThePersonHoldingTheWordFeelsTheBuzz() {
+        let holding = running(describer: "me")
+
+        XCTAssertTrue(VibeBlurtModel.caughtMe(previous: holding,
+                                              next: ended(holding, reason: .blurt),
+                                              me: "me"))
+    }
+
+    func testNobodyElseFeelsIt() {
+        let holding = running(describer: "me")
+        let buzzed = ended(holding, reason: .blurt)
+
+        // The team that pressed the button knows already, and so does everyone
+        // else — it is the describer who needs telling.
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: buzzed, me: "someone-else"))
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: buzzed, me: nil))
+    }
+
+    func testRunningOutOfTimeDoesNotBuzzAnybody() {
+        // The clock is on every screen, so the end of it is not news. Only a
+        // buzz catches somebody mid-sentence.
+        let holding = running(describer: "me")
+
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding,
+                                               next: ended(holding, reason: .time),
+                                               me: "me"))
+    }
+
+    func testTheBuzzOnlyLandsWhenTheRoundWasActuallyRunning() {
+        let holding = running(describer: "me")
+        var waiting = holding
+        waiting.state = .ready
+
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: waiting,
+                                               next: ended(holding, reason: .blurt),
+                                               me: "me"),
+                       "a round nobody had started cannot be caught")
+
+        // And a snapshot that has not changed is not a buzz either, however many
+        // times the observer hands it over.
+        let alreadyOver = ended(holding, reason: .blurt)
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: alreadyOver, next: alreadyOver, me: "me"))
     }
 
     // MARK: - The room, against the real database

@@ -496,6 +496,38 @@ same moment would both be paid. It is one Realtime Database transaction on the
 goes through the same transaction, which is why any phone can call time and why
 the turn still ends if the describer's app has gone to sleep.
 
+### Nobody gets the same word twice
+
+Which took finding a real bug, and the bug was not in this game at all.
+
+"Play again" used to deal from a fresh shuffle of all 300 words, which looks
+random and is not good enough: ten words out of 300 twice shares one every third
+game or so, which people notice and say so. Deriving the second shuffle from
+`seed + 1` was meant to fix that and made it dramatically worse — measured at
+**10 of the first 20 words shared, against 1.3 by chance**.
+
+The cause was `SeededGenerator`, shared by every game in the suite. Its
+constructor pre-scrambled the seed (`seed * gamma + constant`) and `next()` then
+added the gamma again, so seed `n + 1` replayed seed `n`'s stream **one draw
+late**. Two shuffles of the same list were therefore nearly the same shuffle.
+
+It only showed up in Vibe Blurt because it is the only game that derives a second
+shuffle from a related seed — Trio and Sudoku use one seed per game, where a
+shifted stream is invisible. The constructor now does what SplitMix64 actually
+says: the seed *is* the state, and `next()` does the add-and-mix. Adjacent seeds
+now share 1.25 of 20 words, which is chance.
+
+On top of that, a room now has **one deck**, walked from end to end across as many
+games as the table plays, rather than a fresh shuffle per game. Vibe Five does the
+same thing in its own way: it remembers every prompt it has dealt, in
+`UserDefaults`/`localStorage`, and leaves them out until the pool is genuinely
+used up — so a second game cannot deal the first one's cards even if the pool is
+a single pack.
+
+Changing the generator changed every seeded board in the suite, so the fixtures
+for Trio, Sudoku and Blurt were all re-dumped from Swift and the browser tests
+re-checked against them.
+
 ### 300 things to describe, in eight packs
 
 Food and drink, animals and nature, places and travel, household things, jobs and
@@ -575,7 +607,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**186 tests in all: 150 unit and 36 UI.** They are what the numbers above are
+**194 tests in all: 158 unit and 36 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
