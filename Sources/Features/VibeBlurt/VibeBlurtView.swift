@@ -87,17 +87,24 @@ struct VibeBlurtView: View {
                         .kerning(1.5)
                         .foregroundStyle(VibeTheme.tertiaryText)
 
-                    Text("Two teams. One person gets a word and describes it until "
-                         + "their team says it — then the next word. Nobody scores "
-                         + "for guessing. When the clock stops, the point goes to "
-                         + "the team that was **not** holding the phone. First to "
-                         + "\(BlurtRules.target) wins.")
+                    Text("Two teams of at least two. One person gets a word and "
+                         + "describes it; their team guesses. When they get it, the "
+                         + "word passes to somebody on the **other** team — and the "
+                         + "clock keeps running.")
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(VibeTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("If the describer says the word, or any part of it, the "
-                         + "other team can call it — and they take the point instead.")
+                    Text("Nobody scores for guessing. When the clock runs out, the "
+                         + "point goes to the team that is **not** holding the word. "
+                         + "First to \(BlurtRules.target) wins.")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("The other team can see the word, and gets a red BUZZ "
+                         + "button. If the describer says it, or any part of it, "
+                         + "they press it — and they take the point instead.")
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(VibeTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -210,9 +217,7 @@ struct VibeBlurtView: View {
                     .disabled(!model.canStart)
                     .accessibilityIdentifier("blurt.start")
 
-                    Text(model.canStart
-                         ? "Teams are picked at random, so nobody can argue."
-                         : "You need at least two people — read the code out.")
+                    Text(model.canStart ? model.startHint : model.startHint)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(VibeTheme.tertiaryText)
                         .multilineTextAlignment(.center)
@@ -385,8 +390,10 @@ struct VibeBlurtView: View {
             if play.state == .running {
                 if model.isDescriber {
                     describerCard
+                } else if model.isOnBuzzTeam {
+                    buzzCard(play)
                 } else {
-                    waitingCard(play)
+                    guessingCard
                 }
             } else {
                 // `.ready` and `.ended` share this screen: the result of the last
@@ -479,96 +486,115 @@ struct VibeBlurtView: View {
                 }
                 .accessibilityIdentifier("blurt.word")
 
-            HStack(spacing: 12) {
-                Button {
-                    Task { await model.gotIt() }
-                } label: {
-                    Text("Got it")
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background {
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(VibeTheme.vibeBlurt)
-                        }
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("blurt.gotIt")
-
-                // The same call, and honestly so: a word nobody can get scores
-                // nothing either way, so skipping costs the describer's team
-                // nothing but the seconds it took to decide.
-                Button {
-                    Task { await model.gotIt() }
-                } label: {
-                    Text("Skip")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(VibeTheme.primaryText)
-                        .frame(width: 88)
-                        .frame(height: 60)
-                        .background {
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(VibeTheme.surfaceStrong)
-                        }
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("blurt.skip")
+            Button {
+                Task { await model.gotIt() }
+            } label: {
+                Text("Got it — pass it on")
+                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 64)
+                    .background {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(VibeTheme.vibeBlurt)
+                    }
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("blurt.gotIt")
+
+            Text("The word goes to the other team. The clock keeps running.")
+                .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 20)
     }
 
-    /// Everyone else. No word, and the button that keeps the describer honest.
-    private func waitingCard(_ play: BlurtPlay) -> some View {
-        VStack(spacing: 14) {
-            Text(model.describerName)
-                .font(.system(size: 26, weight: .black, design: .rounded))
-                .foregroundStyle(VibeTheme.primaryText)
-            Text("is describing for \(play.team.title)")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+    /// The team that is not holding the word.
+    ///
+    /// They are shown the word, which is the whole reason the BUZZ is worth
+    /// having: catching somebody saying it is a judgement they can actually
+    /// make, rather than a guess from hearing one word out of a sentence. The
+    /// button is round, red and enormous because the moment it is needed lasts
+    /// about a second.
+    private func buzzCard(_ play: BlurtPlay) -> some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 4) {
+                Text("WATCH FOR IT")
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .kerning(1.6)
+                    .foregroundStyle(VibeTheme.tertiaryText)
+                Text(model.currentWord)
+                    .font(.system(size: 30, weight: .black, design: .rounded))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(VibeTheme.primaryText)
+                    .accessibilityIdentifier("blurt.watchedWord")
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .background {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(VibeTheme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(VibeTheme.blurtUrgent.opacity(0.5), lineWidth: 2)
+                    }
+            }
+
+            Text("\(model.describerName) is describing")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 
-            if model.canCallBlurt {
-                Button {
-                    Task { await model.callBlurt() }
-                } label: {
-                    VStack(spacing: 3) {
-                        Text("They said it")
-                            .font(.system(size: 20, weight: .black, design: .rounded))
-                        Text("ends the turn, and you take the point")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .opacity(0.85)
-                    }
+            Button {
+                Task { await model.buzz() }
+            } label: {
+                Text("BUZZ")
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .kerning(2)
                     .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 72)
-                    .background {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(VibeTheme.blurtUrgent)
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("blurt.blurt")
-            } else {
-                Text("Your team is describing.")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .frame(width: 176, height: 176)
+                    .background { Circle().fill(VibeTheme.blurtUrgent) }
+                    .overlay { Circle().stroke(.white.opacity(0.3), lineWidth: 5) }
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("blurt.buzz")
+            .accessibilityLabel("Buzz — they said the word")
+
+            Text("Only if they say the word itself")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    /// The holding team's other members. They are guessing, so this is the one
+    /// screen in the room the word must never reach.
+    private var guessingCard: some View {
+        VStack(spacing: 10) {
+            Text("GUESS IT")
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .kerning(2.4)
+                .foregroundStyle(VibeTheme.blurtTeam(.one))
+            Text("\(model.describerName) is describing to you")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+                .multilineTextAlignment(.center)
+            Text("Shout it out. Get it right and the word goes to the other team — "
+                 + "the clock does not stop.")
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 20)
     }
 
     private func resultBanner(_ play: BlurtPlay) -> some View {
         let scored = play.scorer
-        let text: String = {
-            guard let scored else { return "Turn over" }
-            switch play.reason {
-            case .blurt: return "\(scored.title) takes the point — caught a blurt"
-            case .time, .none: return "\(scored.title) takes the point — the clock ran out"
-            }
-        }()
-        return Text(text)
+        return Text(model.lastRoundSummary)
             .font(.system(size: 15, weight: .bold, design: .rounded))
             .foregroundStyle(.white)
             .multilineTextAlignment(.center)

@@ -87,6 +87,8 @@ for seconds in [0, 5, 29, 30, 45, 61, 90, 119, 120, 600] {
 
 let out: [String: Any] = [
     "target": BlurtRules.target,
+    "minimumPlayers": BlurtRules.minimumPlayers,
+    "minimumPerTeam": BlurtRules.minimumPerTeam,
     "wordCount": BlurtWords.all.count,
     "packOrder": BlurtPack.allCases.map(\.rawValue),
     "packs": packsOut,

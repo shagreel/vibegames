@@ -11,10 +11,12 @@ import { database } from '../../firebase';
 import { shortId } from '../../lib/shortId';
 import {
   DEFAULT_SECONDS,
+  MINIMUM_PLAYERS,
   TARGET,
   describerFor,
   describerOffsets,
   describingTeam,
+  membersOf,
   scoringTeam,
   split,
   winner,
@@ -273,6 +275,9 @@ export async function assignTeam(gameId: string, playerId: string): Promise<void
 export async function startGame(gameId: string, seed: number): Promise<void> {
   const rosterSnapshot = await get(ref(database, `blurt/${gameId}/players`));
   const roster = Object.keys((rosterSnapshot.val() as Record<string, string> | null) ?? {});
+  // Refuses a room that cannot field two teams: with one person a side there is
+  // nobody to describe to, and no other team to catch you saying it.
+  if (roster.length < MINIMUM_PLAYERS) return;
   const teams = split(roster, seed);
 
   const one = Object.keys(teams).filter((id) => teams[id] === 1).sort();
@@ -311,47 +316,101 @@ export async function beginTurn(gameId: string, seconds: number): Promise<void> 
   });
 }
 
-/** The next word. No score: describing earns nothing, it only passes the risk on. */
-export async function advanceWord(gameId: string): Promise<void> {
-  await runTransaction(ref(database, `blurt/${gameId}/play/word`), (current: number | null) =>
-    (current ?? 0) + 1,
-  );
+/**
+ * What the rotation needs: who is on each team, and the seed the starting
+ * positions come from. Read before the transaction rather than inside it,
+ * because the block has to be pure.
+ */
+async function rotation(gameId: string) {
+  const seedSnapshot = await get(ref(database, `blurt/${gameId}/meta/seed`));
+  const seed = seedSnapshot.val();
+  if (typeof seed !== 'number') return null;
+
+  const teamsSnapshot = await get(ref(database, `blurt/${gameId}/teams`));
+  const teams = parseTeams((teamsSnapshot.val() as Record<string, number> | null) ?? null);
+  const one = membersOf(1, teams);
+  const two = membersOf(2, teams);
+  return { one, two, offsets: describerOffsets(one.length, two.length, seed) };
 }
 
 /**
- * Ends the turn, once, whoever gets there first.
+ * Moves the word on by one: the next person in the rotation, which is always
+ * somebody on the other team, with the next word.
  *
- * Both endings pay the same way — the team that was *not* describing takes the
- * point — whether the clock ran out or the other team called a blurt. The
- * transaction is what makes that fair: two people pressing "they said it" at the
- * same moment score once, not twice.
+ * The rotation is the game's spine — one member to the next, alternating sides,
+ * in the same order every time round — so this is the only thing that decides
+ * whose turn it is.
+ */
+function advance(play: BlurtPlay, one: string[], two: string[], offsets: { one: number; two: number }): BlurtPlay {
+  const turn = play.turn + 1;
+  const team = describingTeam(turn);
+  const members = team === 1 ? one : two;
+  const offset = team === 1 ? offsets.one : offsets.two;
+  return {
+    ...play,
+    turn,
+    team,
+    word: play.word + 1,
+    describer: describerFor(members, turn, offset) ?? '',
+  };
+}
+
+/**
+ * The team got the word and taps for the next one.
+ *
+ * This is what passes the word to the other team, and it deliberately does
+ * **not** touch the clock: the timer belongs to the round, and a round is
+ * however many words both teams get through before it stops.
+ *
+ * A transaction, so two taps landing together cannot skip a player.
+ */
+export async function passWord(gameId: string): Promise<boolean> {
+  const spin = await rotation(gameId);
+  if (!spin) return false;
+
+  const result = await runTransaction(
+    ref(database, `blurt/${gameId}/play`),
+    (current: BlurtPlay | null) => {
+      if (!current || current.state !== 'running') return; // abort
+      return advance(current, spin.one, spin.two, spin.offsets);
+    },
+  );
+  return result.committed;
+}
+
+/**
+ * Ends the round, once, whoever gets there first.
+ *
+ * The clock running out and somebody pressing BUZZ pay exactly the same way:
+ * the team *not* holding the word takes the point. The transaction is what
+ * makes that fair — a room that all shouts at once still scores once — and it
+ * also sets the next round's rotation up behind the result.
  */
 export async function endTurn(gameId: string, reason: EndReason): Promise<boolean> {
+  const spin = await rotation(gameId);
+  if (!spin) return false;
+
   const result = await runTransaction(
     ref(database, `blurt/${gameId}/play`),
     (current: BlurtPlay | null) => {
       if (!current || current.state === 'ended') return; // abort
       const scorer = scoringTeam(current.team);
-      const next: BlurtPlay = {
+      let next: BlurtPlay = {
         ...current,
         scorer,
         reason,
         one: current.one + (scorer === 1 ? 1 : 0),
         two: current.two + (scorer === 2 ? 1 : 0),
+        startedAt: null,
+        endsAt: null,
       };
       next.finished = winner(next.one, next.two, TARGET) !== null;
       next.state = 'ended';
 
-      // Set the next turn up behind the result, so the handover screen already
-      // knows whose phone to point at. A finished game keeps the last turn's
-      // shape; nobody plays it.
-      if (!next.finished) {
-        next.turn = current.turn + 1;
-        next.team = describingTeam(next.turn);
-        next.word = current.word + 1;
-        next.startedAt = null;
-        next.endsAt = null;
-      }
+      // The next round starts one further round the rotation, so the order
+      // keeps moving rather than the same person being caught twice. A finished
+      // game keeps the last round's shape; nobody plays it.
+      if (!next.finished) next = advance(next, spin.one, spin.two, spin.offsets);
       return next;
     },
   );

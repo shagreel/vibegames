@@ -105,11 +105,28 @@ final class VibeBlurtModel: ObservableObject {
         return play.describer == me
     }
 
-    /// The other team, which is the one allowed to call a blurt.
-    var canCallBlurt: Bool {
+    /// The team that is not holding the word.
+    ///
+    /// They are the ones who can see it and press BUZZ: the word is shown to
+    /// them so calling a blurt is a judgement rather than a guess.
+    var isOnBuzzTeam: Bool {
         guard let play, let mine = myTeam else { return false }
-        return play.state == .running && mine != play.team
+        return mine != play.team
     }
+
+    /// They can only press it while the round is actually running.
+    var canBuzz: Bool { isOnBuzzTeam && play?.state == .running }
+
+    /// On the holding team, and not the one describing: guessing, and so the
+    /// one person in the room who must not see the word.
+    var isGuessing: Bool {
+        guard let play, let mine = myTeam else { return false }
+        return mine == play.team && !isDescriber
+    }
+
+    /// Who is allowed to see the word — the person describing it, and the team
+    /// trying to catch them saying it. The guessers are not.
+    var canSeeWord: Bool { isDescriber || isOnBuzzTeam }
 
     var scoreOne: Int { play?.one ?? 0 }
     var scoreTwo: Int { play?.two ?? 0 }
@@ -117,6 +134,15 @@ final class VibeBlurtModel: ObservableObject {
     var winner: BlurtTeam? { play?.winner }
 
     var hasStarted: Bool { snapshot.started }
+
+    /// How the round ended, for the result line.
+    var lastRoundSummary: String {
+        guard let play, let scorer = play.scorer else { return "Round over" }
+        switch play.reason {
+        case .blurt: return "\(scorer.title) takes the point — caught a blurt"
+        case .time, .none: return "\(scorer.title) takes the point — the clock ran out"
+        }
+    }
 
     /// Everyone on a team, by name, for the scoreboard and the handover.
     func names(on team: BlurtTeam) -> [String] {
@@ -152,7 +178,15 @@ final class VibeBlurtModel: ObservableObject {
     /// Two is the floor, and the split is worked out at the start — so this
     /// cannot ask whether both teams have somebody in them yet, because before
     /// the start there are no teams to ask about.
-    var canStart: Bool { snapshot.players.count >= 2 }
+    var canStart: Bool { snapshot.players.count >= BlurtRules.minimumPlayers }
+
+    /// What to say when the room is too small, rather than leaving a dead button.
+    var startHint: String {
+        if canStart { return "Teams are picked at random, so nobody can argue." }
+        let short = BlurtRules.minimumPlayers - snapshot.players.count
+        return "You need \(BlurtRules.minimumPlayers) people — two on each team. "
+             + "\(short) more to go."
+    }
 
     // MARK: - Session control
 
@@ -247,18 +281,23 @@ final class VibeBlurtModel: ObservableObject {
         try? await service.beginTurn(gameID: gameID, seconds: seconds)
     }
 
-    /// The team got it. Earns nothing — it only hands the risk on with a new word.
+    /// The team got the word.
+    ///
+    /// This is what passes it to the other team, and it does not touch the
+    /// clock: the round runs for as long as the timer says, however many words
+    /// go past in that time.
     func gotIt() async {
         guard let gameID = sharedGameID, isDescriber, play?.state == .running else { return }
-        await service.advanceWord(gameID: gameID)
+        await service.passWord(gameID: gameID)
     }
 
-    /// Somebody on the other team says the rules were broken.
+    /// Somebody on the other team says the word was said.
     ///
-    /// Ends the turn at once and pays the calling team. The service refuses the
-    /// second press of two, so a room that all shouts at once still scores once.
-    func callBlurt() async {
-        guard let gameID = sharedGameID, canCallBlurt else { return }
+    /// Ends the round at once and pays the team that caught it. The service
+    /// refuses the second press of two, so a room that all shouts at once still
+    /// scores once.
+    func buzz() async {
+        guard let gameID = sharedGameID, canBuzz else { return }
         await service.endTurn(gameID: gameID, reason: .blurt)
     }
 

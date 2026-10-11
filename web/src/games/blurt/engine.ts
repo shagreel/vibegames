@@ -22,6 +22,13 @@ export const TEAMS: Team[] = [1, 2];
 /** First to this many takes the game. */
 export const TARGET = 7;
 
+/**
+ * Two on each side, so there is always somebody to describe to and somebody on
+ * the other team to catch you doing it.
+ */
+export const MINIMUM_PER_TEAM = 2;
+export const MINIMUM_PLAYERS = MINIMUM_PER_TEAM * 2;
+
 export function teamTitle(team: Team): string {
   return team === 1 ? 'Team One' : 'Team Two';
 }

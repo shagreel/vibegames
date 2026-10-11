@@ -160,6 +160,43 @@ final class VibeBlurtTests: XCTestCase {
 
     // MARK: - Turns
 
+    func testTheWordNeverStaysWithOneTeamForTwoWordsRunning() {
+        // This is the mechanic, not a detail: pressing "got it" is what moves
+        // the word to the other side, so nobody is ever caught twice in a row.
+        for turn in 0..<12 {
+            XCTAssertNotEqual(BlurtRules.describingTeam(turn: turn),
+                              BlurtRules.describingTeam(turn: turn + 1),
+                              "turns \(turn) and \(turn + 1) were the same team")
+        }
+    }
+
+    func testTheRotationGoesRoundEverybodyInTheSameOrderEveryTime() {
+        // Four players, two a side: the order is A's first, B's first, A's
+        // second, B's second, and then it starts again.
+        let roster = ["p1", "p2", "p3", "p4"]
+        let teams = BlurtRules.split(players: roster, seed: 3)
+        let one = BlurtRules.members(of: .one, in: teams)
+        let two = BlurtRules.members(of: .two, in: teams)
+        let offsets = BlurtRules.describerOffsets(oneMembers: one.count, twoMembers: two.count, seed: 3)
+
+        let order = (0..<(BlurtRules.minimumPlayers * 2)).map { turn -> String in
+            let team = BlurtRules.describingTeam(turn: turn)
+            let members = team == .one ? one : two
+            let offset = team == .one ? offsets.one : offsets.two
+            return BlurtRules.describer(for: team, members: members, turn: turn, offset: offset) ?? ""
+        }
+
+        // The second half repeats the first: same people, same order.
+        XCTAssertEqual(Array(order[0..<4]), Array(order[4..<8]))
+        XCTAssertEqual(Set(order), Set(roster), "somebody never got the word")
+    }
+
+    func testARoomNeedsTwoPeopleOnEachSide() {
+        XCTAssertEqual(BlurtRules.minimumPerTeam, 2)
+        XCTAssertEqual(BlurtRules.minimumPlayers, 4)
+        XCTAssertEqual(BlurtRules.minimumPlayers, BlurtRules.minimumPerTeam * 2)
+    }
+
     func testTurnsAlternateAndTeamOneStarts() {
         XCTAssertEqual(BlurtRules.describingTeam(turn: 0), .one)
         XCTAssertEqual(BlurtRules.describingTeam(turn: 1), .two)

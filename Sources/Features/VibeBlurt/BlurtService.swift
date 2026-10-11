@@ -316,11 +316,15 @@ final class VibeBlurtService {
         try await reference.child("teams").child(short).setValue(one <= two ? 1 : 2)
     }
 
-    /// Splits the room and deals the first turn.
+    /// Splits the room and deals the first word.
+    ///
+    /// Refuses a room that cannot field two teams: with one person a side there
+    /// is nobody to describe to, and no other team to catch you saying it.
     func startGame(gameID: String, seed: UInt32) async throws {
         guard let reference = gameReference(gameID) else { return }
 
         let roster = try await reference.child("players").getData().value as? [String: Any] ?? [:]
+        guard roster.count >= BlurtRules.minimumPlayers else { return }
         let teams = BlurtRules.split(players: Array(roster.keys), seed: seed)
 
         let one = BlurtRules.members(of: .one, in: teams)
@@ -341,7 +345,11 @@ final class VibeBlurtService {
 
     // MARK: - Playing
 
-    /// Starts the clock, when the describer has the phone in their hand.
+    /// Starts the round's clock.
+    ///
+    /// One clock per round, not per word: the whole point is that the timer
+    /// keeps running while the word goes back and forth, so the last few seconds
+    /// are spent trying to get rid of it.
     func beginTurn(gameID: String, seconds: TimeInterval) async throws {
         guard let reference = gameReference(gameID)?.child("play") else { return }
         let now = Date()
@@ -352,28 +360,83 @@ final class VibeBlurtService {
         ])
     }
 
-    /// The team got the word and wants the next one. No score: describing earns
-    /// nothing, it only passes the risk on. A transaction, so the count cannot
-    /// be rewound by two taps arriving out of order.
-    func advanceWord(gameID: String) async {
-        guard let reference = gameReference(gameID)?.child("play/word") else { return }
-        _ = try? await reference.runTransactionBlock { mutable in
-            mutable.value = (mutable.value as? Int ?? 0) + 1
-            return TransactionResult.success(withValue: mutable)
+    /// Reads what the rotation needs: who is on each team, and the seed the
+    /// starting positions come from. Read before the transaction rather than
+    /// inside it, because the block has to be pure.
+    private func rotation(gameID: String) async -> (one: [String], two: [String], offsets: (one: Int, two: Int))? {
+        guard let reference = gameReference(gameID) else { return nil }
+        guard let seed = (try? await reference.child("meta/seed").getData().value) as? NSNumber else {
+            return nil
+        }
+        let raw = (try? await reference.child("teams").getData().value) as? [String: Any] ?? [:]
+        var teams: [String: BlurtTeam] = [:]
+        for (player, value) in raw {
+            if let n = value as? Int, let team = BlurtTeam(rawValue: n) { teams[player] = team }
+        }
+        let one = BlurtRules.members(of: .one, in: teams)
+        let two = BlurtRules.members(of: .two, in: teams)
+        let offsets = BlurtRules.describerOffsets(oneMembers: one.count,
+                                                  twoMembers: two.count,
+                                                  seed: UInt32(truncating: seed))
+        return (one, two, offsets)
+    }
+
+    /// Moves the word on by one: the next person in the rotation, which is
+    /// always somebody on the other team, with the next word.
+    ///
+    /// The rotation is the game's spine — one member to the next, alternating
+    /// sides, in the same order every time round — so this is the only thing
+    /// that decides whose turn it is.
+    private static func advance(_ play: inout BlurtPlay, one: [String], two: [String], offsets: (one: Int, two: Int)) {
+        play.turn += 1
+        play.team = BlurtRules.describingTeam(turn: play.turn)
+        play.word += 1
+        let members = play.team == .one ? one : two
+        let offset = play.team == .one ? offsets.one : offsets.two
+        play.describer = BlurtRules.describer(for: play.team,
+                                              members: members,
+                                              turn: play.turn,
+                                              offset: offset) ?? ""
+    }
+
+    /// The team got the word and taps for the next one.
+    ///
+    /// This is what passes the word to the other team, and it deliberately does
+    /// **not** touch the clock: the timer belongs to the round, and a round is
+    /// however many words both teams get through before it stops.
+    ///
+    /// A transaction, so two taps landing together cannot skip a player.
+    @discardableResult
+    func passWord(gameID: String) async -> Bool {
+        guard let reference = gameReference(gameID)?.child("play"),
+              let rotation = await rotation(gameID: gameID) else { return false }
+
+        return await withCheckedContinuation { continuation in
+            reference.runTransactionBlock({ current in
+                guard var play = BlurtPlay(value: current.value), play.state == .running else {
+                    return TransactionResult.abort()
+                }
+                Self.advance(&play, one: rotation.one, two: rotation.two, offsets: rotation.offsets)
+                current.value = play.value
+                return TransactionResult.success(withValue: current)
+            }, andCompletionBlock: { error, committed, _ in
+                continuation.resume(returning: error == nil && committed)
+            })
         }
     }
 
-    /// Ends the turn, once, whoever gets there first.
+    /// Ends the round, once, whoever gets there first.
     ///
-    /// Both endings pay the same way — the team that was *not* describing takes
-    /// the point — whether the clock ran out or the other team called a blurt.
-    /// The transaction is what makes that fair: two people pressing "they said
-    /// it" at the same moment score once, not twice.
+    /// The clock running out and somebody pressing BUZZ pay exactly the same
+    /// way: the team *not* holding the word takes the point. The transaction is
+    /// what makes that fair — a room that all shouts at once still scores once —
+    /// and it also sets the next round's rotation up behind the result.
     @discardableResult
     func endTurn(gameID: String, reason: BlurtEnd) async -> Bool {
-        guard let reference = gameReference(gameID)?.child("play") else { return false }
+        guard let reference = gameReference(gameID)?.child("play"),
+              let rotation = await rotation(gameID: gameID) else { return false }
 
-        let result = await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             reference.runTransactionBlock({ current in
                 guard var play = BlurtPlay(value: current.value), play.state != .ended else {
                     return TransactionResult.abort()
@@ -387,16 +450,15 @@ final class VibeBlurtService {
                                                   two: play.two,
                                                   target: BlurtRules.target) != nil
                 play.state = .ended
+                play.startedAt = nil
+                play.endsAt = nil
 
-                // Set the next turn up behind the result, so the handover screen
-                // already knows whose phone to point at. A finished game keeps
-                // the last turn's shape; nobody plays it.
+                // The next round starts one further round the rotation, so the
+                // order keeps moving rather than the same person being caught
+                // twice. A finished game keeps the last round's shape; nobody
+                // plays it.
                 if !play.finished {
-                    play.turn += 1
-                    play.team = BlurtRules.describingTeam(turn: play.turn)
-                    play.word += 1
-                    play.startedAt = nil
-                    play.endsAt = nil
+                    Self.advance(&play, one: rotation.one, two: rotation.two, offsets: rotation.offsets)
                 }
 
                 current.value = play.value
@@ -405,7 +467,6 @@ final class VibeBlurtService {
                 continuation.resume(returning: error == nil && committed)
             })
         }
-        return result
     }
 
     /// Same room, same teams, fresh deck and scoreboard.

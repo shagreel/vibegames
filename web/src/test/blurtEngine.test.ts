@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import fixtures from '../games/blurt/engine.fixtures.json';
 import {
   DURATIONS,
+  MINIMUM_PLAYERS,
+  MINIMUM_PER_TEAM,
   TARGET,
   describerFor,
   describerOffsets,
@@ -124,6 +126,39 @@ describe('the teams', () => {
 describe('the turn order', () => {
   it('alternates, with team one starting', () => {
     expect([0, 1, 2, 3].map(describingTeam)).toEqual([1, 2, 1, 2]);
+  });
+
+  it('never leaves the word with one team for two words running', () => {
+    // This is the mechanic, not a detail: pressing "got it" is what moves the
+    // word to the other side, so nobody is ever caught twice in a row.
+    for (let turn = 0; turn < 12; turn += 1) {
+      expect(describingTeam(turn), `turn ${turn}`).not.toBe(describingTeam(turn + 1));
+    }
+  });
+
+  it('goes round everybody in the same order every time', () => {
+    // Four players, two a side: A's first, B's first, A's second, B's second,
+    // and then it starts again.
+    const roster = ['p1', 'p2', 'p3', 'p4'];
+    const teams = split(roster, 3);
+    const one = membersOf(1, teams);
+    const two = membersOf(2, teams);
+    const offsets = describerOffsets(one.length, two.length, 3);
+
+    const order = Array.from({ length: 8 }, (_, turn) => {
+      const team = describingTeam(turn);
+      const members = team === 1 ? one : two;
+      return describerFor(members, turn, team === 1 ? offsets.one : offsets.two);
+    });
+
+    expect(order.slice(0, 4)).toEqual(order.slice(4, 8));
+    expect(new Set(order)).toEqual(new Set(roster));
+  });
+
+  it('needs two people on each side', () => {
+    expect(MINIMUM_PER_TEAM).toBe(fixtures.minimumPerTeam);
+    expect(MINIMUM_PLAYERS).toBe(fixtures.minimumPlayers);
+    expect(MINIMUM_PLAYERS).toBe(MINIMUM_PER_TEAM * 2);
   });
 
   it('draws the same starting offsets as the app', () => {

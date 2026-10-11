@@ -438,20 +438,35 @@ The fifth game, and the only one that does not work on your own. Everyone joins
 on their own phone; the app splits the room into two teams at random and hands
 one person at a time a word to describe without saying it.
 
-The scoring is the whole game, and it is not what people expect:
+Two on each side at least — four people — and the word is a hot potato:
 
-- **Nobody scores for guessing.** Guessing just gets you the next word, and the
-  clock keeps running.
+- **One person describes; their team-mates guess.** The word reaches the
+  describer's screen and nobody else's on that side.
+- **Getting it passes the word to the other team**, to the next person in the
+  rotation, with a new word. **The clock does not stop or reset** — it belongs to
+  the round, not to the word.
+- **The word goes round everybody, alternating sides, in the same order every
+  time.** One member to the next, team to team, until the clock runs out.
 - **The point goes to the team *not* holding the word when the clock stops.**
-  Describing earns nothing; it only passes the risk on.
-- **A rule-break pays the other team.** If the describer says the word, or any
-  part of it, anyone on the other team can call it, which ends the turn on the
-  spot. Two people calling at once still score once.
+  Nobody scores for guessing; guessing only gets rid of the word, which is the
+  whole game.
 - **First to seven.**
 
-That makes the last ten seconds of a turn the tense part, and the app is built so
-they are tense on every phone rather than only on the describer's: the clock is
-on all of them.
+That makes the last ten seconds the tense part, and the app is built so they are
+tense on every phone rather than only on the describer's: the clock is on all of
+them.
+
+### The other team sees the word
+
+Which is the point of the BUZZ button. The team that is *not* holding the word is
+shown it, so catching somebody saying it is a judgement they can actually make
+rather than a guess from one word of a sentence. They get one enormous round red
+button. Pressing it ends the round at once and pays them instead of the team
+holding the word — and two people pressing at the same moment still score once,
+because ending a round is a transaction.
+
+The one screen in the room the word must never reach is the holding team's own
+guessers, who are the only people actually trying to guess it.
 
 ### The word is never sent anywhere
 
@@ -460,6 +475,10 @@ A room stores a **seed**, a **round** and which **packs** are on — never a wor
 Every phone derives the same deck from those, and only the describer's screen
 renders the current entry. It is not hidden in the payload; it is not in the
 payload. Same trick as the Trio table and the Sudoku grid.
+
+The *rotation* is derived the same way — from the seed, the teams and a step
+counter — so no device has to be told whose turn it is; they all work it out and
+agree.
 
 Which is why the settings live in the room rather than on the phone. The deck
 depends on the seed *and* the packs, so two devices disagreeing about which packs
@@ -556,7 +575,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**179 tests in all: 143 unit and 36 UI.** They are what the numbers above are
+**182 tests in all: 146 unit and 36 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.

@@ -562,6 +562,64 @@
   font-weight: 800;
 }
 
+/* ── the two screens that are not the describer's ───────────────────── */
+
+.blurt__buzz-team,
+.blurt__guessing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.2rem 1rem 2rem;
+  text-align: center;
+}
+
+.blurt__guessing h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.blurt__guessing p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #c9c9d1;
+}
+
+.blurt__watched-word {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 2px solid color-mix(in srgb, var(--blurt-urgent) 55%, transparent);
+  border-radius: 1.25rem;
+  background: #1b1b1e;
+  font-size: 1.8rem;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+/* Round, red and enormous: the moment it is needed lasts about a second. */
+.blurt__buzz {
+  display: grid;
+  place-items: center;
+  width: 11rem;
+  height: 11rem;
+  margin: 0.3rem 0;
+  border: 5px solid rgb(255 255 255 / 0.3);
+  border-radius: 50%;
+  background: var(--blurt-urgent);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.blurt__buzz:active {
+  transform: scale(0.96);
+}
+
+.blurt__buzz strong {
+  font-size: 2.2rem;
+  letter-spacing: 0.08em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blurt__bar-fill {
     transition: none;

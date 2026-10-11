@@ -7,6 +7,7 @@ import { shortId } from '../../lib/shortId';
 import {
   DEFAULT_SECONDS,
   DURATIONS,
+  MINIMUM_PLAYERS,
   TARGET,
   TEAMS,
   nearestDuration,
@@ -17,13 +18,13 @@ import {
 } from './engine';
 import {
   EMPTY_SNAPSHOT,
-  advanceWord,
   assignTeam,
   beginTurn,
   createGame,
   endTurn,
   joinGame,
   observeGame,
+  passWord,
   playAgain,
   playScore,
   startGame,
@@ -103,6 +104,8 @@ function VibeBlurt() {
   const myTeam: Team | null = myShortId ? (snapshot.teams[myShortId] ?? null) : null;
   const winner = winningTeam(play);
   const isDescriber = play !== null && myShortId !== null && play.describer === myShortId;
+  /** The team that is not holding the word: they see it, and they get BUZZ. */
+  const onBuzzTeam = play !== null && myTeam !== null && myTeam !== play.team;
 
   // MARK: - Joining
 
@@ -253,6 +256,13 @@ function VibeBlurt() {
   };
 
   const duration = nearestDuration(snapshot.turnSeconds);
+  const playerCount = Object.keys(snapshot.players).length;
+  const startHint =
+    playerCount >= MINIMUM_PLAYERS
+      ? 'Teams are picked at random, so nobody can argue.'
+      : `You need ${MINIMUM_PLAYERS} people — two on each team. ${
+          MINIMUM_PLAYERS - playerCount
+        } more to go.`;
   const allPacksOn = snapshot.packs.length === PACK_ORDER.length;
 
   // Derived, never stored.
@@ -361,15 +371,11 @@ function VibeBlurt() {
                 type="button"
                 className="blurt__primary"
                 onClick={() => void startGame(gameId, snapshot.seed ?? randomSeed())}
-                disabled={Object.keys(snapshot.players).length < 2}
+                disabled={Object.keys(snapshot.players).length < MINIMUM_PLAYERS}
               >
                 Deal the teams
               </button>
-              <p className="blurt__hint">
-                {Object.keys(snapshot.players).length < 2
-                  ? 'You need at least two people — read the code out.'
-                  : 'Teams are picked at random, so nobody can argue.'}
-              </p>
+              <p className="blurt__hint">{startHint}</p>
             </>
           ) : (
             <p className="blurt__hint">Waiting for {snapshot.creator ?? 'the host'} to start.</p>
@@ -448,33 +454,36 @@ function VibeBlurt() {
           <div className="blurt__describer">
             <span className="blurt__word-label">Your word — don&rsquo;t say it</span>
             <strong className="blurt__word">{currentWord}</strong>
-            <div className="blurt__describer-actions">
-              <button type="button" className="blurt__primary" onClick={() => void advanceWord(gameId)}>
-                Got it
-              </button>
-              {/* The same call, honestly so: a word nobody can get scores
-                  nothing either way, so skipping costs only the seconds. */}
-              <button type="button" className="blurt__skip" onClick={() => void advanceWord(gameId)}>
-                Skip
-              </button>
-            </div>
+            <button type="button" className="blurt__primary" onClick={() => void passWord(gameId)}>
+              Got it — pass it on
+            </button>
+            <p className="blurt__hint">The word goes to the other team. The clock keeps running.</p>
+          </div>
+        ) : onBuzzTeam ? (
+          /* The other team is shown the word, which is the whole reason the
+             BUZZ is worth having: catching somebody saying it is a judgement
+             they can actually make, not a guess from one word of a sentence. */
+          <div className="blurt__buzz-team">
+            <span className="blurt__word-label">Watch for it</span>
+            <strong className="blurt__watched-word">{currentWord}</strong>
+            <p className="blurt__hint">
+              {snapshot.players[play.describer] ?? 'Someone'} is describing
+            </p>
+            <button type="button" className="blurt__buzz" onClick={() => void endTurn(gameId, 'blurt')}>
+              <strong>BUZZ</strong>
+            </button>
+            <p className="blurt__hint">Only if they say the word itself</p>
           </div>
         ) : (
-          <div className="blurt__waiting">
-            <h2>{snapshot.players[play.describer] ?? 'Someone'}</h2>
-            <p>is describing for {teamTitle(play.team)}</p>
-            {myTeam !== null && myTeam !== play.team ? (
-              <button
-                type="button"
-                className="blurt__blurt"
-                onClick={() => void endTurn(gameId, 'blurt')}
-              >
-                <strong>They said it</strong>
-                <span>ends the turn, and you take the point</span>
-              </button>
-            ) : (
-              <p className="blurt__hint">Your team is describing.</p>
-            )}
+          /* The holding team's other members: guessing, and the one screen in
+             the room the word must never reach. */
+          <div className="blurt__guessing">
+            <span className="blurt__word-label">Guess it</span>
+            <h2>{snapshot.players[play.describer] ?? 'Someone'} is describing to you</h2>
+            <p>
+              Shout it out. Get it right and the word goes to the other team — the clock does not
+              stop.
+            </p>
           </div>
         )
       ) : (

@@ -186,4 +186,9 @@ enum BlurtRules {
 
     /// The default target. A game that lasts a while but not all evening.
     static let target = 7
+
+    /// Two on each side, so there is always somebody to describe to and
+    /// somebody on the other team to catch you doing it.
+    static let minimumPerTeam = 2
+    static let minimumPlayers = minimumPerTeam * 2
 }
