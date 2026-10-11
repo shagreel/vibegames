@@ -357,6 +357,36 @@ code {
   padding-left: 0.9rem;
 }
 
+/* The way into the browser version, under each game's copy. Wears the game's
+   own accent so it reads as part of that section rather than as a general call
+   to action bolted on. */
+.game__play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.35rem;
+  border-radius: 999px;
+  background: var(--a);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.game__play:hover,
+.game__play:focus-visible {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.game__play span {
+  font-size: 1.05em;
+  line-height: 1;
+}
+
 .game__shots {
   position: relative;
   display: flex;
@@ -449,6 +479,15 @@ code {
 /* ── reduced motion ───────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+  .game__play {
+    transition: none;
+  }
+
+  .game__play:hover,
+  .game__play:focus-visible {
+    transform: none;
+  }
+
   html { scroll-behavior: auto; }
   .hero__glow, .phone--float { animation: none; }
   .reveal, .reveal-up {

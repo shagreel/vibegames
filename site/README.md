@@ -57,7 +57,8 @@ them up automatically:
 | `vibe-trio-crowd.svg` | people hunting trios together |
 
 If you use `.jpg` instead of `.svg`, update the `src` attributes in the
-`people__strip` section of `index.html`. Landscape crops around 900×640 look
+`people__strip` section of `index.html` — removed for now, but the images
+and their styling are still there to restore. Landscape crops around 900×640 look
 best.
 
 To regenerate the illustrations after changing the palettes:
