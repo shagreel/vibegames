@@ -62,9 +62,21 @@ final class VibeBlurtScreenshots: XCTestCase {
 
         // Who the app is, as far as this room is concerned. Reading the roster
         // back is the only way to learn its short id.
-        let (status, roster) = request("GET", "\(code)/players")
-        guard status == 200, let players = roster as? [String: Any], let me = players.keys.first else {
-            return XCTFail("the app never registered in its own room")
+        // The write that registers the player happens just after the one that
+        // makes the room, so give it a moment rather than racing it.
+        var me: String?
+        var lastSeen = "nothing"
+        for _ in 0..<10 {
+            let (status, roster) = request("GET", "\(code)/players")
+            if status == 200, let players = roster as? [String: Any], let first = players.keys.first {
+                me = first
+                break
+            }
+            lastSeen = "HTTP \(status) \(String(describing: roster))"
+            Thread.sleep(forTimeInterval: 1)
+        }
+        guard let me else {
+            return XCTFail("the app never registered in its own room — last read: \(lastSeen)")
         }
 
         for (index, name) in ["Alex", "Jo", "Robin"].enumerated() {
@@ -80,7 +92,14 @@ final class VibeBlurtScreenshots: XCTestCase {
         XCTAssertTrue(word.waitForExistence(timeout: 20), "the describer should be given a word")
         attach(app, named: "\(appearance)-blurt-word")
 
-        // 2. The app is on the other team, watching for it — the screen with the
+        // 2. The app is on the team holding the word, but somebody else has it:
+        //    the team-mate who is guessing.
+        writeTurn(code: code, team: 1, describer: "ffff000", word: 1)
+        let guessing = app.descendants(matching: .any)["blurt.guessing"]
+        XCTAssertTrue(guessing.waitForExistence(timeout: 20), "a team-mate should be told to guess")
+        attach(app, named: "\(appearance)-blurt-guessing")
+
+        // 3. The app is on the other team, watching for it — the screen with the
         //    red button, which is the one worth showing.
         writeTurn(code: code, team: 2, describer: "ffff001", word: 3)
         let buzz = app.buttons["blurt.buzz"]

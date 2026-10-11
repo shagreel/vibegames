@@ -627,6 +627,9 @@ struct VibeBlurtView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 20)
+        // The one screen in the room that must never show the word, and until
+        // now the one screen with no name to look it up by.
+        .accessibilityIdentifier("blurt.guessing")
     }
 
     private func resultBanner(_ play: BlurtPlay) -> some View {
