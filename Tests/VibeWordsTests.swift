@@ -107,14 +107,21 @@ final class WordGameEngineTests: XCTestCase {
         XCTAssertEqual(state, .absent)
     }
 
-    func testTheSymbolKeysResolveToRealSymbols() {
-        // The return and delete keys are drawn as SF Symbols. A symbol name that
-        // does not exist draws *nothing at all* — no error, no placeholder — so
-        // a typo would ship a blank key and the game would look broken rather
-        // than fail. The names are checked against the system instead.
-        for name in ["return", "delete.left.fill"] {
-            XCTAssertNotNil(UIImage(systemName: name), "\(name) is not a symbol on this iOS")
-        }
+    func testTheSymbolKeysStayMonochrome() {
+        // The delete key is drawn as an SF Symbol, and a symbol name that does
+        // not exist draws *nothing at all* — no error, no placeholder — so a
+        // typo would ship a blank key rather than fail a test.
+        XCTAssertNotNil(UIImage(systemName: "delete.left.fill"),
+                        "delete.left.fill is not a symbol on this iOS")
+
+        // The return key is the up-arrow character, which is an emoji unless it
+        // is asked for as text. Without the variation selector iOS draws it as a
+        // small blue rounded square — the only colour on an otherwise monochrome
+        // keyboard. Stripping it looks like tidying up and is not.
+        let glyph = VibeWordsKeyboardView.returnGlyph
+        XCTAssertEqual(Array(glyph.unicodeScalars).first?.value, 0x2B06, "not the up arrow")
+        XCTAssertEqual(Array(glyph.unicodeScalars).last?.value, 0xFE0E,
+                       "the text-presentation selector is missing, so this draws as an emoji")
     }
 
     // MARK: - Validation

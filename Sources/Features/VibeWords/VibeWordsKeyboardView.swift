@@ -33,6 +33,25 @@ struct VibeWordsKeyboardView: View {
         case delete
     }
 
+    /// What the return key is drawn with.
+    ///
+    /// The `\u{FE0E}` is not decoration. The up arrow is an emoji, and without
+    /// the variation selector iOS draws it as a small blue rounded square — the
+    /// only colour on a keyboard that is otherwise monochrome and tinted. The
+    /// text glyph comes from a fallback font drawn small for its point size, so
+    /// it is set well above the letters either side of it.
+    static let returnGlyph = "\u{2B06}\u{FE0E}"
+
+    /// How far to lift the return glyph so it sits on the same line as the
+    /// letters.
+    ///
+    /// The fallback font that supplies the text glyph draws it low in its box,
+    /// so the arrow's bottom edge landed below every letter beside it — measured
+    /// against a screenshot at 14px, or 4.7pt at 3x, under the baseline of
+    /// Z X C V B N M. Guessed values here look *almost* right, which is worse
+    /// than obviously wrong.
+    static let returnGlyphRise: CGFloat = 4.7
+
     // MARK: Metrics
 
     private let keyHeight: CGFloat = 58
@@ -92,10 +111,13 @@ struct VibeWordsKeyboardView: View {
         case .letter(let character):
             Text(String(character))
         case .enter:
-            // Apple's own return glyph rather than the word: "ENTER" was too
-            // wide for one key and had to be shrunk until it looked like a
-            // mistake. The arrow says the same thing at any width.
-            Image(systemName: "return").font(.system(size: 18, weight: .bold))
+            // The up arrow, rather than the word: "ENTER" was too wide for one
+            // key and had to be shrunk until it looked like a mistake. See
+            // `returnGlyph` for the variation selector, and `returnGlyphRise`
+            // for why it is nudged up.
+            Text(Self.returnGlyph)
+                .font(.system(size: 30, weight: .bold))
+                .offset(y: -Self.returnGlyphRise)
         case .delete:
             Image(systemName: "delete.left.fill").font(.system(size: 18, weight: .bold))
         }

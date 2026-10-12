@@ -722,7 +722,7 @@ function VibeWords() {
                 // key and had to be shrunk until it looked like a mistake. The
                 // return arrow says the same thing at any width.
                 const isSymbol = key === 'ENTER' || key === 'BACKSPACE';
-                const label = key === 'ENTER' ? '↵' : key === 'BACKSPACE' ? '⌫' : key;
+                const label = key === 'ENTER' ? '\u2B06\uFE0E' : key === 'BACKSPACE' ? '⌫' : key;
                 return (
                   <button
                     key={key}
