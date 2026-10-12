@@ -597,6 +597,22 @@ Presence is the set of live entries under `players/`, and `onDisconnect` clears 
 player's own when the socket drops, so there is no heartbeat to go stale and no
 counter to get out of step.
 
+**Presence is not a one-off write, and that is not obvious.** Writing it at the
+join is enough to look right and is not enough to be right: the entry is cleared
+the moment the socket drops, and nothing puts it back. A phone that slept and
+woke up was therefore present and connected but invisible — the room kept its team
+slot, the scoreboard read "Someone", and the rotation walked straight past it, so
+that phone never had a turn again for the rest of the game. Both clients now watch
+`.info/connected` and re-announce themselves on every reconnect, which is
+Firebase's own presence pattern and also fires once on open.
+
+The trap inside the trap: the reconnect write needs the player's *name*, and the
+listener that does it is registered before somebody who joins by link has typed
+one. A write with an empty name is refused by the rules (`length >= 1`) — and a
+refused write is silent, so it looks exactly like a reconnect that never
+happened. The browser rebuilds the listener when the name arrives, and refuses to
+write without one rather than firing a request that cannot succeed.
+
 **The team list is deliberately not cleaned up with it.** `teams/` is what
 remembers which side somebody was on, so coming back with the same code puts you
 straight back where you were rather than reshuffling you. The identity is the
@@ -620,9 +636,10 @@ ask the same question: who is *here*?
   offered it, and whoever starts is written down as the describer — so the word
   lands on the phone that is actually there.
 
-`Tools/blurt_presence_e2e.mjs` covers all three against the deployed site and the
+`Tools/blurt_presence_e2e.mjs` covers all four against the deployed site and the
 real database — a leaver and a returner, a round in progress when the holder
-goes, and a round nobody can start. It exists because none of this is visible in
+goes, a round nobody can start, and a connection that drops and comes back under
+a live page. It exists because none of this is visible in
 a single client: presence is a property of the room, and every one of these bugs
 looked right on the phone that stayed.
 

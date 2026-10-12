@@ -714,6 +714,8 @@ final class VibeBlurtTests: XCTestCase {
         let box = Box()
 
         return await withCheckedContinuation { continuation in
+            // Watching, not playing: no presence, so this does not turn up in
+            // the roster the test is counting.
             let observation = service.observe(gameID: gameID) { snapshot in
                 guard matching(snapshot), !box.done else { return }
                 box.done = true

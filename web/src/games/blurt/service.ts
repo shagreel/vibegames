@@ -100,6 +100,8 @@ export function namesOn(snapshot: BlurtSnapshot, team: Team): string[] {
 
 export function observeGame(
   gameId: string,
+  playerId: string,
+  name: string,
   onChange: (snapshot: BlurtSnapshot) => void,
 ): () => void {
   // Held and rebuilt in parts: `meta` changes only when settings do, while
@@ -142,6 +144,23 @@ export function observeGame(
     onValue(ref(database, `blurt/${gameId}/play`), (snapshot) => {
       play = (snapshot.val() as BlurtPlay | null) ?? null;
       emit();
+    }),
+
+    // Presence, for as long as this browser is connected.
+    //
+    // It is not a one-off write. `onDisconnect` clears the entry when the socket
+    // drops — a laptop shut, a phone asleep past the connection timeout — and
+    // nothing ever puts it back, so the room keeps a team slot for somebody it
+    // cannot see: they read as "Someone", and the rotation walks straight past
+    // them. Re-announcing on every reconnect is Firebase's own presence pattern,
+    // and it fires once immediately, so opening the game re-registers you too.
+    onValue(ref(database, '.info/connected'), (snapshot) => {
+      if (snapshot.val() !== true) return;
+      // The name has to be here. A write without one is refused by the rules
+      // (`length >= 1`), and a refused write is silent — which is how a phone
+      // sat in a team, invisible to the roster and skipped by the rotation.
+      if (!name) return;
+      void ensurePresent(gameId, playerId, name);
     }),
   ];
 

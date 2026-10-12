@@ -379,7 +379,8 @@ final class VibeBlurtModel: ObservableObject {
     private func beginObserving(gameID: String) {
         observation.map { service.stopObserving($0) }
 
-        observation = service.observe(gameID: gameID) { [weak self] snapshot in
+        observation = service.observe(gameID: gameID,
+                                      presence: .init(playerID: PlayerIdentity.id, name: playerName)) { [weak self] snapshot in
             guard let self else { return }
             self.apply(snapshot)
         }

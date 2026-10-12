@@ -162,8 +162,12 @@ function VibeBlurt() {
 
   useEffect(() => {
     if (!gameId) return;
-    return observeGame(gameId, setSnapshot);
-  }, [gameId]);
+    return observeGame(gameId, id, name, setSnapshot);
+    // `name` is a dependency because the presence listener carries it: somebody
+    // who types their name at the prompt lands here afterwards, and the observer
+    // has to be rebuilt with it or every reconnect re-announces an empty name,
+    // which the rules refuse without saying so.
+  }, [gameId, id, name]);
 
   const requireName = useCallback(
     (action: (who: string) => void) => {

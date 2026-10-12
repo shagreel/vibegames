@@ -191,11 +191,44 @@ final class VibeBlurtService {
 
     // MARK: - Observing
 
-    func observe(gameID: String, onChange: @escaping (BlurtSnapshot) -> Void) -> BlurtObservation? {
+    /// Who to keep on the roster for as long as an observation is open.
+    ///
+    /// Optional, because a watcher is not a player: the tests watch a room
+    /// without joining it, and a presence entry they did not ask for would turn
+    /// up in the roster they are counting.
+    struct Presence {
+        let playerID: String
+        let name: String
+    }
+
+    func observe(gameID: String,
+                 presence: Presence? = nil,
+                 onChange: @escaping (BlurtSnapshot) -> Void) -> BlurtObservation? {
         guard let reference = gameReference(gameID) else { return nil }
 
         let observation = BlurtObservation()
         observation.onChange = onChange
+
+        // Presence, for as long as this phone is connected.
+        //
+        // It is not a one-off write. `onDisconnect` clears the entry when the
+        // socket drops — a phone switched off, or asleep past the connection
+        // timeout — and nothing ever puts it back, so the room keeps a team slot
+        // for somebody it cannot see: they read as "Someone", and the rotation
+        // walks straight past them, which is a phone that never gets a turn.
+        // Re-announcing on every reconnect is Firebase's own presence pattern,
+        // and it fires once immediately, so opening the game re-registers you.
+        if let presence, !presence.name.isEmpty,
+           let connected = database?.reference(withPath: ".info/connected") {
+            observation.handles.append((connected, connected.observe(.value) { [weak self] snapshot in
+                guard snapshot.value as? Bool == true else { return }
+                Task {
+                    try? await self?.markPresent(gameID: gameID,
+                                                 playerID: presence.playerID,
+                                                 name: presence.name)
+                }
+            }))
+        }
 
         let meta = reference.child("meta")
         observation.handles.append((meta, meta.observe(.value) { [weak observation] snapshot in

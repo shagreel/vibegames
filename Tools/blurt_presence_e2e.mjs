@@ -19,6 +19,10 @@
  *   3. A round that has *not* started when the person who is up leaves. Nothing
  *      is running, so no clock ends it: checks a team-mate is offered it, and
  *      that whoever starts it is written down as the describer.
+ *   4. A connection that drops and comes back underneath a live page — a phone
+ *      asleep, a laptop shut. Checks presence is re-announced without a reload,
+ *      because a room that has stopped seeing a phone keeps a team slot for it
+ *      and the rotation skips it forever.
  *
  * Run it after deploying, from the repository root:
  *
@@ -277,6 +281,48 @@ console.log("\n3. a team-mate can take over a round whose describer has left");
     check(play?.describer === idOf(mate.name), "and the word is on the phone that started it");
     check(play?.describer in here, "so the describer is somebody in the room");
   }
+}
+
+// ── 4. A connection that drops and comes back ─────────────────────────────
+
+console.log("\n4. a dropped connection puts the player back on the roster");
+
+{
+  const names = ["Alex", "Sam", "Jo", "Robin"];
+  const seats = await seatsFor(names);
+  const code = await assembleRoom(seats);
+  console.log(`   room ${code}`);
+
+  const players = await read(code, "players") ?? {};
+  const idOf = (name, list = players) => Object.keys(list).find((k) => list[k] === name);
+  const victim = seats.find((s) => s.name === "Jo");
+  const victimId = idOf("Jo");
+
+  // Not a page close: the socket has to die underneath a page that is still
+  // running, which is what a phone going to sleep does. Closing the tab would
+  // exercise the join path instead.
+  const cdp = await victim.page.target().createCDPSession();
+  await cdp.send("Network.enable");
+  await cdp.send("Network.emulateNetworkConditions",
+    { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+
+  const cleared = await until(async () => !(victimId in ((await read(code, "players")) ?? {})), 40000);
+  check(Boolean(cleared), "a dropped connection takes the player off the roster");
+  check(victimId in ((await read(code, "teams")) ?? {}),
+        "and the team list still remembers their side");
+
+  await cdp.send("Network.emulateNetworkConditions",
+    { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+
+  const restored = await until(async () => (await read(code, "players"))?.[victimId], 30000);
+  check(restored === "Jo",
+        `the page re-announces itself on reconnect, without a reload (${JSON.stringify(restored)})`);
+
+  const here = await read(code, "players") ?? {};
+  const teams = await read(code, "teams") ?? {};
+  const orphans = Object.keys(teams).filter((id) => !(id in here));
+  check(orphans.length === 0,
+        `so no seat is left belonging to nobody (${orphans.length} orphaned)`);
 }
 
 await browser.close();
