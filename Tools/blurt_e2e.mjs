@@ -88,8 +88,17 @@ await players[0].page.waitForSelector(".blurt__code-value", { timeout: 20000 });
 const code = await players[0].page.$eval(".blurt__code-value", (el) => el.textContent.trim());
 say("code shown to the host:", code);
 
+// The other three arrive on a link whose code has been retyped by hand rather
+// than copied: capitalised, and without the hyphen. That is how a code gets
+// shared in practice — read out loud, typed from memory — and it is the only
+// thing that checks the code is normalised on the way in. The host's screen
+// shows it in capitals, so this is also the exact string somebody would copy
+// down.
+const retyped = code.toUpperCase().replace(/-/g, "");
+say("the others retype it as:", retyped);
+
 for (const player of players.slice(1)) {
-  await player.page.goto(`${SITE}/blurt?game=${code.toLowerCase()}`, { waitUntil: "networkidle0" });
+  await player.page.goto(`${SITE}/blurt?game=${retyped}`, { waitUntil: "networkidle0" });
   await sleep(2200);
   await nameSelf(player.page, player.name);
   await sleep(1200);
