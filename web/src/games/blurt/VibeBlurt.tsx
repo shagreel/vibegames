@@ -139,6 +139,22 @@ function VibeBlurt() {
   const myTeam: Team | null = myShortId ? (snapshot.teams[myShortId] ?? null) : null;
   const winner = winningTeam(play);
   const isDescriber = play !== null && myShortId !== null && play.describer === myShortId;
+  /** The person this round belongs to has left the room. */
+  const describerHasLeft =
+    play !== null && !play.finished && play.describer !== '' && snapshot.players[play.describer] === undefined;
+  /**
+   * Whether this phone can start the round that is waiting. Normally the
+   * describer's own; when they have gone it is the next person on their team,
+   * because nothing is running yet and no clock will ever end a round that
+   * nobody can start.
+   */
+  const canStartRound =
+    play !== null &&
+    !play.finished &&
+    play.state !== 'running' &&
+    myShortId !== null &&
+    (play.describer === myShortId ||
+      (describerHasLeft && myTeam !== null && myTeam === play.team));
   /** The team that is not holding the word: they see it, and they get BUZZ. */
   const onBuzzTeam = play !== null && myTeam !== null && myTeam !== play.team;
 
@@ -546,7 +562,13 @@ function VibeBlurt() {
           <span className={`blurt__team-tag blurt__team-tag--${play.team}`}>
             {teamTitle(play.team)}
           </span>
-          <h2>{isDescriber ? "You're up" : `${snapshot.players[play.describer] ?? 'Someone'} is up`}</h2>
+          <h2>
+            {isDescriber
+              ? "You're up"
+              : describerHasLeft
+                ? `${snapshot.players[play.describer] ?? 'They'} left`
+                : `${snapshot.players[play.describer] ?? 'Someone'} is up`}
+          </h2>
           {/* Which side *you* are on, said outright. The scoreboard shows it,
               but this is the screen everyone looks at between rounds. */}
           {myTeam !== null && (
@@ -557,13 +579,15 @@ function VibeBlurt() {
           <p>
             {isDescriber
               ? 'Hold the phone so only you can see it, then start the clock.'
-              : `Pass the phone to ${snapshot.players[play.describer] ?? 'them'}. Everyone else, watch for the word.`}
+              : canStartRound
+                ? 'They have left the room, and nothing is running yet. Anyone on their team can take the round.'
+                : `Pass the phone to ${snapshot.players[play.describer] ?? 'them'}. Everyone else, watch for the word.`}
           </p>
-          {isDescriber && (
+          {canStartRound && (
             <button
               type="button"
               className="blurt__primary"
-              onClick={() => void beginTurn(gameId, randomTurnSeconds())}
+              onClick={() => void beginTurn(gameId, randomTurnSeconds(), myShortId ?? '')}
             >
               Start the clock
             </button>

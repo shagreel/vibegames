@@ -590,6 +590,42 @@ awkward part is that the two languages share thousands of words — `tap`, `vest
 something else over there — so those are printed as advisories for a person to
 read rather than failed automatically.
 
+### Leaving, and coming back
+
+A phone that goes away — closed, slept, lost signal — disappears from the room.
+Presence is the set of live entries under `players/`, and `onDisconnect` clears a
+player's own when the socket drops, so there is no heartbeat to go stale and no
+counter to get out of step.
+
+**The team list is deliberately not cleaned up with it.** `teams/` is what
+remembers which side somebody was on, so coming back with the same code puts you
+straight back where you were rather than reshuffling you. The identity is the
+same because it is derived from the device and the game code, not from anything
+the server holds.
+
+That leaves three places where the team list and the room disagree, and all three
+ask the same question: who is *here*?
+
+- **Whose turn it is.** The rotation is walked over the whole team and the
+  missing are taken out of the order. Standing somebody in for them instead looks
+  equivalent and is not: the stand-in also holds the turn after, so they would
+  describe twice in a row. Taking them out keeps everyone else's turn and gives a
+  returning player their own place back.
+- **Which side is short**, when somebody new arrives. Counting the departed puts
+  them on a side that already has a full bench — the room reads two-a-side while
+  one side has one player actually holding a phone.
+- **A round nobody can start.** Nothing is running before the clock starts, so no
+  clock will end a round whose describer has left, and nobody else can start it.
+  When the named describer is not in the room, the next person on their team is
+  offered it, and whoever starts is written down as the describer — so the word
+  lands on the phone that is actually there.
+
+`Tools/blurt_presence_e2e.mjs` covers all three against the deployed site and the
+real database — a leaver and a returner, a round in progress when the holder
+goes, and a round nobody can start. It exists because none of this is visible in
+a single client: presence is a property of the room, and every one of these bugs
+looked right on the phone that stayed.
+
 ### How long a round lasts
 
 A round is a random **50 to 70 seconds**, drawn by the phone that starts it and
@@ -684,7 +720,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**221 tests in all: 178 unit and 43 UI.** They are what the numbers above are
+**226 tests in all: 183 unit and 43 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -835,6 +871,7 @@ Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories
 Tools/make_web_game_codes.py    Mirrors the code words into the web app
+Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
 Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
 Tools/prune_games.py            Deletes old games (admin — clients cannot)

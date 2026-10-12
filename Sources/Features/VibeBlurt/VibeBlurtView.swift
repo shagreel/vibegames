@@ -654,7 +654,11 @@ struct VibeBlurtView: View {
                 .kerning(2)
                 .foregroundStyle(VibeTheme.blurtTeam(play.team))
 
-            Text(model.isDescriber ? "You're up" : "\(model.describerName) is up")
+            Text(model.isDescriber
+                 ? "You're up"
+                 : model.describerHasLeft
+                   ? "\(model.describerName) has left"
+                   : "\(model.describerName) is up")
                 .font(.system(size: 30, weight: .black, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
 
@@ -669,13 +673,15 @@ struct VibeBlurtView: View {
 
             Text(model.isDescriber
                  ? "Hold the phone so only you can see it, then start the clock."
-                 : "Pass the phone to \(model.describerName). Everyone else, watch for the word.")
+                 : model.canStartThisRound
+                   ? "They have left the room, and nothing is running yet. Anyone on their team can take the round."
+                   : "Pass the phone to \(model.describerName). Everyone else, watch for the word.")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if model.isDescriber {
+            if model.canStartThisRound {
                 Button {
                     Task { await model.beginTurn() }
                 } label: {

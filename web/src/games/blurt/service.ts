@@ -253,8 +253,14 @@ export async function assignTeam(gameId: string, playerId: string): Promise<void
   const teamsRef = ref(database, `blurt/${gameId}/teams`);
   const snapshot = await get(teamsRef);
   const teams = parseTeams((snapshot.val() as Record<string, number> | null) ?? null);
-  const one = Object.values(teams).filter((t) => t === 1).length;
-  const two = Object.values(teams).filter((t) => t === 2).length;
+  // Only the people who are here. A team list keeps its departed, and counting
+  // those would put a new arrival on a side that is already full of players who
+  // never came back.
+  const playersSnapshot = await get(ref(database, `blurt/${gameId}/players`));
+  const here = new Set(Object.keys((playersSnapshot.val() as Record<string, string> | null) ?? {}));
+  const present = Object.keys(teams).filter((id) => here.has(id));
+  const one = present.filter((id) => teams[id] === 1).length;
+  const two = present.filter((id) => teams[id] === 2).length;
   await set(ref(database, `blurt/${gameId}/teams/${shortId(playerId, gameId)}`), one <= two ? 1 : 2);
 }
 
@@ -299,10 +305,19 @@ export async function startGame(gameId: string, seed: number): Promise<void> {
 }
 
 /** Starts the clock, when the describer has the phone in their hand. */
-export async function beginTurn(gameId: string, seconds: number): Promise<void> {
+export async function beginTurn(
+  gameId: string,
+  seconds: number,
+  describer: string,
+): Promise<void> {
   const now = Date.now();
+  // `describer` is whoever actually tapped, which is normally the person the
+  // rotation named — but not when that person has left the room and a team-mate
+  // has picked the round up. Writing it here makes the stand-in stick rather
+  // than leaving the word on an empty seat.
   await update(ref(database, `blurt/${gameId}/play`), {
     state: 'running',
+    describer,
     startedAt: now,
     endsAt: now + seconds * 1000,
   });
@@ -320,9 +335,14 @@ async function rotation(gameId: string) {
 
   const teamsSnapshot = await get(ref(database, `blurt/${gameId}/teams`));
   const teams = parseTeams((teamsSnapshot.val() as Record<string, number> | null) ?? null);
+  // Who is actually in the room. The team lists keep their departed — that is
+  // what lets them come back to the same side — so the turn has to be walked
+  // forward past anybody who is not here.
+  const playersSnapshot = await get(ref(database, `blurt/${gameId}/players`));
+  const present = new Set(Object.keys((playersSnapshot.val() as Record<string, string> | null) ?? {}));
   const one = membersOf(1, teams);
   const two = membersOf(2, teams);
-  return { one, two, offsets: describerOffsets(one.length, two.length, seed) };
+  return { one, two, present, offsets: describerOffsets(one.length, two.length, seed) };
 }
 
 /**
@@ -333,7 +353,13 @@ async function rotation(gameId: string) {
  * in the same order every time round — so this is the only thing that decides
  * whose turn it is.
  */
-function advance(play: BlurtPlay, one: string[], two: string[], offsets: { one: number; two: number }): BlurtPlay {
+function advance(
+  play: BlurtPlay,
+  one: string[],
+  two: string[],
+  offsets: { one: number; two: number },
+  present: ReadonlySet<string>,
+): BlurtPlay {
   const turn = play.turn + 1;
   const team = describingTeam(turn);
   const members = team === 1 ? one : two;
@@ -343,7 +369,7 @@ function advance(play: BlurtPlay, one: string[], two: string[], offsets: { one: 
     turn,
     team,
     word: play.word + 1,
-    describer: describerFor(members, turn, offset) ?? '',
+    describer: describerFor(members, turn, offset, present) ?? '',
   };
 }
 
@@ -364,7 +390,7 @@ export async function passWord(gameId: string): Promise<boolean> {
     ref(database, `blurt/${gameId}/play`),
     (current: BlurtPlay | null) => {
       if (!current || current.state !== 'running') return; // abort
-      return advance(current, spin.one, spin.two, spin.offsets);
+      return advance(current, spin.one, spin.two, spin.offsets, spin.present);
     },
   );
   return result.committed;
@@ -402,7 +428,7 @@ export async function endTurn(gameId: string, reason: EndReason): Promise<boolea
       // The next round starts one further round the rotation, so the order
       // keeps moving rather than the same person being caught twice. A finished
       // game keeps the last round's shape; nobody plays it.
-      if (!next.finished) next = advance(next, spin.one, spin.two, spin.offsets);
+      if (!next.finished) next = advance(next, spin.one, spin.two, spin.offsets, spin.present);
       return next;
     },
   );

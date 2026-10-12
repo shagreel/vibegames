@@ -232,13 +232,24 @@ enum BlurtRules {
     /// Rotates through the team so it is not the same person every time. `number`
     /// counts turns from zero across the whole game, so a team's own count is
     /// half of it.
+    ///
+    /// `present` narrows the rotation to the people actually in the room. The
+    /// team list outlives any particular phone — that is what lets somebody who
+    /// drops out come back to the same side — so whoever is missing is taken
+    /// *out* of the order rather than standing in for. Walking forward to the
+    /// next person instead looks equivalent and is not: the stand-in also holds
+    /// the turn after, so they describe twice in a row.
+    ///
+    /// Removing them keeps the order that remains, so a returning player lands
+    /// back in their own place.
     static func describer(for team: BlurtTeam,
                           members: [String],
                           turn number: Int,
-                          offset: Int) -> String? {
-        guard !members.isEmpty else { return nil }
-        let within = (number / 2 + offset) % members.count
-        return members[within]
+                          offset: Int,
+                          present: Set<String>? = nil) -> String? {
+        let roster = present.map { here in members.filter { here.contains($0) } } ?? members
+        guard !roster.isEmpty else { return nil }
+        return roster[(number / 2 + offset) % roster.count]
     }
 
     /// The team that takes the point when a turn ends — never the one that was

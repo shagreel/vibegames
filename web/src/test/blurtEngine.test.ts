@@ -200,6 +200,23 @@ describe('the turn order', () => {
   it('has nobody to describe with an empty team', () => {
     expect(describerFor([], 0, 0)).toBeNull();
   });
+
+  it('skips a player who has left without giving anyone two turns running', () => {
+    const members = ['ann', 'bo', 'cass', 'dee'];
+    const withoutBo = new Set(['ann', 'cass', 'dee']);
+    const turns = [0, 2, 4, 6];
+
+    expect(turns.map((turn) => describerFor(members, turn, 0)))
+      .toEqual(['ann', 'bo', 'cass', 'dee']);
+
+    // Taking bo out rather than standing somebody in for them. Walking forward
+    // to the next person instead would give cass turns 2 and 4.
+    expect(turns.map((turn) => describerFor(members, turn, 0, withoutBo)))
+      .toEqual(['ann', 'cass', 'dee', 'ann']);
+
+    expect(describerFor(members, 2, 0, new Set())).toBeNull();
+    expect(describerFor(members, 2, 0, new Set(members))).toBe('bo');
+  });
 });
 
 describe('the scoring', () => {

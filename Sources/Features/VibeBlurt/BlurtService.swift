@@ -311,8 +311,13 @@ final class VibeBlurtService {
         let short = Self.shortID(playerID: playerID, gameID: gameID)
 
         let teamsValue = try await reference.child("teams").getData().value as? [String: Any] ?? [:]
+        let playersValue = try await reference.child("players").getData().value as? [String: Any] ?? [:]
         var one = 0, two = 0
-        for raw in teamsValue.values {
+        for (player, raw) in teamsValue {
+            // Only the people who are here. A team list keeps its departed, and
+            // counting those would put a new arrival on a side that is already
+            // full of players who never came back.
+            guard playersValue[player] != nil else { continue }
             if let n = raw as? Int, let team = BlurtTeam(rawValue: n) {
                 if team == .one { one += 1 } else { two += 1 }
             }
@@ -354,11 +359,17 @@ final class VibeBlurtService {
     /// One clock per round, not per word: the whole point is that the timer
     /// keeps running while the word goes back and forth, so the last few seconds
     /// are spent trying to get rid of it.
-    func beginTurn(gameID: String, seconds: TimeInterval) async throws {
+    ///
+    /// `describer` is whoever actually tapped, which is normally the person the
+    /// rotation named — but not when that person has left the room and a
+    /// team-mate has picked the round up. Writing it here is what makes the
+    /// stand-in stick rather than the word sitting on an empty seat.
+    func beginTurn(gameID: String, seconds: TimeInterval, describer: String) async throws {
         guard let reference = gameReference(gameID)?.child("play") else { return }
         let now = Date()
         try await reference.updateChildValues([
             "state": BlurtState.running.rawValue,
+            "describer": describer,
             "startedAt": Self.milliseconds(now),
             "endsAt": Self.milliseconds(now.addingTimeInterval(seconds)),
         ])
@@ -367,7 +378,7 @@ final class VibeBlurtService {
     /// Reads what the rotation needs: who is on each team, and the seed the
     /// starting positions come from. Read before the transaction rather than
     /// inside it, because the block has to be pure.
-    private func rotation(gameID: String) async -> (one: [String], two: [String], offsets: (one: Int, two: Int))? {
+    private func rotation(gameID: String) async -> (one: [String], two: [String], offsets: (one: Int, two: Int), present: Set<String>)? {
         guard let reference = gameReference(gameID) else { return nil }
 
         // Read `meta` and take the seed out of it, rather than reading
@@ -385,12 +396,16 @@ final class VibeBlurtService {
         for (player, value) in raw {
             if let n = value as? Int, let team = BlurtTeam(rawValue: n) { teams[player] = team }
         }
+        // Who is actually in the room. The team lists keep their departed — that
+        // is what lets them come back to the same side — so the turn has to be
+        // walked forward past anybody who is not here.
+        let playersRaw = (try? await reference.child("players").getData().value) as? [String: Any] ?? [:]
         let one = BlurtRules.members(of: .one, in: teams)
         let two = BlurtRules.members(of: .two, in: teams)
         let offsets = BlurtRules.describerOffsets(oneMembers: one.count,
                                                   twoMembers: two.count,
                                                   seed: seed)
-        return (one, two, offsets)
+        return (one, two, offsets, Set(playersRaw.keys))
     }
 
     /// Moves the word on by one: the next person in the rotation, which is
@@ -399,7 +414,11 @@ final class VibeBlurtService {
     /// The rotation is the game's spine — one member to the next, alternating
     /// sides, in the same order every time round — so this is the only thing
     /// that decides whose turn it is.
-    private static func advance(_ play: inout BlurtPlay, one: [String], two: [String], offsets: (one: Int, two: Int)) {
+    private static func advance(_ play: inout BlurtPlay,
+                                one: [String],
+                                two: [String],
+                                offsets: (one: Int, two: Int),
+                                present: Set<String>) {
         play.turn += 1
         play.team = BlurtRules.describingTeam(turn: play.turn)
         play.word += 1
@@ -408,7 +427,8 @@ final class VibeBlurtService {
         play.describer = BlurtRules.describer(for: play.team,
                                               members: members,
                                               turn: play.turn,
-                                              offset: offset) ?? ""
+                                              offset: offset,
+                                              present: present) ?? ""
     }
 
     /// The team got the word and taps for the next one.
@@ -428,7 +448,11 @@ final class VibeBlurtService {
                 guard var play = BlurtPlay(value: current.value), play.state == .running else {
                     return TransactionResult.abort()
                 }
-                Self.advance(&play, one: rotation.one, two: rotation.two, offsets: rotation.offsets)
+                Self.advance(&play,
+                             one: rotation.one,
+                             two: rotation.two,
+                             offsets: rotation.offsets,
+                             present: rotation.present)
                 current.value = play.value
                 return TransactionResult.success(withValue: current)
             }, andCompletionBlock: { error, committed, _ in
@@ -475,7 +499,11 @@ final class VibeBlurtService {
                 // twice. A finished game keeps the last round's shape; nobody
                 // plays it.
                 if !play.finished {
-                    Self.advance(&play, one: rotation.one, two: rotation.two, offsets: rotation.offsets)
+                    Self.advance(&play,
+                                 one: rotation.one,
+                                 two: rotation.two,
+                                 offsets: rotation.offsets,
+                                 present: rotation.present)
                 }
 
                 current.value = play.value
@@ -518,7 +546,8 @@ final class VibeBlurtService {
                 next.describer = BlurtRules.describer(for: next.team,
                                                       members: members,
                                                       turn: next.turn,
-                                                      offset: offset) ?? ""
+                                                      offset: offset,
+                                                      present: rotation.present) ?? ""
 
                 current.value = next.value
                 return TransactionResult.success(withValue: current)

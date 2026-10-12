@@ -180,6 +180,26 @@ final class VibeBlurtModel: ObservableObject {
         return snapshot.players[play.describer] ?? "Someone"
     }
 
+    /// Whether the person this round belongs to has left the room.
+    ///
+    /// The turn is written down when the word moves, and a phone that leaves
+    /// afterwards does not rewrite it — so the round can be pointing at somebody
+    /// who is not there. Nothing is running yet in that state, so no clock will
+    /// end it either.
+    var describerHasLeft: Bool {
+        guard let play, !play.finished, !play.describer.isEmpty else { return false }
+        return snapshot.players[play.describer] == nil
+    }
+
+    /// Whether this phone can start the round that is waiting: the describer's
+    /// own, or — when they have gone — the next person on their team.
+    var canStartThisRound: Bool {
+        Self.canStartRound(play: play,
+                           me: myShortID,
+                           present: Set(snapshot.players.keys),
+                           myTeam: myTeam)
+    }
+
     /// Whether the room has enough people to make a game of it.
     ///
     /// Two is the floor, and the split is worked out at the start — so this
@@ -290,9 +310,21 @@ final class VibeBlurtModel: ObservableObject {
     /// ending a round leaves the result and the next round's rotation behind in
     /// the same state. Asking only for `.ready` — which this did — is why the
     /// first round started and no round after it did.
-    nonisolated static func canStartRound(play: BlurtPlay?, me: String?) -> Bool {
-        guard let play, let me, !play.finished else { return false }
-        return play.describer == me && play.state != .running
+    ///
+    /// `present` and `myTeam` cover the other way a round gets stuck: the phone
+    /// that was up has left the room. Nothing is running yet, so no clock will
+    /// end it, and nobody else can start it — the table would wait on a phone
+    /// that is not there for the rest of the evening. When the named describer
+    /// is gone, the next person on that team picks the round up instead.
+    nonisolated static func canStartRound(play: BlurtPlay?,
+                                          me: String?,
+                                          present: Set<String>? = nil,
+                                          myTeam: BlurtTeam? = nil) -> Bool {
+        guard let play, let me, !play.finished, play.state != .running else { return false }
+        if play.describer == me { return true }
+
+        guard let present, !present.contains(play.describer) else { return false }
+        return myTeam == play.team
     }
 
     /// The describer has the phone in their hand; start the clock.
@@ -301,10 +333,18 @@ final class VibeBlurtModel: ObservableObject {
     /// written into the end time. Every other phone reads it back out of
     /// `startedAt` and `endsAt` rather than being told, so there is nothing to
     /// agree on and nothing to go stale.
+    ///
+    /// Whoever starts it is written down as the describer, which is what makes
+    /// standing in for somebody who has left stick: the word is on the screen of
+    /// the phone that is actually in the room.
     func beginTurn() async {
-        guard let gameID = sharedGameID, Self.canStartRound(play: play, me: myShortID) else { return }
+        guard let gameID = sharedGameID, let me = myShortID,
+              Self.canStartRound(play: play,
+                                 me: me,
+                                 present: Set(snapshot.players.keys),
+                                 myTeam: myTeam) else { return }
         let seconds = TimeInterval(BlurtTiming.randomTurnSeconds())
-        try? await service.beginTurn(gameID: gameID, seconds: seconds)
+        try? await service.beginTurn(gameID: gameID, seconds: seconds, describer: me)
     }
 
     /// The team got the word.

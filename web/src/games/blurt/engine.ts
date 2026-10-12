@@ -220,10 +220,17 @@ export function describerFor(
   members: readonly string[],
   turn: number,
   offset: number,
+  present?: ReadonlySet<string>,
 ): string | null {
-  if (members.length === 0) return null;
-  const within = (Math.floor(turn / 2) + offset) % members.length;
-  return members[within];
+  // `present` narrows the rotation to the people actually in the room. The team
+  // list outlives any particular phone — that is what lets somebody who drops
+  // out come back to the same side — so whoever is missing is taken *out* of the
+  // order rather than stood in for. Walking forward to the next person instead
+  // looks equivalent and is not: the stand-in also holds the turn after, so they
+  // describe twice in a row.
+  const roster = present ? members.filter((member) => present.has(member)) : members;
+  if (roster.length === 0) return null;
+  return roster[(Math.floor(turn / 2) + offset) % roster.length];
 }
 
 /** The team that takes the point — never the one that was describing. */

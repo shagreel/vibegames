@@ -477,6 +477,75 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertFalse(VibeBlurtModel.canStartRound(play: nil, me: "me"))
     }
 
+    func testATeamMateTakesOverARoundWhoseDescriberHasLeft() {
+        // Nothing is running yet in this state, so no clock will ever end a
+        // round that nobody can start: without this the whole table waits on a
+        // phone that has gone home.
+        var round = play(state: .ready, describer: "gone")
+        round.team = .one
+
+        XCTAssertTrue(VibeBlurtModel.canStartRound(play: round, me: "gone", present: [], myTeam: .one),
+                      "the named describer can still start it — they are the one tapping")
+        XCTAssertTrue(VibeBlurtModel.canStartRound(play: round, me: "mate", present: ["mate"], myTeam: .one),
+                      "and a team-mate picks it up once they have gone")
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: round, me: "other", present: ["other"], myTeam: .two),
+                       "but not somebody on the other team")
+    }
+
+    func testNobodyStandsInWhileTheDescriberIsStillHere() {
+        var round = play(state: .ready, describer: "here")
+        round.team = .one
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: round, me: "mate",
+                                                    present: ["here", "mate"], myTeam: .one),
+                       "the round is theirs, not the team's")
+    }
+
+    func testAStandInCannotRestartARoundThatIsAlreadyRunning() {
+        var round = play(state: .running, describer: "gone")
+        round.team = .one
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: round, me: "mate",
+                                                    present: ["mate"], myTeam: .one),
+                       "the clock is already going")
+    }
+
+    // MARK: - Who is actually in the room
+
+    func testTheWordSkipsSomebodyWhoHasLeft() {
+        let members = ["ann", "bo", "cass", "dee"]
+
+        // The rotation walks the whole team, so each of these has their own turn.
+        XCTAssertEqual(BlurtRules.describer(for: .one, members: members, turn: 2, offset: 0), "bo")
+
+        let withoutBo: Set<String> = ["ann", "cass", "dee"]
+        XCTAssertEqual(BlurtRules.describer(for: .one, members: members, turn: 2, offset: 0, present: withoutBo),
+                       "cass", "bo has gone, so the turn walks on to the next person who is here")
+        XCTAssertNil(BlurtRules.describer(for: .one, members: members, turn: 2, offset: 0, present: []),
+                     "better nobody than a phone that is not in the room")
+    }
+
+    func testSomebodyLeavingDoesNotShiftAnybodyElsesTurn() {
+        // A departure takes that person out of the order rather than handing
+        // their turn to the next person, who would then describe twice in a row.
+        // Everyone left keeps a turn, and a returning player gets their own back.
+        let members = ["ann", "bo", "cass", "dee"]
+        let withoutBo: Set<String> = ["ann", "cass", "dee"]
+        let turns = Array(stride(from: 0, to: 8, by: 2))
+
+        let withEverybody = turns.map {
+            BlurtRules.describer(for: .one, members: members, turn: $0, offset: 0, present: Set(members))
+        }
+        let withBoGone = turns.map {
+            BlurtRules.describer(for: .one, members: members, turn: $0, offset: 0, present: withoutBo)
+        }
+
+        XCTAssertEqual(withEverybody, ["ann", "bo", "cass", "dee"])
+        XCTAssertEqual(withBoGone, ["ann", "cass", "dee", "ann"],
+                       "bo is skipped and nobody else describes twice")
+        XCTAssertEqual(
+            BlurtRules.describer(for: .one, members: members, turn: 2, offset: 0, present: Set(members)),
+            "bo", "and it is theirs again the moment they are back")
+    }
+
     // MARK: - The buzz you feel
 
     private func running(describer: String) -> BlurtPlay {
@@ -701,7 +770,7 @@ final class VibeBlurtTests: XCTestCase {
 
         let service = VibeBlurtService.shared
         let (gameID, before) = try await VibeBlurtTests.startedRoom(service)
-        try await service.beginTurn(gameID: gameID, seconds: 60)
+        try await service.beginTurn(gameID: gameID, seconds: 60, describer: before.describer)
 
         let passed = await service.passWord(gameID: gameID)
         XCTAssertTrue(passed, "the pass was refused")
@@ -724,7 +793,7 @@ final class VibeBlurtTests: XCTestCase {
 
         let service = VibeBlurtService.shared
         let (gameID, before) = try await VibeBlurtTests.startedRoom(service)
-        try await service.beginTurn(gameID: gameID, seconds: 60)
+        try await service.beginTurn(gameID: gameID, seconds: 60, describer: before.describer)
 
         let ended = await service.endTurn(gameID: gameID, reason: .blurt)
         XCTAssertTrue(ended, "the buzz was refused")
