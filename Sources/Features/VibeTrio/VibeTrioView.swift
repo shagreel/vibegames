@@ -109,7 +109,7 @@ struct VibeTrioView: View {
                 .foregroundStyle(VibeTheme.tertiaryText)
 
             HStack(spacing: 10) {
-                TextField("abc12345", text: $joinCode)
+                TextField("cars-feed", text: $joinCode)
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(VibeTheme.primaryText)

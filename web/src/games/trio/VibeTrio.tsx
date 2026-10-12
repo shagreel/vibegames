@@ -10,7 +10,7 @@ import {
   clearRestartTime,
   createGame,
   joinGame,
-  makeGameId,
+  makeGameCode,
   nameOf,
   observeGame,
   randomSeed,
@@ -19,6 +19,7 @@ import {
   startGame,
   type TrioSnapshot,
 } from './service';
+import { normaliseGameCode } from '../../lib/gameCode';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
@@ -91,7 +92,10 @@ function VibeTrio() {
   // MARK: - The game id in the URL
 
   useEffect(() => {
-    const wanted = new URLSearchParams(window.location.search).get('game');
+    const typed = new URLSearchParams(window.location.search).get('game');
+    if (!typed) return;
+    // A code in a link may have been retyped by hand rather than copied.
+    const wanted = normaliseGameCode(typed);
     if (!wanted) return;
     setGameId(wanted);
     setIsHost(isHosting(wanted));
@@ -207,7 +211,7 @@ function VibeTrio() {
 
   const createShared = () =>
     withName(() => {
-      const newId = makeGameId();
+      const newId = makeGameCode();
       const newSeed = randomSeed();
       hostedGame(newId);
       setIsHost(true);
@@ -221,7 +225,8 @@ function VibeTrio() {
 
   const join = (code: string) =>
     withName(() => {
-      const wanted = code.trim().toLowerCase();
+      // Heard across a room and typed from memory, so it arrives however it arrives.
+      const wanted = normaliseGameCode(code);
       if (!wanted) return;
       setJoinError('');
       void joinGame(wanted, id)
@@ -465,7 +470,7 @@ function Lobby(props: {
             id="trio-join"
             value={props.joinCode}
             onChange={(event) => props.onJoinCode(event.target.value)}
-            placeholder="abc12345"
+            placeholder="cars-feed"
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}

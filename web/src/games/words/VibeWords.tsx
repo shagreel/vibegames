@@ -5,6 +5,7 @@ import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
+import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import './VibeWords.css';
 
 type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'current';
@@ -43,13 +44,15 @@ function VibeWords() {
 
   // Initialize game
   useEffect(() => {
-    // Check for query parameter, or generate a new game ID
+    // Check for query parameter, or generate a new game ID. A code that arrived
+    // in a link is normalised, because it may have been retyped by hand.
     const urlParams = new URLSearchParams(window.location.search);
-    let currentGameId = urlParams.get('game');
+    const typed = urlParams.get('game');
+    let currentGameId = typed ? normaliseGameCode(typed) : '';
 
     if (!currentGameId) {
       // Generate a new game ID
-      currentGameId = Math.random().toString(36).substring(2, 10);
+      currentGameId = makeGameCode();
       // Update URL without reloading the page
       const newUrl = `${window.location.pathname}?game=${currentGameId}`;
       window.history.replaceState({}, '', newUrl);

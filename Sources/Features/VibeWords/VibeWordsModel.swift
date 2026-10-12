@@ -108,7 +108,7 @@ final class VibeWordsModel: ObservableObject {
         isBusy = true
         defer { isBusy = false }
 
-        let gameID = Self.makeGameID()
+        let gameID = GameCode.make()
         let word = WordLists.randomAnswer()
 
         do {
@@ -132,7 +132,9 @@ final class VibeWordsModel: ObservableObject {
     func joinSharedGame(code: String) async {
         guard service.isAvailable, hasName else { return }
 
-        let gameID = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Forgiving on the way in: these arrive second-hand, heard across a
+        // room and typed from memory.
+        let gameID = GameCode.normalise(code)
         guard !gameID.isEmpty else { return }
 
         isBusy = true
@@ -351,12 +353,6 @@ final class VibeWordsModel: ObservableObject {
 
     func keyboardFeedback(for letter: Character) -> LetterFeedback? {
         WordGameEngine.keyboardFeedback(for: letter, guesses: guesses, answer: answer)
-    }
-
-    /// The eight-character code used to share a game.
-    nonisolated static func makeGameID() -> String {
-        let alphabet = Array("abcdefghijklmnopqrstuvwxyz0123456789")
-        return String((0..<8).map { _ in alphabet.randomElement()! })
     }
 
     func endSession() {

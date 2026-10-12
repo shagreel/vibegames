@@ -57,7 +57,9 @@ final class VibeBlurtScreenshots: XCTestCase {
                            + String(app.debugDescription.prefix(3000)))
         }
         let code = codeLabel.label.components(separatedBy: " ").last?.lowercased() ?? ""
-        XCTAssertEqual(code.count, 8, "unexpected code: \(codeLabel.label)")
+        // Two four-letter words: the shape a code has to have to be sayable.
+        XCTAssertEqual(code.split(separator: "-").map(\.count), [4, 4],
+                       "unexpected code: \(codeLabel.label)")
         attach(app, named: "\(appearance)-blurt-lobby")
 
         // Who the app is, as far as this room is concerned. Reading the roster

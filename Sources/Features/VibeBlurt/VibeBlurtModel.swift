@@ -199,7 +199,7 @@ final class VibeBlurtModel: ObservableObject {
     func createGame() async {
         guard service.isAvailable, hasName else { return }
 
-        let gameID = VibeWordsModel.makeGameID()
+        let gameID = GameCode.make()
         let seed = SudokuGenerator.randomSeed()
 
         do {
@@ -221,7 +221,9 @@ final class VibeBlurtModel: ObservableObject {
     func joinGame(code: String) async {
         guard service.isAvailable, hasName else { return }
 
-        let gameID = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Forgiving on the way in: these arrive second-hand, heard across a
+        // room and typed from memory.
+        let gameID = GameCode.normalise(code)
         guard !gameID.isEmpty else { return }
 
         do {

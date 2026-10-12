@@ -21,12 +21,13 @@ import {
   clearRestartTime,
   createGame,
   joinGame,
-  makeGameId,
+  makeGameCode,
   observeGame,
   recordWinner,
   startGame,
   type SudokuSnapshot,
 } from './service';
+import { normaliseGameCode } from '../../lib/gameCode';
 import './VibeSudoku.css';
 
 /**
@@ -110,8 +111,11 @@ function VibeSudoku() {
    */
   const arrivedByLink = useRef(false);
   useEffect(() => {
-    const wanted = new URLSearchParams(window.location.search).get('game');
-    if (!wanted || arrivedByLink.current) return;
+    const typed = new URLSearchParams(window.location.search).get('game');
+    if (!typed || arrivedByLink.current) return;
+    // A code in a link may have been retyped by hand rather than copied.
+    const wanted = normaliseGameCode(typed);
+    if (!wanted) return;
     arrivedByLink.current = true;
 
     setGameId(wanted);
@@ -205,7 +209,7 @@ function VibeSudoku() {
 
   const createShared = () =>
     withName(() => {
-      const newId = makeGameId();
+      const newId = makeGameCode();
       const newSeed = randomSeed();
       hostedGame(newId);
       setIsHost(true);
@@ -219,7 +223,7 @@ function VibeSudoku() {
 
   const join = (code: string) =>
     withName(() => {
-      const wanted = code.trim().toLowerCase();
+      const wanted = normaliseGameCode(code);
       if (!wanted) return;
       setJoinError('');
       void joinGame(wanted, id, name)
@@ -652,7 +656,7 @@ function Lobby(props: {
             id="sudoku-join"
             value={props.joinCode}
             onChange={(event) => props.onJoinCode(event.target.value)}
-            placeholder="abc12345"
+            placeholder="cars-feed"
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}

@@ -81,9 +81,24 @@ wins.
 
 ### Playing with friends
 
-The host taps **Start a game with friends** and shares the eight-character code.
+The host taps **Start a game with friends** and shares the code — two short
+words, `cars-feed`, because it gets read out loud across a room.
 Everyone else taps **Join with a code**. Players disappear automatically when
 they leave, and a round ends with a countdown before the next word.
+
+Codes are two four-letter words rather than eight characters of noise because
+they are said out loud and typed in by somebody who only heard them. What is
+typed is forgiven: capitals, a forgotten hyphen (`carsfeed`) and a stray space
+all resolve to the same room, and the same shape works in all four games that
+have one. Digits are kept rather than stripped, so a code from before the words
+changed still names the room it named.
+
+The vocabulary is shared, which is not automatic — a code made on a phone has to
+be joinable in a browser. `Sources/Model/GameCodeWords.swift` is the single
+source of truth and `Tools/make_web_game_codes.py` mirrors it into
+`web/src/lib/gameCodeWords.generated.ts`; regenerate after editing the list.
+`web/src/test/gameCode.test.ts` reads the Swift list directly and fails if the
+two ever disagree.
 
 The iOS client shares its **exact Realtime Database schema** with the existing
 web version, so a web player and an iOS player can sit in the same game — once
@@ -175,7 +190,7 @@ rewrite do not need a routing library, and the games keep their shared-game id i
 the query string, which is the part that actually needs preserving.
 
 A shared game is a query string, the same as it always was:
-`play.vibegames.party/trio?game=csngwo21`.
+`play.vibegames.party/trio?game=cars-feed`.
 
 ### Vibe Trio in a browser, and why the shuffle is not a detail
 
@@ -566,12 +581,16 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
 
-**147 tests** — 113 unit and 34 UI.
-
-- `Tests/VibeWordsTests.swift` — 32 unit tests covering the scoring rules
+- `Tests/VibeWordsTests.swift` — 30 unit tests covering the scoring rules
   (especially repeated letters, where a naive implementation gets it wrong), the
-  shared database payload shape, word-code generation, and the backend
-  configuration state.
+  shared database payload shape, and the backend configuration state.
+- `Tests/GameCodeTests.swift` — 9 unit tests on the code that shares a game, now
+  two four-letter words (`cars-feed`) rather than eight characters of noise. The
+  words are checked to be four lowercase letters drawn from the list, never the
+  same word twice, and the forgiveness is checked with the ways people actually
+  type a code they only heard: capitals, a forgotten hyphen, a stray space. A
+  code from before the words changed is left alone rather than silently becoming
+  a different room.
 - `Tests/SudokuTests.swift` — 19 unit tests. The generator gets the most
   scrutiny because it is the part that can be quietly wrong: determinism from a
   seed, that every solution is a legal grid, that the givens agree with it, that
@@ -607,7 +626,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**202 tests in all: 166 unit and 36 UI.** They are what the numbers above are
+**207 tests in all: 171 unit and 36 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -755,6 +774,7 @@ Tools/check_branding.py         Naming guard
 Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories
+Tools/make_web_game_codes.py    Mirrors the code words into the web app
 Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
 Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
 Tools/prune_games.py            Deletes old games (admin — clients cannot)

@@ -181,9 +181,4 @@ export async function clearRestartTime(gameId: string): Promise<void> {
 }
 
 /** A seeded game id, short enough to read out loud. */
-export function makeGameId(): string {
-  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint32Array(8);
-  crypto.getRandomValues(values);
-  return [...values].map((value) => alphabet[value % alphabet.length]).join('');
-}
+export { makeGameCode } from '../../lib/gameCode';

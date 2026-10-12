@@ -209,20 +209,6 @@ final class GameSnapshotTests: XCTestCase {
 /// Game codes and the optional-backend behaviour.
 final class VibeWordsModelTests: XCTestCase {
 
-    func testGameCodeIsEightLowercaseAlphanumerics() {
-        let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789")
-        for _ in 0..<200 {
-            let code = VibeWordsModel.makeGameID()
-            XCTAssertEqual(code.count, 8)
-            XCTAssertTrue(code.allSatisfy { allowed.contains($0) }, "Unexpected code: \(code)")
-        }
-    }
-
-    func testGameCodesAreNotObviouslyRepeating() {
-        let codes = Set((0..<200).map { _ in VibeWordsModel.makeGameID() })
-        XCTAssertGreaterThan(codes.count, 195, "Codes should not collide in practice")
-    }
-
     /// Configuration is optional: solo play must work either way. This asserts
     /// the app's state matches whether a config file is actually bundled, so it
     /// stays meaningful both before and after Firebase is set up.

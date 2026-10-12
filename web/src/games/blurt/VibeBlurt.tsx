@@ -4,6 +4,7 @@ import { SupportButton } from '../../hub/Support';
 import { hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
 import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
+import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
   DEFAULT_SECONDS,
   DURATIONS,
@@ -233,7 +234,7 @@ function VibeBlurt() {
 
   const create = () =>
     requireName((who) => {
-      const newId = makeGameId();
+      const newId = makeGameCode();
       const seed = randomSeed();
       void createGame(newId, seed, who, id, packs, seconds)
         .then(() => {
@@ -246,7 +247,7 @@ function VibeBlurt() {
     });
 
   const join = () => {
-    const code = joinCode.trim().toLowerCase();
+    const code = normaliseGameCode(joinCode);
     if (!code) return;
     requireName((who) => {
       void joinGame(code, id, who)
@@ -332,7 +333,7 @@ function VibeBlurt() {
                 id="blurt-code"
                 value={joinCode}
                 onChange={(event) => setJoinCode(event.target.value)}
-                placeholder="abc12345"
+                placeholder="cars-feed"
                 maxLength={12}
                 autoComplete="off"
                 autoCapitalize="none"
@@ -699,14 +700,9 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string | null) => void }) {
 
 /** The game code in the link, if somebody arrived on one. */
 function arrivedAt(): string | null {
-  return new URLSearchParams(window.location.search).get('game');
-}
-
-function makeGameId(): string {
-  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint32Array(8);
-  crypto.getRandomValues(values);
-  return [...values].map((value) => alphabet[value % alphabet.length]).join('');
+  const typed = new URLSearchParams(window.location.search).get('game');
+  // A code in a link may have been retyped by hand rather than copied.
+  return (typed && normaliseGameCode(typed)) || null;
 }
 
 function randomSeed(): number {

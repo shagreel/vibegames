@@ -138,30 +138,10 @@ describe('Game Logic - Letter Checking', () => {
   });
 });
 
-describe('Game Logic - Game ID Generation', () => {
-  it('should generate valid game ID', () => {
-    const gameId = Math.random().toString(36).substring(2, 10);
-    
-    expect(gameId).toBeDefined();
-    expect(gameId.length).toBeGreaterThan(0);
-    expect(gameId.length).toBeLessThanOrEqual(8);
-  });
-
-  it('should generate different game IDs', () => {
-    const gameId1 = Math.random().toString(36).substring(2, 10);
-    const gameId2 = Math.random().toString(36).substring(2, 10);
-    
-    // Should be different (extremely high probability)
-    expect(gameId1).not.toBe(gameId2);
-  });
-
-  it('should generate URL-safe game IDs', () => {
-    const gameId = Math.random().toString(36).substring(2, 10);
-    
-    // Should only contain alphanumeric characters
-    expect(gameId).toMatch(/^[a-z0-9]+$/);
-  });
-});
+// The game-code tests used to live here, but they exercised a copy of the old
+// `Math.random().toString(36)` generator rather than the one the app uses — so
+// they passed no matter what the app did. The real generator is tested in
+// `gameCode.test.ts`, including the URLs people type when they retype a code.
 
 describe('Game Logic - Player ID Generation', () => {
   it('should generate Firebase-safe player IDs', () => {
