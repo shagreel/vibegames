@@ -35,7 +35,7 @@ final class SoundEngine {
         prepareIfNeeded()
     }
 
-    func play(_ cue: Cue) {
+    func play(_ cue: Cue, volume: Float = 1) {
         prepareIfNeeded()
         guard isRunning,
               let player = players[cue],
@@ -44,6 +44,9 @@ final class SoundEngine {
         if player.isPlaying {
             player.stop()
         }
+        // The volume lives on the player rather than in the buffer, so one tick
+        // can be quiet and the next loud without synthesising it twice.
+        player.volume = max(0, min(1, volume))
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
         player.play()
     }

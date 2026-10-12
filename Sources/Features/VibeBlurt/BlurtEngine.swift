@@ -26,40 +26,114 @@ enum BlurtEnd: String, Equatable, Sendable {
     case blurt
 }
 
-/// How long a turn lasts. Chosen in the lobby, because a table of adults and a
-/// table with a nine-year-old want very different amounts of it.
-enum BlurtDuration: Int, CaseIterable, Identifiable, Sendable {
-    case brisk = 30
-    case standard = 60
-    case generous = 90
-    case long = 120
+/// How long a turn lasts, and how the last of it is signalled.
+///
+/// A round is a **random** 50–70 seconds rather than a length the table chose.
+/// A known length gets counted down out loud, and a table watching the same
+/// number arrive together all stop together; not knowing exactly when the
+/// buzzer is coming is most of what makes the last few seconds tense.
+///
+/// So there is no number on screen, and the bar is deliberately spent *before*
+/// the round is — it fills by the time the last 15% begins, so its end is not
+/// the round's end. What the last 15% has instead is the two things nobody can
+/// count: a tick that hurries and gets louder, and a bar that pulses.
+///
+/// Everything here is a pure function of the shared clock, so the phone and the
+/// browser agree about how urgent a round is — see `Tools/blurt_fixtures`.
+enum BlurtTiming {
 
-    var id: Int { rawValue }
+    /// The shortest and the longest a round can be.
+    static let shortest = 50
+    static let longest = 70
 
-    var title: String {
-        switch self {
-        case .brisk: return "30 seconds"
-        case .standard: return "1 minute"
-        case .generous: return "90 seconds"
-        case .long: return "2 minutes"
-        }
+    /// The last of the round, as a fraction of it, where the game stops being
+    /// able to hide how much is left. This is the one number that decides when
+    /// the hurrying starts, on both platforms.
+    static let tailFraction = 0.15
+
+    /// A fresh round length. Drawn by the phone that starts the round, which is
+    /// the only one that needs to: it writes the end time, and every other phone
+    /// reads the length back out of `startedAt` and `endsAt`.
+    static func randomTurnSeconds() -> Int {
+        Int.random(in: shortest...longest)
     }
 
-    var blurb: String {
-        switch self {
-        case .brisk: return "Frantic. Words come round again."
-        case .standard: return "The one the box would have picked."
-        case .generous: return "Room to think, and to get stuck."
-        case .long: return "For a big table and slow clues."
-        }
+    /// How close to the end, 0 for the whole of the first 85% and 1 at the
+    /// buzzer, ramping in between.
+    static func urgency(remaining: TimeInterval, total: TimeInterval) -> Double {
+        guard total > 0 else { return 0 }
+        let fraction = remaining / total
+        guard fraction < tailFraction else { return 0 }
+        return min(1, max(0, (tailFraction - fraction) / tailFraction))
     }
 
-    static let `default` = BlurtDuration.standard
+    /// How much of the bar is filled: 0 at the start, 1 from the moment the last
+    /// 15% begins.
+    ///
+    /// The divisor is what stops the bar being a countdown. It reaches its end
+    /// with time still on the clock, so the bar emptying is not the buzzer and
+    /// cannot be read as one.
+    static func barFill(remaining: TimeInterval, total: TimeInterval) -> Double {
+        guard total > 0 else { return 0 }
+        let elapsed = 1 - remaining / total
+        return min(1, max(0, elapsed / (1 - tailFraction)))
+    }
 
-    /// Anything the database hands back that is not one of ours becomes the
-    /// default rather than a crash or a zero-length turn.
-    static func nearest(to seconds: Int) -> BlurtDuration {
-        allCases.min(by: { abs($0.rawValue - seconds) < abs($1.rawValue - seconds) }) ?? .default
+    // MARK: - The tick
+
+    /// A steady tick for the first part of the round, then one that hurries.
+    ///
+    /// Kept in `Double` even though the player wants `Float`, so that this whole
+    /// model can be compared with the browser's exactly rather than nearly.
+    static let steadyInterval: TimeInterval = 1.0
+    static let urgentInterval: TimeInterval = 0.17
+    static let steadyVolume: Double = 0.28
+    static let urgentVolume: Double = 1.0
+
+    /// How long to wait before the next tick, at this urgency.
+    static func tickInterval(urgency: Double) -> TimeInterval {
+        steadyInterval + (urgentInterval - steadyInterval) * min(1, max(0, urgency))
+    }
+    /// How loud the next tick is, at this urgency.
+    static func tickVolume(urgency: Double) -> Double {
+        steadyVolume + (urgentVolume - steadyVolume) * min(1, max(0, urgency))
+    }
+
+    /// When every tick of a round falls, and how loud each one is.
+    ///
+    /// Laid out as *absolute* offsets from the start rather than as a chain of
+    /// waits, so a phone that joins a round already in progress falls in with
+    /// the ticks the rest of the table is hearing instead of starting its own
+    /// rhythm. It is also what makes the schedule checkable without a clock.
+    static func tickSchedule(total: TimeInterval) -> [(at: TimeInterval, volume: Double)] {
+        guard total > 0 else { return [] }
+        var schedule: [(at: TimeInterval, volume: Double)] = []
+        var elapsed: TimeInterval = 0
+
+        while true {
+            let urgency = urgency(remaining: total - elapsed, total: total)
+            elapsed += tickInterval(urgency: urgency)
+            if elapsed >= total { break }
+            schedule.append((at: elapsed, volume: tickVolume(urgency: urgency)))
+        }
+        return schedule
+    }
+
+    // MARK: - The pulse
+
+    /// How fast the bar blinks once the hurry has started. The browser's CSS
+    /// pulse is set to the same rate, so the two look alike.
+    static let pulseRate: Double = 1.4
+
+    /// How visible the bar is at a given moment.
+    ///
+    /// A function of the moment rather than of any stored "am I dim right now"
+    /// flag, because a flag has to be reset when a round ends and a round can end
+    /// mid-blink — which would leave the next round stuck at whatever the last
+    /// one was doing.
+    static func pulseOpacity(at time: TimeInterval) -> Double {
+        let wave = 0.5 + 0.5 * sin(2 * .pi * pulseRate * time)
+        return 1 - 0.65 * wave
     }
 }
 

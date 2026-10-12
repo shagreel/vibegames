@@ -6,14 +6,16 @@ import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
 import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
-  DEFAULT_SECONDS,
-  DURATIONS,
+  LONGEST_SECONDS,
   MINIMUM_PLAYERS,
+  SHORTEST_SECONDS,
   TARGET,
   TEAMS,
-  nearestDuration,
+  barFill,
+  randomTurnSeconds,
   shuffled,
   teamTitle,
+  urgency as urgencyAt,
   wordAt,
   type Team,
 } from './engine';
@@ -52,7 +54,6 @@ import './VibeBlurt.css';
  */
 
 const PACKS_KEY = 'blurt.packs';
-const SECONDS_KEY = 'blurt.seconds';
 
 function loadPacks(): string[] {
   try {
@@ -67,11 +68,6 @@ function loadPacks(): string[] {
     // A corrupt value is not worth crashing a game over.
   }
   return [...PACK_ORDER];
-}
-
-function loadSeconds(): number {
-  const stored = Number(localStorage.getItem(SECONDS_KEY));
-  return stored > 0 ? nearestDuration(stored).seconds : DEFAULT_SECONDS;
 }
 
 function VibeBlurt() {
@@ -99,7 +95,6 @@ function VibeBlurt() {
   const [now, setNow] = useState(() => Date.now());
   const [showSettings, setShowSettings] = useState(false);
   const [packs, setPacks] = useState<string[]>(loadPacks);
-  const [seconds, setSeconds] = useState<number>(loadSeconds);
 
   const myShortId = gameId ? shortId(id, gameId) : null;
   const play = snapshot.play;
@@ -236,7 +231,7 @@ function VibeBlurt() {
     requireName((who) => {
       const newId = makeGameCode();
       const seed = randomSeed();
-      void createGame(newId, seed, who, id, packs, seconds)
+      void createGame(newId, seed, who, id, packs)
         .then(() => {
           hostedGame(newId);
           window.history.replaceState({}, '', `/blurt?game=${newId}`);
@@ -270,15 +265,12 @@ function VibeBlurt() {
     reportedTurn.current = null;
   };
 
-  const changeSettings = (nextPacks: string[], nextSeconds: number) => {
+  const changeSettings = (nextPacks: string[]) => {
     setPacks(nextPacks);
-    setSeconds(nextSeconds);
     localStorage.setItem(PACKS_KEY, JSON.stringify(nextPacks));
-    localStorage.setItem(SECONDS_KEY, String(nextSeconds));
-    if (gameId && isHost && !snapshot.started) void updateSettings(gameId, nextPacks, nextSeconds);
+    if (gameId && isHost && !snapshot.started) void updateSettings(gameId, nextPacks);
   };
 
-  const duration = nearestDuration(snapshot.turnSeconds);
   const playerCount = Object.keys(snapshot.players).length;
   const startHint =
     playerCount >= MINIMUM_PLAYERS
@@ -296,14 +288,13 @@ function VibeBlurt() {
   );
   const currentWord = play ? wordAt(play.word, deck) : '';
 
-  const secondsLeft =
-    play?.state === 'running' && play.endsAt !== null
-      ? Math.max(0, Math.ceil((play.endsAt - now) / 1000))
-      : null;
-  const progress =
-    play?.state === 'running' && play.endsAt !== null && play.startedAt !== null
-      ? Math.max(0, Math.min(1, (play.endsAt - now) / (play.endsAt - play.startedAt)))
-      : 0;
+  // There is deliberately no seconds-left: a round is a random 50-70 seconds so
+  // that nobody can count it down. These two are what the bar is drawn from.
+  const running = play?.state === 'running' && play.endsAt !== null && play.startedAt !== null;
+  const total = running ? (play.endsAt as number) - (play.startedAt as number) : 0;
+  const remaining = running ? (play.endsAt as number) - now : 0;
+  const fill = running ? barFill(remaining, total) : 0;
+  const urgent = running && urgencyAt(remaining, total) > 0;
 
   // MARK: - Screens
 
@@ -385,7 +376,7 @@ function VibeBlurt() {
           >
             <span>Settings</span>
             <span className="blurt__settings-value">
-              {duration.title} · {allPacksOn ? `all ${PACK_ORDER.length} packs` : `${snapshot.packs.length} of ${PACK_ORDER.length} packs`}
+              {allPacksOn ? `all ${PACK_ORDER.length} packs` : `${snapshot.packs.length} of ${PACK_ORDER.length} packs`}
             </span>
           </button>
 
@@ -409,7 +400,6 @@ function VibeBlurt() {
         {showSettings && (
           <SettingsSheet
             packs={snapshot.packs}
-            seconds={snapshot.turnSeconds}
             editable={isHost && !snapshot.started}
             onChange={changeSettings}
             onClose={() => setShowSettings(false)}
@@ -447,17 +437,15 @@ function VibeBlurt() {
         </p>
       )}
 
-      {play.state === 'running' && play.endsAt !== null && (
-        <div className="blurt__clock">
-          <span className={secondsLeft !== null && secondsLeft <= 10 ? 'is-urgent' : ''}>
-            {secondsLeft}
-          </span>
+      {running && (
+        // No number, by design: a random 50-70 second round cannot be counted
+        // down, and the bar is spent before the round is, so its end is not the
+        // buzzer either. What says "nearly" is the colour and the pulse.
+        <div className="blurt__clock" data-ends-at={play.endsAt} data-started-at={play.startedAt}>
           <div className="blurt__bar">
             <div
-              className={`blurt__bar-fill blurt__bar-fill--${play.team}${
-                secondsLeft !== null && secondsLeft <= 10 ? ' is-urgent' : ''
-              }`}
-              style={{ width: `${progress * 100}%` }}
+              className={`blurt__bar-fill blurt__bar-fill--${play.team}${urgent ? ' is-urgent' : ''}`}
+              style={{ width: `${fill * 100}%` }}
             />
           </div>
         </div>
@@ -543,7 +531,7 @@ function VibeBlurt() {
             <button
               type="button"
               className="blurt__primary"
-              onClick={() => void beginTurn(gameId, snapshot.turnSeconds)}
+              onClick={() => void beginTurn(gameId, randomTurnSeconds())}
             >
               Start the clock
             </button>
@@ -585,15 +573,13 @@ function BlurtHeader({
 
 function SettingsSheet({
   packs,
-  seconds,
   editable,
   onChange,
   onClose,
 }: {
   packs: string[];
-  seconds: number;
   editable: boolean;
-  onChange: (packs: string[], seconds: number) => void;
+  onChange: (packs: string[]) => void;
   onClose: () => void;
 }) {
   const chosen = new Set(packs);
@@ -608,18 +594,11 @@ function SettingsSheet({
         <h2>Game settings</h2>
 
         <h3>Turn length</h3>
-        {DURATIONS.map((option) => (
-          <button
-            key={option.seconds}
-            type="button"
-            className={`blurt__option${seconds === option.seconds ? ' is-on' : ''}`}
-            onClick={() => editable && onChange(packs, option.seconds)}
-            disabled={!editable}
-          >
-            <strong>{option.title}</strong>
-            <span>{option.blurb}</span>
-          </button>
-        ))}
+        <p className="blurt__hint">
+          Somewhere between {SHORTEST_SECONDS} and {LONGEST_SECONDS} seconds, and not the same
+          twice. Nobody knows which, so nobody can count it down — the bar changes colour and
+          starts pulsing when it is nearly over.
+        </p>
 
         <h3>Words</h3>
         {PACK_ORDER.map((packId) => (
@@ -637,7 +616,7 @@ function SettingsSheet({
               } else {
                 next.add(packId);
               }
-              onChange([...next], seconds);
+              onChange([...next]);
             }}
             disabled={!editable}
           >

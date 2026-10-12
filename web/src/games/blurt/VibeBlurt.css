@@ -371,17 +371,6 @@
   padding: 0.85rem 1rem 0;
 }
 
-.blurt__clock > span {
-  font-size: 2.6rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.blurt__clock > span.is-urgent {
-  color: var(--blurt-urgent);
-}
-
 .blurt__bar {
   width: 100%;
   height: 0.5rem;
@@ -406,6 +395,19 @@
 
 .blurt__bar-fill.is-urgent {
   background: var(--blurt-urgent);
+  animation: blurt-hurry 0.36s ease-in-out infinite alternate;
+}
+
+/* The bar filling is not the buzzer — it fills with a sixth of the round still
+   to play — so the last of the time is said by the colour and this pulse, which
+   cannot be counted the way a number or an emptying bar can. */
+@keyframes blurt-hurry {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.3;
+  }
 }
 
 .blurt__describer,
@@ -671,5 +673,10 @@
 @media (prefers-reduced-motion: reduce) {
   .blurt__bar-fill {
     transition: none;
+  }
+
+  /* Nothing is lost by dropping the pulse: the colour still changes. */
+  .blurt__bar-fill.is-urgent {
+    animation: none;
   }
 }

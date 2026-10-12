@@ -38,31 +38,83 @@ export function other(team: Team): Team {
 }
 
 /**
- * How long a turn lasts, chosen in the lobby.
+ * How long a round lasts, and how the end of it is signalled.
  *
- * Mirrors `BlurtDuration`. A table of adults and a table with a nine-year-old
- * want very different amounts of the same game.
+ * Mirrors `BlurtTiming`. A round is a **random** 50–70 seconds rather than a
+ * length the table chose: a known length gets counted down out loud, and a table
+ * watching the same number arrive together all stop together.
+ *
+ * So there is no number on screen, and the bar is spent *before* the round is —
+ * it fills by the time the last 15% begins, so its end is not the round's end.
+ * What the last 15% has instead is a bar that changes colour and pulses, which
+ * cannot be counted.
+ *
+ * All of this is pinned against the Swift model by `engine.fixtures.json`, so
+ * keep the arithmetic in the same order as well as the same shape.
  */
-export interface DurationOption {
-  seconds: number;
-  title: string;
-  blurb: string;
+export const SHORTEST_SECONDS = 50;
+export const LONGEST_SECONDS = 70;
+
+/** The last of the round, as a fraction, where the hurry begins. */
+export const TAIL_FRACTION = 0.15;
+
+export const STEADY_INTERVAL = 1.0;
+export const URGENT_INTERVAL = 0.17;
+export const STEADY_VOLUME = 0.28;
+export const URGENT_VOLUME = 1.0;
+
+/** A fresh round length. Drawn by whichever phone starts the round. */
+export function randomTurnSeconds(): number {
+  return SHORTEST_SECONDS + Math.floor(Math.random() * (LONGEST_SECONDS - SHORTEST_SECONDS + 1));
 }
 
-export const DURATIONS: DurationOption[] = [
-  { seconds: 30, title: '30 seconds', blurb: 'Frantic. Words come round again.' },
-  { seconds: 60, title: '1 minute', blurb: 'The one the box would have picked.' },
-  { seconds: 90, title: '90 seconds', blurb: 'Room to think, and to get stuck.' },
-  { seconds: 120, title: '2 minutes', blurb: 'For a big table and slow clues.' },
-];
+/** How close to the end: 0 for the whole of the first 85%, 1 at the buzzer. */
+export function urgency(remaining: number, total: number): number {
+  if (!(total > 0)) return 0;
+  const fraction = remaining / total;
+  if (fraction >= TAIL_FRACTION) return 0;
+  return Math.min(1, Math.max(0, (TAIL_FRACTION - fraction) / TAIL_FRACTION));
+}
 
-export const DEFAULT_SECONDS = 60;
+/**
+ * How much of the bar is filled: 0 at the start, 1 from the moment the last 15%
+ * begins. The divisor is what stops the bar being a countdown.
+ */
+export function barFill(remaining: number, total: number): number {
+  if (!(total > 0)) return 0;
+  const elapsed = 1 - remaining / total;
+  return Math.min(1, Math.max(0, elapsed / (1 - TAIL_FRACTION)));
+}
 
-/** Anything unexpected from the database becomes the nearest one offered. */
-export function nearestDuration(seconds: number): DurationOption {
-  return DURATIONS.reduce((best, option) =>
-    Math.abs(option.seconds - seconds) < Math.abs(best.seconds - seconds) ? option : best,
+/** How long to wait before the next tick, at this urgency. */
+export function tickInterval(urgencyValue: number): number {
+  return (
+    STEADY_INTERVAL +
+    (URGENT_INTERVAL - STEADY_INTERVAL) * Math.min(1, Math.max(0, urgencyValue))
   );
+}
+
+/** How loud the next tick is, at this urgency. Unused in the browser, which has
+ * no sound here, but pinned by the fixtures so the two models cannot drift. */
+export function tickVolume(urgencyValue: number): number {
+  return (
+    STEADY_VOLUME + (URGENT_VOLUME - STEADY_VOLUME) * Math.min(1, Math.max(0, urgencyValue))
+  );
+}
+
+/** When every tick of a round falls, and how loud each one is. */
+export function tickSchedule(total: number): { at: number; volume: number }[] {
+  if (!(total > 0)) return [];
+  const schedule: { at: number; volume: number }[] = [];
+  let elapsed = 0;
+
+  for (;;) {
+    const u = urgency(total - elapsed, total);
+    elapsed += tickInterval(u);
+    if (elapsed >= total) break;
+    schedule.push({ at: elapsed, volume: tickVolume(u) });
+  }
+  return schedule;
 }
 
 /** A themed bundle of things to describe. */

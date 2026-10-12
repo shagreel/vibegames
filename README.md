@@ -467,9 +467,11 @@ Two on each side at least — four people — and the word is a hot potato:
   whole game.
 - **First to seven.**
 
-That makes the last ten seconds the tense part, and the app is built so they are
-tense on every phone rather than only on the describer's: the clock is on all of
-them.
+That makes the end of the round the tense part, and the app is built so it is
+tense on every phone rather than only on the describer's. It cannot be counted
+either: there is no number, the bar is spent with a sixth of the round still to
+play, and the ticking hurries for the last 15%. See
+[How long a round lasts](#how-long-a-round-lasts).
 
 ### The other team sees the word
 
@@ -550,9 +552,27 @@ people, sport and music, actions, and celebrations and weather. Written for this
 rather than borrowed — the physical game's list is somebody's copyright, and the
 name is kept out of the code and UI for the same reason the other one is.
 
-The turn length is the room's choice too: 30 seconds, a minute, 90 or two. A
-table of adults and a table with a nine-year-old want very different amounts of
-the same game, and there was no reason for the app to be the one deciding.
+### How long a round lasts
+
+A round is a random **50 to 70 seconds**, drawn by the phone that starts it and
+written into the round's end time. Every other phone reads the length back out of
+`startedAt` and `endsAt` rather than being told, so there is nothing to agree on
+and nothing to go stale.
+
+There is no number on screen, because a length a table knows is a length a table
+counts down out loud. The bar is not a countdown either: it fills with the last
+15% still to play, so the bar running out is not the buzzer and cannot be read as
+one. What says "nearly" is a tick that stays steady for the first 85% of the round
+and then closes in on itself and gets louder. The browser has no sound here, so it
+gets the same information from the bar changing colour and pulsing.
+
+`BlurtTiming` holds all of it as pure functions of `remaining` and `total` —
+`urgency`, `barFill`, `tickInterval`, `tickVolume` and the whole `tickSchedule` —
+and the browser's copy is pinned against Swift's by the fixtures, all 69 ticks of a
+60-second round included. The ticks are absolute offsets from the round's shared
+start rather than a chain of waits, which is what stops one phone's rhythm
+drifting from another's and what lets a phone that joins mid-round fall in with
+the table instead of starting its own.
 
 ## Building
 
@@ -626,7 +646,7 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**207 tests in all: 171 unit and 36 UI.** They are what the numbers above are
+**212 tests in all: 176 unit and 36 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.

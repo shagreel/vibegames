@@ -70,8 +70,24 @@ async function roleOf(page) {
     watchedWord: await text(".blurt__watched-word"),
     guessing: (await page.$(".blurt__guessing")) !== null,
     canBuzz: (await page.$(".blurt__buzz")) !== null,
+    // There is no number on screen any more, by design: a round is a random
+    // length so that nobody can count it down. The bar carries the round's own
+    // start and end times, which is what lets this tell a running clock from a
+    // stopped one without the game having to show one.
     clock: await page
-      .$eval(".blurt__clock > span", (el) => Number(el.textContent.trim()))
+      .$eval(".blurt__clock", (el) => {
+        const endsAt = Number(el.dataset.endsAt);
+        return Number.isFinite(endsAt) ? (endsAt - Date.now()) / 1000 : null;
+      })
+      .catch(() => null),
+    roundLength: await page
+      .$eval(".blurt__clock", (el) => {
+        const endsAt = Number(el.dataset.endsAt);
+        const startedAt = Number(el.dataset.startedAt);
+        return Number.isFinite(endsAt) && Number.isFinite(startedAt)
+          ? (endsAt - startedAt) / 1000
+          : null;
+      })
       .catch(() => null),
     scores: await page.$$eval(".blurt__score strong", (els) => els.map((e) => e.textContent.trim())),
     teamNames: await page.$$eval(".blurt__score-names", (els) => els.map((e) => e.textContent.trim())),
@@ -163,8 +179,14 @@ for (const player of players) {
   );
 }
 
+const secs = (value) => (value === null ? 'none' : value.toFixed(1));
+
 const before = await roleOf(firstDescriber.player.page);
-check(before.clock !== null, `the clock is running (${before.clock}s)`);
+check(before.clock !== null, `the clock is running (${secs(before.clock)}s left)`);
+check(
+  before.roundLength !== null && before.roundLength >= 50 && before.roundLength <= 70,
+  `the round length is a random 50-70 seconds (${secs(before.roundLength)}s)`,
+);
 check(before.ownWord !== null, `the describer has a word: ${JSON.stringify(before.ownWord)}`);
 
 // ── "got it" passes the word to the other team, and the clock keeps going ─
@@ -185,11 +207,14 @@ check(
 );
 
 const clockNow = await firstDescriber.player.page
-  .$eval(".blurt__clock > span", (el) => Number(el.textContent.trim()))
+  .$eval(".blurt__clock", (el) => {
+    const endsAt = Number(el.dataset.endsAt);
+    return Number.isFinite(endsAt) ? (endsAt - Date.now()) / 1000 : null;
+  })
   .catch(() => null);
 check(
   clockNow !== null && clockNow <= startedAt,
-  `the clock did not reset across the pass (${startedAt}s -> ${clockNow}s)`,
+  `the clock did not reset across the pass (${secs(startedAt)}s -> ${secs(clockNow)}s left)`,
 );
 check(stillGuessing.length === 1, `one person is still guessing (${stillGuessing.length})`);
 say("scores mid-round:", JSON.stringify((await roleOf(players[0].page)).scores));
@@ -234,7 +259,11 @@ if (starter) {
   await starter.page.click(".blurt__handover .blurt__primary");
   await sleep(2500);
   const next = await roleOf(starter.page);
-  check(next.clock !== null, `the next round started (clock at ${next.clock}s)`);
+  check(next.clock !== null, `the next round started (${secs(next.clock)}s left)`);
+  check(
+    next.roundLength !== null && next.roundLength >= 50 && next.roundLength <= 70,
+    `and is its own random length (${secs(next.roundLength)}s)`,
+  );
 }
 
 await browser.close();

@@ -121,25 +121,125 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertNotEqual(all, some)
     }
 
-    // MARK: - Turn length
+    // MARK: - How long a round lasts
 
-    func testTheOfferedTurnLengthsAreSensible() {
-        XCTAssertFalse(BlurtDuration.allCases.isEmpty)
-        for option in BlurtDuration.allCases {
-            XCTAssertGreaterThanOrEqual(option.rawValue, 10, "a turn nobody could play")
-            XCTAssertLessThanOrEqual(option.rawValue, 600, "a turn nobody would wait for")
-            XCTAssertFalse(option.title.isEmpty)
-            XCTAssertFalse(option.blurb.isEmpty)
+    func testARoundIsARandomLengthNobodyCanCount() {
+        var seen = Set<Int>()
+        for _ in 0..<400 {
+            let seconds = BlurtTiming.randomTurnSeconds()
+            XCTAssertGreaterThanOrEqual(seconds, BlurtTiming.shortest)
+            XCTAssertLessThanOrEqual(seconds, BlurtTiming.longest)
+            seen.insert(seconds)
         }
-        XCTAssertEqual(BlurtDuration.default, .standard)
+        // Not a coin toss between two values. A length a table can learn is a
+        // length a table counts down out loud, which is what this replaced.
+        XCTAssertGreaterThan(seen.count, 10, "the round length is barely varying")
     }
 
-    func testAnUnexpectedDurationBecomesTheNearestOneOffered() {
-        XCTAssertEqual(BlurtDuration.nearest(to: 0), .brisk)
-        XCTAssertEqual(BlurtDuration.nearest(to: 30), .brisk)
-        XCTAssertEqual(BlurtDuration.nearest(to: 45), .brisk, "equidistant, and the shorter wins")
-        XCTAssertEqual(BlurtDuration.nearest(to: 61), .standard)
-        XCTAssertEqual(BlurtDuration.nearest(to: 600), .long)
+    func testNothingIsUrgentUntilTheLastOfTheRound() {
+        let total: TimeInterval = 60
+        XCTAssertEqual(BlurtTiming.urgency(remaining: total, total: total), 0)
+        XCTAssertEqual(BlurtTiming.urgency(remaining: total * 0.5, total: total), 0)
+        // The tail is where it starts, and from there it is a ramp rather than a
+        // step — the sound and the bar both ride this one number.
+        XCTAssertEqual(BlurtTiming.urgency(remaining: total * 0.15, total: total), 0, accuracy: 0.0001)
+        XCTAssertEqual(BlurtTiming.urgency(remaining: total * 0.10, total: total), 1.0 / 3.0, accuracy: 0.0001)
+        XCTAssertEqual(BlurtTiming.urgency(remaining: total * 0.05, total: total), 2.0 / 3.0, accuracy: 0.0001)
+        XCTAssertEqual(BlurtTiming.urgency(remaining: 0, total: total), 1)
+    }
+
+    func testTheBarIsSpentBeforeTheRoundIs() {
+        let total: TimeInterval = 60
+        XCTAssertEqual(BlurtTiming.barFill(remaining: total, total: total), 0)
+        // Full with a sixth of the round still to play, so the bar running out
+        // cannot be read as the buzzer.
+        XCTAssertEqual(BlurtTiming.barFill(remaining: total * 0.15, total: total), 1, accuracy: 0.0001)
+        XCTAssertEqual(BlurtTiming.barFill(remaining: total * 0.01, total: total), 1)
+        XCTAssertEqual(BlurtTiming.barFill(remaining: 0, total: total), 1)
+
+        // And it only ever fills. A bar that went backwards would read as time
+        // being added.
+        var last = 0.0
+        for remaining in stride(from: total, through: 0, by: -0.5) {
+            let fill = BlurtTiming.barFill(remaining: remaining, total: total)
+            XCTAssertGreaterThanOrEqual(fill, last - 0.0001)
+            last = fill
+        }
+    }
+
+    func testTheTickHurriesAndGetsLouder() {
+        let steady = BlurtTiming.tickInterval(urgency: 0)
+        let frantic = BlurtTiming.tickInterval(urgency: 1)
+
+        XCTAssertEqual(steady, BlurtTiming.steadyInterval)
+        XCTAssertLessThan(frantic, steady, "the tick has to hurry to warn anybody")
+        XCTAssertGreaterThan(frantic, 0.05, "but not so fast it becomes a continuous tone")
+
+        XCTAssertEqual(BlurtTiming.tickVolume(urgency: 0), BlurtTiming.steadyVolume)
+        XCTAssertEqual(BlurtTiming.tickVolume(urgency: 1), BlurtTiming.urgentVolume)
+        XCTAssertGreaterThan(BlurtTiming.urgentVolume, BlurtTiming.steadyVolume)
+    }
+
+    func testTheScheduleIsSteadyAndThenHurried() {
+        let total: TimeInterval = 60
+        let schedule = BlurtTiming.tickSchedule(total: total)
+        XCTAssertFalse(schedule.isEmpty)
+
+        // Every tick is inside the round, in order, and none lands after the
+        // buzzer.
+        var previous: TimeInterval = 0
+        for tick in schedule {
+            XCTAssertGreaterThan(tick.at, previous)
+            XCTAssertLessThan(tick.at, total, "a tick after the buzzer")
+            previous = tick.at
+        }
+
+        // The first part really is steady: gaps only start closing once the tail
+        // has begun.
+        let tailStart = total * (1 - BlurtTiming.tailFraction)
+        let early = zip(schedule, schedule.dropFirst()).filter { $0.1.at < tailStart }
+        XCTAssertFalse(early.isEmpty, "no steady ticks to check")
+        for (a, b) in early {
+            XCTAssertEqual(b.at - a.at, BlurtTiming.steadyInterval, accuracy: 0.0001)
+        }
+
+        // And by the end it is hurrying hard.
+        let lastGap = schedule[schedule.count - 1].at - schedule[schedule.count - 2].at
+        XCTAssertLessThan(lastGap, BlurtTiming.steadyInterval / 2)
+    }
+
+    func testEveryLengthHurriesBeforeItEnds() {
+        // However long the round happens to be, the hurry has to actually
+        // happen — a 70-second round must not tail off into silence.
+        for total in [50.0, 55.0, 60.0, 65.0, 70.0] {
+            let schedule = BlurtTiming.tickSchedule(total: total)
+            let tailStart = total * (1 - BlurtTiming.tailFraction)
+            let inTail = schedule.filter { $0.at >= tailStart }
+
+            XCTAssertGreaterThanOrEqual(inTail.count, 5, "\(total)s barely hurried")
+            XCTAssertEqual(schedule.last?.volume ?? 0, BlurtTiming.urgentVolume, accuracy: 0.2,
+                           "\(total)s never got loud")
+        }
+    }
+
+    func testTheBarPulsesRatherThanCountingDown() {
+        // The pulse is a function of the moment, not a stored flag, so that a
+        // round ending mid-blink cannot leave the next one stuck at whatever the
+        // last one was doing.
+        let period = 1 / BlurtTiming.pulseRate
+        let samples = (0..<100).map { BlurtTiming.pulseOpacity(at: Double($0) / 100 * period) }
+
+        for value in samples {
+            XCTAssertGreaterThanOrEqual(value, 0.35)
+            XCTAssertLessThanOrEqual(value, 1)
+        }
+        // Shallow enough to be decoration rather than a warning.
+        XCTAssertGreaterThan(samples.max()! - samples.min()!, 0.5,
+                             "the pulse is too shallow to notice")
+
+        // And it comes back round.
+        XCTAssertEqual(BlurtTiming.pulseOpacity(at: 0.3),
+                       BlurtTiming.pulseOpacity(at: 0.3 + period), accuracy: 0.0001)
     }
 
     // MARK: - Teams
@@ -465,8 +565,7 @@ final class VibeBlurtTests: XCTestCase {
                                      seed: 1,
                                      creatorName: names[0],
                                      playerID: "test-player-1",
-                                     packs: Set(BlurtPack.allCases),
-                                     turnSeconds: 60)
+                                     packs: Set(BlurtPack.allCases))
         for (index, name) in names.dropFirst().enumerated() {
             try await service.joinGame(gameID: gameID,
                                        playerID: "test-player-\(index + 2)",
@@ -500,8 +599,7 @@ final class VibeBlurtTests: XCTestCase {
                                      seed: 7,
                                      creatorName: names[0],
                                      playerID: "test-player-1",
-                                     packs: [.food, .play],
-                                     turnSeconds: 30)
+                                     packs: [.food, .play])
         for index in 2...4 {
             try await service.joinGame(gameID: gameID,
                                        playerID: "test-player-\(index)",
@@ -515,8 +613,7 @@ final class VibeBlurtTests: XCTestCase {
 
         let room = try XCTUnwrap(snapshot)
         XCTAssertTrue(room.started)
-        XCTAssertEqual(room.turnSeconds, 30, "the room kept its own turn length")
-        XCTAssertEqual(room.packs, Set([.food, .play]), "and its own packs")
+        XCTAssertEqual(room.packs, Set([.food, .play]), "the room kept its own packs")
         XCTAssertEqual(room.teams.count, 4, "everybody was put on a team")
         XCTAssertEqual(BlurtRules.members(of: .one, in: room.teams).count, 2)
         XCTAssertEqual(BlurtRules.members(of: .two, in: room.teams).count, 2)
@@ -578,8 +675,7 @@ final class VibeBlurtTests: XCTestCase {
                                      seed: seed,
                                      creatorName: names[0],
                                      playerID: "test-player-1",
-                                     packs: Set(BlurtPack.allCases),
-                                     turnSeconds: 60)
+                                     packs: Set(BlurtPack.allCases))
         for index in 2...4 {
             try await service.joinGame(gameID: gameID, playerID: "test-player-\(index)", name: names[index - 1])
         }
@@ -657,8 +753,7 @@ final class VibeBlurtTests: XCTestCase {
                                      seed: 52,
                                      creatorName: "Sam",
                                      playerID: PlayerIdentity.id,
-                                     packs: Set(BlurtPack.allCases),
-                                     turnSeconds: 60)
+                                     packs: Set(BlurtPack.allCases))
         for index in 1...3 {
             try await service.joinGame(gameID: gameID, playerID: "test-player-\(index)", name: "P\(index)")
         }

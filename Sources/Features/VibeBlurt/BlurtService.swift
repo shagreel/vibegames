@@ -115,9 +115,7 @@ struct BlurtSnapshot: Equatable {
     /// phone: the deck is derived from the seed *and* these, so two devices
     /// disagreeing about them would deal two different decks.
     var packs: Set<BlurtPack> = Set(BlurtPack.allCases)
-    var turnSeconds: Int = BlurtDuration.default.rawValue
 
-    var duration: BlurtDuration { BlurtDuration.nearest(to: turnSeconds) }
     var allPacksOn: Bool { packs.count == BlurtPack.allCases.count }
 
     /// A room that has been created but not started.
@@ -155,9 +153,6 @@ final class BlurtObservation {
             if let packs = meta["packs"] as? [String: Any] {
                 snapshot.packs = Set(packs.keys.compactMap(BlurtPack.init(rawValue:)))
             }
-            if let seconds = meta["turnSeconds"] as? NSNumber {
-                snapshot.turnSeconds = seconds.intValue
-            }
         }
         for (player, value) in players {
             if let name = value as? String { snapshot.players[player] = name }
@@ -177,10 +172,6 @@ final class VibeBlurtService {
 
     static let shared = VibeBlurtService()
     private init() {}
-
-    /// Used only when a room somehow has no duration of its own; the lobby
-    /// always writes one.
-    static let fallbackTurnSeconds: TimeInterval = TimeInterval(BlurtDuration.default.rawValue)
 
     var isAvailable: Bool { FirebaseBootstrapper.database != nil }
 
@@ -262,8 +253,7 @@ final class VibeBlurtService {
                     seed: UInt32,
                     creatorName: String,
                     playerID: String,
-                    packs: Set<BlurtPack>,
-                    turnSeconds: Int) async throws {
+                    packs: Set<BlurtPack>) async throws {
         guard let reference = gameReference(gameID) else { return }
 
         try await reference.child("meta").setValue([
@@ -271,20 +261,18 @@ final class VibeBlurtService {
             "creator": creatorName,
             "createdAt": Self.milliseconds(Date()),
             "started": false,
-            "turnSeconds": turnSeconds,
             "packs": Self.packValue(packs),
         ])
         try await markPresent(gameID: gameID, playerID: playerID, name: creatorName)
     }
 
-    /// How long a turn is and which packs are in play.
+    /// Which packs are in play.
     ///
     /// Held in the room so the lobby shows everyone the same thing, and so the
     /// choice cannot drift per device between the lobby and the start.
-    func updateSettings(gameID: String, packs: Set<BlurtPack>, turnSeconds: Int) async throws {
+    func updateSettings(gameID: String, packs: Set<BlurtPack>) async throws {
         guard let reference = gameReference(gameID) else { return }
         try await reference.child("meta").updateChildValues([
-            "turnSeconds": turnSeconds,
             "packs": Self.packValue(packs),
         ])
     }

@@ -36,10 +36,10 @@ final class VibeBlurtModel: ObservableObject {
     /// room when they make one. Not read from the room once a game exists — the
     /// room is the authority then, so everyone deals the same deck.
     @Published var preferredPacks: Set<BlurtPack> = BlurtModelSettings.loadPacks()
-    @Published var preferredSeconds: Int = BlurtModelSettings.loadSeconds()
 
     private var observation: BlurtObservation?
     private var tickTask: Task<Void, Never>?
+    private let ticker = BlurtTicker()
     /// Set while a timeout is in flight, so one phone does not fire it twice.
     private var endingTurn = false
     private var endedTurnNumber = -1
@@ -93,7 +93,23 @@ final class VibeBlurtModel: ObservableObject {
         return BlurtDeck.shuffled(seed: seed, packs: snapshot.packs)
     }
 
-    var duration: BlurtDuration { snapshot.duration }
+    /// How close the round is to the end: 0 for the whole of the first 85% and 1
+    /// at the buzzer. Drives both the hurrying tick and the colour of the bar.
+    var urgency: Double {
+        guard let play, play.state == .running,
+              let start = play.startedAt, let end = play.endsAt else { return 0 }
+        return BlurtTiming.urgency(remaining: end.timeIntervalSince(now),
+                                   total: end.timeIntervalSince(start))
+    }
+
+    /// How much of the bar is filled. It reaches its end before the round does,
+    /// deliberately, so the bar emptying is not the buzzer.
+    var barFill: Double {
+        guard let play, play.state == .running,
+              let start = play.startedAt, let end = play.endsAt else { return 0 }
+        return BlurtTiming.barFill(remaining: end.timeIntervalSince(now),
+                                   total: end.timeIntervalSince(start))
+    }
 
     /// Only the host sets the room up, and only before the start.
     var canChangeSettings: Bool { isHost && !hasStarted }
@@ -164,21 +180,6 @@ final class VibeBlurtModel: ObservableObject {
         return snapshot.players[play.describer] ?? "Someone"
     }
 
-    /// Seconds left in the turn, or nil when it is not running.
-    var secondsLeft: Int? {
-        guard let play, play.state == .running, let endsAt = play.endsAt else { return nil }
-        return max(0, Int(endsAt.timeIntervalSince(now).rounded(.up)))
-    }
-
-    /// How far through the turn, for the bar. 1 at the start, 0 at the buzzer.
-    var turnProgress: Double {
-        guard let play, play.state == .running,
-              let start = play.startedAt, let end = play.endsAt else { return 0 }
-        let total = end.timeIntervalSince(start)
-        guard total > 0 else { return 0 }
-        return max(0, min(1, end.timeIntervalSince(now) / total))
-    }
-
     /// Whether the room has enough people to make a game of it.
     ///
     /// Two is the floor, and the split is worked out at the start — so this
@@ -207,8 +208,7 @@ final class VibeBlurtModel: ObservableObject {
                                          seed: seed,
                                          creatorName: playerName,
                                          playerID: PlayerIdentity.id,
-                                         packs: preferredPacks,
-                                         turnSeconds: preferredSeconds)
+                                         packs: preferredPacks)
             UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
             session = .shared(gameID: gameID, isHost: true)
             beginObserving(gameID: gameID)
@@ -249,6 +249,7 @@ final class VibeBlurtModel: ObservableObject {
 
     func endSession() {
         stopClock()
+        SoundEngine.shared.deactivate()
     }
 
     func submitName(_ name: String) {
@@ -263,12 +264,11 @@ final class VibeBlurtModel: ObservableObject {
 
     /// Writes the room's settings, so the lobby shows everybody the same thing
     /// and the start does not have to carry them.
-    func updateSettings(packs: Set<BlurtPack>, seconds: Int) async {
+    func updateSettings(packs: Set<BlurtPack>) async {
         guard let gameID = sharedGameID, isHost, !hasStarted else { return }
         preferredPacks = packs
-        preferredSeconds = seconds
-        BlurtModelSettings.save(packs: packs, seconds: seconds)
-        try? await service.updateSettings(gameID: gameID, packs: packs, turnSeconds: seconds)
+        BlurtModelSettings.save(packs: packs)
+        try? await service.updateSettings(gameID: gameID, packs: packs)
     }
 
     /// Registers the room: splits it into teams and deals the first turn.
@@ -296,9 +296,14 @@ final class VibeBlurtModel: ObservableObject {
     }
 
     /// The describer has the phone in their hand; start the clock.
+    ///
+    /// The length is drawn here, by the one phone that starts the round, and
+    /// written into the end time. Every other phone reads it back out of
+    /// `startedAt` and `endsAt` rather than being told, so there is nothing to
+    /// agree on and nothing to go stale.
     func beginTurn() async {
         guard let gameID = sharedGameID, Self.canStartRound(play: play, me: myShortID) else { return }
-        let seconds = TimeInterval(snapshot.turnSeconds)
+        let seconds = TimeInterval(BlurtTiming.randomTurnSeconds())
         try? await service.beginTurn(gameID: gameID, seconds: seconds)
     }
 
@@ -365,10 +370,20 @@ final class VibeBlurtModel: ObservableObject {
             endingTurn = false
         }
 
-        if newSnapshot.play?.state == .running {
+        let wasRunning = previous.play?.state == .running
+        let isRunning = newSnapshot.play?.state == .running
+
+        if isRunning {
             startClock()
+            if !wasRunning {
+                // Not for a phone that opened the app mid-round: nothing started
+                // on this screen, so nothing should announce that it did.
+                if previous.play != nil { SoundEngine.shared.play(.start) }
+                startTicking()
+            }
         } else {
             stopClock()
+            if wasRunning { SoundEngine.shared.play(.buzzer) }
         }
 
         // Somebody who arrived after the start — a phone that slept through it,
@@ -398,6 +413,15 @@ final class VibeBlurtModel: ObservableObject {
     private func stopClock() {
         tickTask?.cancel()
         tickTask = nil
+        ticker.stop()
+    }
+
+    /// Starts the hurrying tick from the round's own start and end times, so
+    /// every phone lays out the same ticks and a late arrival joins the rhythm
+    /// rather than beginning one.
+    private func startTicking() {
+        guard let play, let start = play.startedAt, let end = play.endsAt else { return }
+        ticker.start(startedAt: start, total: end.timeIntervalSince(start))
     }
 
     private func tick() {
@@ -424,7 +448,6 @@ final class VibeBlurtModel: ObservableObject {
 /// The host's own lobby choices, remembered between games.
 enum BlurtModelSettings {
     private static let packsKey = "blurt.packs"
-    private static let secondsKey = "blurt.seconds"
 
     static func loadPacks() -> Set<BlurtPack> {
         guard let stored = UserDefaults.standard.array(forKey: packsKey) as? [String] else {
@@ -436,14 +459,7 @@ enum BlurtModelSettings {
         return packs.isEmpty ? Set(BlurtPack.allCases) : packs
     }
 
-    static func loadSeconds() -> Int {
-        let stored = UserDefaults.standard.integer(forKey: secondsKey)
-        guard stored > 0 else { return BlurtDuration.default.rawValue }
-        return BlurtDuration.nearest(to: stored).rawValue
-    }
-
-    static func save(packs: Set<BlurtPack>, seconds: Int) {
+    static func save(packs: Set<BlurtPack>) {
         UserDefaults.standard.set(packs.map(\.rawValue).sorted(), forKey: packsKey)
-        UserDefaults.standard.set(seconds, forKey: secondsKey)
     }
 }

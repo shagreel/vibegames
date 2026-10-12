@@ -10,7 +10,6 @@ import {
 import { database } from '../../firebase';
 import { shortId } from '../../lib/shortId';
 import {
-  DEFAULT_SECONDS,
   MINIMUM_PLAYERS,
   TARGET,
   describerFor,
@@ -67,7 +66,6 @@ export interface BlurtSnapshot {
   teams: Record<string, Team>;
   play: BlurtPlay | null;
   packs: string[];
-  turnSeconds: number;
 }
 
 export const EMPTY_SNAPSHOT: BlurtSnapshot = {
@@ -79,7 +77,6 @@ export const EMPTY_SNAPSHOT: BlurtSnapshot = {
   teams: {},
   play: null,
   packs: [...PACK_ORDER],
-  turnSeconds: DEFAULT_SECONDS,
 };
 
 export function playScore(play: BlurtPlay | null, team: Team): number {
@@ -126,7 +123,6 @@ export function observeGame(
       teams: parseTeams(teams),
       play: parsePlay(play),
       packs: parsePacks(meta?.packs),
-      turnSeconds: typeof meta?.turnSeconds === 'number' ? meta.turnSeconds : DEFAULT_SECONDS,
     });
   };
 
@@ -220,14 +216,12 @@ export async function createGame(
   creatorName: string,
   playerId: string,
   packs: readonly string[],
-  turnSeconds: number,
 ): Promise<void> {
   await set(ref(database, `blurt/${gameId}/meta`), {
     seed,
     creator: creatorName,
     createdAt: Date.now(),
     started: false,
-    turnSeconds,
     packs: packValue(packs),
   });
   await ensurePresent(gameId, playerId, creatorName);
@@ -241,10 +235,8 @@ export async function joinGame(gameId: string, playerId: string, name: string): 
 export async function updateSettings(
   gameId: string,
   packs: readonly string[],
-  turnSeconds: number,
 ): Promise<void> {
   await update(ref(database, `blurt/${gameId}/meta`), {
-    turnSeconds,
     packs: packValue(packs),
   });
 }

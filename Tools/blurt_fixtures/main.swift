@@ -74,12 +74,50 @@ for (one, two) in [(6, 7), (7, 6), (7, 7), (0, 0), (6, 6)] {
     winners["\(one)-\(two)"] = BlurtRules.winner(one: one, two: two, target: BlurtRules.target)?.rawValue.description ?? "nil"
 }
 
-var durations: [String: Int] = [:]
-for option in BlurtDuration.allCases { durations["\(option.rawValue)"] = option.rawValue }
-var nearest: [String: Int] = [:]
-for seconds in [0, 5, 29, 30, 45, 61, 90, 119, 120, 600] {
-    nearest["\(seconds)"] = BlurtDuration.nearest(to: seconds).rawValue
+// How urgent a round feels, and how much of the bar is filled, sampled across a
+// whole one. Dumped rather than described because these two decide when the
+// ticking hurries and when the bar starts pulsing, and a phone and a browser
+// that disagreed about the last 15% would look like a bug in whichever one the
+// player was not holding.
+//
+// Sampled at whole percents, so the two sides agree on the keys as well as the
+// values.
+var urgencyAt: [String: Double] = [:]
+var barFillAt: [String: Double] = [:]
+var tickIntervalAt: [String: Double] = [:]
+var tickVolumeAt: [String: Double] = [:]
+let sampleTotal: TimeInterval = 60
+for percent in 0...100 {
+    let remaining = sampleTotal * (1 - Double(percent) / 100)
+    let urgency = BlurtTiming.urgency(remaining: remaining, total: sampleTotal)
+    urgencyAt["\(percent)"] = urgency
+    barFillAt["\(percent)"] = BlurtTiming.barFill(remaining: remaining, total: sampleTotal)
+    tickIntervalAt["\(percent)"] = BlurtTiming.tickInterval(urgency: urgency)
+    tickVolumeAt["\(percent)"] = BlurtTiming.tickVolume(urgency: urgency)
 }
+
+// A whole round's ticks, as absolute offsets from the start. This is what stops
+// one phone's rhythm drifting from another's, so it is worth pinning exactly.
+var schedule: [[String: Double]] = []
+for tick in BlurtTiming.tickSchedule(total: sampleTotal) {
+    schedule.append(["at": tick.at, "volume": tick.volume])
+}
+
+let timing: [String: Any] = [
+    "shortest": BlurtTiming.shortest,
+    "longest": BlurtTiming.longest,
+    "tailFraction": BlurtTiming.tailFraction,
+    "steadyInterval": BlurtTiming.steadyInterval,
+    "urgentInterval": BlurtTiming.urgentInterval,
+    "steadyVolume": BlurtTiming.steadyVolume,
+    "urgentVolume": BlurtTiming.urgentVolume,
+    "sampleTotal": sampleTotal,
+    "urgencyAt": urgencyAt,
+    "barFillAt": barFillAt,
+    "tickIntervalAt": tickIntervalAt,
+    "tickVolumeAt": tickVolumeAt,
+    "schedule": schedule,
+]
 
 let out: [String: Any] = [
     "target": BlurtRules.target,
@@ -91,8 +129,7 @@ let out: [String: Any] = [
     "packsChosen": somePacks.map(\.rawValue).sorted(),
     "decks": decks,
     "subsetDecks": subsetDecks,
-    "durations": durations,
-    "nearestDuration": nearest,
+    "timing": timing,
     "splits": splits,
     "offsets": offsetsOut,
     "describers": describers,

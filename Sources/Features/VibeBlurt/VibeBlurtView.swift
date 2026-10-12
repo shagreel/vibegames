@@ -34,13 +34,17 @@ struct VibeBlurtView: View {
         }
         .vibeCanvas()
         .toolbar(.hidden, for: .navigationBar)
-        .task { AppAnalytics.screen(.blurt) }
+        .task {
+            AppAnalytics.screen(.blurt)
+            // The end of a round is announced by sound alone, so the audio stack
+            // is readied when the screen opens rather than at the buzzer.
+            SoundEngine.shared.warmUp()
+        }
         .onDisappear { model.endSession() }
         .sheet(isPresented: $showingSettings) {
             VibeBlurtSettingsView(packs: model.snapshot.packs,
-                                  seconds: model.snapshot.turnSeconds,
-                                  isEditable: model.canChangeSettings) { packs, seconds in
-                Task { await model.updateSettings(packs: packs, seconds: seconds) }
+                                  isEditable: model.canChangeSettings) { packs in
+                Task { await model.updateSettings(packs: packs) }
             }
         }
         .sheet(isPresented: $showingNamePrompt) {
@@ -300,7 +304,7 @@ struct VibeBlurtView: View {
                     Text("Settings")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(VibeTheme.primaryText)
-                    Text("\(model.duration.title) · \(packSummary)")
+                    Text(packSummary)
                         .font(.system(size: 12.5, weight: .medium, design: .rounded))
                         .foregroundStyle(VibeTheme.secondaryText)
                 }
@@ -469,30 +473,40 @@ struct VibeBlurtView: View {
         .padding(.horizontal, 20)
     }
 
-    /// The clock, and the bar under it. Shown to everyone: the describer needs
-    /// it, and so does the team waiting to pounce.
+    /// The bar, and deliberately **no number**.
+    ///
+    /// A round lasts a random 50–70 seconds so that nobody can count it down, and
+    /// the bar is not a countdown either: it fills with a sixth of the round
+    /// still to go, so its end is not the buzzer. What says "nearly" is the
+    /// colour changing and the bar pulsing — neither of which can be counted.
+    ///
+    /// The pulse runs off the display clock rather than the model's quarter-second
+    /// tick, which is far too coarse to blink smoothly.
     private func clock(_ play: BlurtPlay) -> some View {
-        let left = model.secondsLeft ?? 0
-        let urgent = left <= 10
+        let urgent = model.urgency > 0
         return VStack(spacing: 8) {
-            Text("\(left)")
-                .font(.system(size: 44, weight: .black, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(urgent ? VibeTheme.blurtUrgent : VibeTheme.primaryText)
-                .accessibilityIdentifier("blurt.clock")
-                .accessibilityLabel("\(left) seconds left")
-
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule().fill(VibeTheme.surfaceStrong)
-                    Capsule()
-                        .fill(urgent ? VibeTheme.blurtUrgent : VibeTheme.blurtTeam(play.team))
-                        .frame(width: max(0, proxy.size.width * model.turnProgress))
+
+                    TimelineView(.animation) { context in
+                        Capsule()
+                            .fill(urgent ? VibeTheme.blurtUrgent : VibeTheme.blurtTeam(play.team))
+                            .frame(width: max(0, proxy.size.width * model.barFill))
+                            .opacity(urgent
+                                     ? BlurtTiming.pulseOpacity(at: context.date.timeIntervalSinceReferenceDate)
+                                     : 1)
+                    }
                 }
             }
             .frame(height: 8)
         }
         .padding(.horizontal, 20)
+        // What a screen reader gets instead of a number. It is not a countdown
+        // out loud either, for the same reason it is not one on screen.
+        .accessibilityElement()
+        .accessibilityIdentifier("blurt.clock")
+        .accessibilityLabel(urgent ? "Time is nearly up" : "Time is running")
     }
 
     /// The describer's screen. This is the only place in the app the word is
