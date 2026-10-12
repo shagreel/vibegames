@@ -280,9 +280,22 @@ final class VibeBlurtModel: ObservableObject {
         }
     }
 
+    /// Whether this player can start the round that is waiting.
+    ///
+    /// Pure and static so the rule can be read and tested in one place. It has
+    /// to cover **both** states the handover screen appears in: `.ready` for the
+    /// first round of a game, and `.ended` for every round after it, because
+    /// ending a round leaves the result and the next round's rotation behind in
+    /// the same state. Asking only for `.ready` — which this did — is why the
+    /// first round started and no round after it did.
+    nonisolated static func canStartRound(play: BlurtPlay?, me: String?) -> Bool {
+        guard let play, let me, !play.finished else { return false }
+        return play.describer == me && play.state != .running
+    }
+
     /// The describer has the phone in their hand; start the clock.
     func beginTurn() async {
-        guard let gameID = sharedGameID, isDescriber, play?.state == .ready else { return }
+        guard let gameID = sharedGameID, Self.canStartRound(play: play, me: myShortID) else { return }
         let seconds = TimeInterval(snapshot.turnSeconds)
         try? await service.beginTurn(gameID: gameID, seconds: seconds)
     }

@@ -330,6 +330,47 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertNotNil(value["state"])
     }
 
+    // MARK: - Starting a round
+
+    private func play(state: BlurtState, describer: String = "me", finished: Bool = false) -> BlurtPlay {
+        var play = BlurtPlay()
+        play.state = state
+        play.describer = describer
+        play.finished = finished
+        return play
+    }
+
+    func testTheStartButtonWorksInBothStatesTheHandoverScreenAppearsIn() {
+        // The handover screen is what is shown whenever the round is not
+        // running, and that is two different states: `.ready` for the first
+        // round of a game, and `.ended` for every round after it, because ending
+        // a round leaves the result and the next round's rotation behind in the
+        // same state. This asked only for `.ready`, so the first round started
+        // and no round after it did.
+        XCTAssertTrue(VibeBlurtModel.canStartRound(play: play(state: .ready), me: "me"),
+                      "the first round of a game")
+        XCTAssertTrue(VibeBlurtModel.canStartRound(play: play(state: .ended), me: "me"),
+                      "and every round after it")
+    }
+
+    func testNobodyElseCanStartTheRound() {
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: play(state: .ended), me: "someone-else"),
+                       "only the person whose phone is showing the word")
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: play(state: .ended), me: nil))
+    }
+
+    func testARoundAlreadyRunningCannotBeStartedAgain() {
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: play(state: .running), me: "me"))
+    }
+
+    func testAFinishedGameHasNothingLeftToStart() {
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: play(state: .ended, finished: true), me: "me"))
+    }
+
+    func testThereIsNothingToStartWithoutARound() {
+        XCTAssertFalse(VibeBlurtModel.canStartRound(play: nil, me: "me"))
+    }
+
     // MARK: - The buzz you feel
 
     private func running(describer: String) -> BlurtPlay {
@@ -595,6 +636,67 @@ final class VibeBlurtTests: XCTestCase {
         XCTAssertEqual(after.scorer, before.team.other, "the team that was not holding it")
         XCTAssertEqual(after.score(of: before.team), 0)
         XCTAssertEqual(after.score(of: before.team.other), 1)
+    }
+
+    /// The whole of what went wrong, against the real database.
+    ///
+    /// A room is played to the end of a round, and then the person who is up
+    /// next tries to start the next one. That is the button that did nothing:
+    /// the app refused before it ever reached the database, because a finished
+    /// round leaves the state as `.ended` rather than `.ready` and the guard
+    /// only allowed the latter.
+    @MainActor
+    func testTheNextRoundCanBeStartedAfterOneEnds() async throws {
+        try XCTSkipUnless(FirebaseBootstrapper.isConfigured, "No Firebase config bundled")
+
+        let service = VibeBlurtService.shared
+        let gameID = "zz" + UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased()
+        let me = VibeBlurtService.shortID(playerID: PlayerIdentity.id, gameID: gameID)
+
+        try await service.createGame(gameID: gameID,
+                                     seed: 52,
+                                     creatorName: "Sam",
+                                     playerID: PlayerIdentity.id,
+                                     packs: Set(BlurtPack.allCases),
+                                     turnSeconds: 60)
+        for index in 1...3 {
+            try await service.joinGame(gameID: gameID, playerID: "test-player-\(index)", name: "P\(index)")
+        }
+        try await service.startGame(gameID: gameID, seed: 52)
+
+        // Exactly the state a finished round leaves behind: the result of the
+        // last one, and the next one's rotation already set up behind it.
+        let database = try XCTUnwrap(FirebaseBootstrapper.database)
+        try await database.reference(withPath: "blurt/\(gameID)/play").setValue([
+            "round": 0, "turn": 1, "team": 2, "describer": me, "word": 1,
+            "state": "ended", "reason": "blurt", "scorer": 1,
+            "one": 1, "two": 0, "finished": false,
+        ])
+
+        let model = VibeBlurtModel()
+        model.submitName("Sam")
+        await model.joinGame(code: gameID)
+
+        let isUp = await VibeBlurtTests.waitUntil { model.play?.describer == me }
+        XCTAssertTrue(isUp, "the device should have been told it is up next")
+        XCTAssertEqual(model.play?.state, .ended, "and that the last round is over")
+
+        await model.beginTurn()
+
+        let started = await VibeBlurtTests.waitUntil { model.play?.state == .running }
+        XCTAssertTrue(started, "the next round never started")
+    }
+
+    /// Waits for a condition, giving up rather than hanging the suite.
+    @MainActor
+    private static func waitUntil(timeout: TimeInterval = 12,
+                                  _ condition: () -> Bool) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        return condition()
     }
 
     func testNonsenseFromTheDatabaseIsRefusedRatherThanCrashing() {

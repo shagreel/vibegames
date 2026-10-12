@@ -206,6 +206,28 @@ if (buzzer) {
   check(false, "somebody could buzz");
 }
 
+// ── and the round after it can be started ───────────────────────────────
+//
+// A finished round leaves the state as "ended" with the next round's rotation
+// already set up behind it, so the app refused to start round two while round
+// one had started fine. The browser has the same shape of handover, so it is
+// checked for it too.
+let starter = null;
+for (const player of players) {
+  if (await player.page.$(".blurt__handover .blurt__primary")) {
+    starter = player;
+    break;
+  }
+}
+check(starter !== null, "somebody is asked to start the next round");
+
+if (starter) {
+  await starter.page.click(".blurt__handover .blurt__primary");
+  await sleep(2500);
+  const next = await roleOf(starter.page);
+  check(next.clock !== null, `the next round started (clock at ${next.clock}s)`);
+}
+
 await browser.close();
 
 console.log(
