@@ -105,6 +105,14 @@ struct VibeFiveView: View {
                 primaryButton
                     .padding(.horizontal, 22)
                     .padding(.bottom, 10)
+
+                // Five has no lobby to put a card in — this screen is the game —
+                // so the opener is a quiet line under the button instead. Same
+                // words, same page behind it.
+                InstructionsLink(identifier: "five.instructions.open") {
+                    GameInstructionsPage(instructions: .five)
+                }
+                .padding(.bottom, 8)
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.85),
                        value: model.isRevealed)

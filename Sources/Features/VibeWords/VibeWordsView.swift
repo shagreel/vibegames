@@ -95,6 +95,11 @@ struct VibeWordsView: View {
                     .foregroundStyle(VibeTheme.tertiaryText)
                     .multilineTextAlignment(.center)
                     .padding(.top, 6)
+
+                InstructionsCard(accent: VibeTheme.vibeWords,
+                                 identifier: "words.instructions.open") {
+                    GameInstructionsPage(instructions: .words)
+                }
             }
             .padding(20)
         }

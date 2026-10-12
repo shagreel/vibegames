@@ -1,0 +1,138 @@
+/* The "how to play" page, shared by every game. One stylesheet, so the five
+   cannot drift apart the way the instructions themselves had. */
+
+.howto {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #121213;
+  color: #ffffff;
+}
+
+.howto__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid #2a2a2d;
+}
+
+.howto__header .back-to-games {
+  position: absolute;
+  left: 0.75rem;
+}
+
+.howto__titles {
+  text-align: center;
+}
+
+.howto__titles h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.howto__titles p {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8b9197;
+}
+
+.howto__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  line-height: 1.6;
+}
+
+.howto__intro {
+  margin: 0;
+  font-size: 1rem;
+  color: #c8ccd2;
+}
+
+.howto__section {
+  padding: 1rem 1.1rem;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 1.25rem;
+  background: rgb(255 255 255 / 5%);
+}
+
+.howto__section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8b9197;
+}
+
+.howto__section p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #d5d8dd;
+}
+
+.howto__section strong,
+.howto__bullets strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.howto__bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.howto__bullets li {
+  position: relative;
+  padding-left: 1rem;
+  font-size: 0.92rem;
+  color: #b9c0c8;
+}
+
+.howto__bullets li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #6f757b;
+}
+
+/* The opener. Quiet on purpose: three of these sit at the bottom of a column of
+   cards, and one sits under a game in progress. */
+.howto__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: center;
+  margin: 0.6rem auto 0;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: none;
+  color: #9aa0a6;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.howto__link:hover {
+  color: #ffffff;
+}

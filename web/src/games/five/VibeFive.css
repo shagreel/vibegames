@@ -265,6 +265,12 @@
 
 /* ── the one button ────────────────────────────────────────────────────── */
 
+/* The instructions link is the last thing on this page, so it needs the room at
+   the bottom that the primary button's own margin does not give it. */
+.five > .howto__link {
+  margin-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
 .five__primary {
   margin: 0 1.4rem calc(1.1rem + env(safe-area-inset-bottom));
   height: 4.2rem;

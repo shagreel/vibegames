@@ -72,6 +72,11 @@ struct VibeSudokuView: View {
                 soloCard
                 sharedCard
                 joinCard
+
+                InstructionsCard(accent: VibeTheme.vibeSudoku,
+                                 identifier: "sudoku.instructions.open") {
+                    GameInstructionsPage(instructions: .sudoku)
+                }
             }
             .padding(20)
         }

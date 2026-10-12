@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BackToGames from '../../hub/BackToGames';
+import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { SupportButton } from '../../hub/Support';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
@@ -41,7 +42,33 @@ import './VibeSudoku.css';
 
 type Screen = 'lobby' | 'game';
 
+/** The instructions, in this game's own words. */
+const SUDOKU_INSTRUCTIONS: HowToPlayContent = {
+  name: 'Vibe Sudoku',
+  intro:
+    'Fill the 9x9 grid so every row, every column and every 3x3 box holds 1 to 9. Play solo, or race friends on an identical board.',
+  sections: [
+    {
+      title: 'Difficulty means something',
+      body: 'Easy, Medium and Hard are graded by the technique a puzzle actually needs, not by how many clues it has — so Hard is hard rather than merely sparse. If you host a race, guests play whatever difficulty you picked, so everybody gets the same board.',
+    },
+    {
+      title: 'If you get stuck',
+      body: '**Notes** lets you pencil candidates into a square. Anything that clashes with a number in the same row, column or box is highlighted, so a mistake shows up before it spreads.',
+    },
+  ],
+  bullets: [
+    { lead: 'Solo', text: 'An endless supply of boards, at the difficulty you choose.' },
+    { lead: 'Race', text: 'Everyone gets the same board. First to fill it wins.' },
+    {
+      lead: 'Nothing is stored',
+      text: 'A puzzle is a pure function of its seed, so a shared game sends one number instead of a grid — and the solution is never written anywhere.',
+    },
+  ],
+};
+
 function VibeSudoku() {
+  const [rulesOpen, setRulesOpen] = useState(false);
   const id = useMemo(() => playerId(), []);
 
   const [name, setName] = useState(() => playerName());
@@ -373,6 +400,8 @@ function VibeSudoku() {
     });
   }, [roundOver, seed, gameId, solved, elapsed]);
 
+  if (rulesOpen) return <HowToPlay content={SUDOKU_INSTRUCTIONS} onClose={() => setRulesOpen(false)} />;
+
   return (
     <div className="sudoku">
       <header className="sudoku__header">
@@ -405,6 +434,7 @@ function VibeSudoku() {
           onJoin={join}
           onSolo={playSolo}
           onCreate={createShared}
+          onRules={() => setRulesOpen(true)}
         />
       ) : waitingForHost ? (
         <Waiting
@@ -615,6 +645,7 @@ function Lobby(props: {
   onJoin: (code: string) => void;
   onSolo: () => void;
   onCreate: () => void;
+  onRules: () => void;
 }) {
   return (
     <div className="sudoku__lobby">
@@ -667,6 +698,8 @@ function Lobby(props: {
         </div>
         {props.joinError && <p className="sudoku__join-error">{props.joinError}</p>}
       </form>
+
+      <HowToPlayLink onClick={props.onRules} />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
 import { normaliseGameCode } from '../../lib/gameCode';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import BackToGames from '../../hub/BackToGames';
+import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { SupportButton } from '../../hub/Support';
 import './VibeTrio.css';
 
@@ -482,9 +483,7 @@ function Lobby(props: {
         {props.joinError && <p className="trio__join-error">{props.joinError}</p>}
       </form>
 
-      <button type="button" className="trio__link" onClick={props.onRules}>
-        How to play
-      </button>
+      <HowToPlayLink onClick={props.onRules} />
     </div>
   );
 }
@@ -751,48 +750,31 @@ function Leaderboard(props: {
 
 // MARK: - Instructions
 
-function Rules({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="trio trio--rules">
-      <header className="trio__header">
-        <button type="button" className="back-to-games" onClick={onClose}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M15.5 4.2 7.7 12l7.8 7.8" />
-          </svg>
-          <span>Back</span>
-        </button>
-        <div className="trio__titles">
-          <h1>How to play</h1>
-        </div>
-      </header>
+/** The instructions, in this game's own words. */
+const TRIO_INSTRUCTIONS: HowToPlayContent = {
+  name: 'Vibe Trio',
+  intro: 'Twelve charcuterie boards are dealt face up. Your job is to find three of them that make a trio.',
+  sections: [
+    {
+      title: "What's on a board",
+      body: 'Every board has four features, and each one comes three ways. **Platter**: round walnut, bamboo hexagon, slate rectangle. **Cheese**: swiss wedge, gouda cubes, brie round. **Meat**: prosciutto ribbon, salami stack, turkey roll-up. **Garnish**: purple grapes, red strawberry, pear slices.',
+    },
+    {
+      title: 'The rule',
+      body: 'Three cards make a trio when every one of those four features is **either the same on all three or different on all three**. Two matching and a third odd is not a trio — that is exactly the mistake the game is built to punish.',
+    },
+  ],
+  bullets: [
+    { lead: 'Solo', text: 'Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a trio — the other two are still yours to find.' },
+    { lead: 'Race', text: 'Everyone shares one table, so a trio taken by anybody is gone for everybody. The winner is whoever has taken the most when the deck runs out. No hints.' },
+    { lead: 'Wrong three', text: 'They flash red and nothing moves. Look again — the cards stay put.' },
+  ],
+};
 
-      <div className="trio__rules">
-        <p>
-          Every card is a charcuterie board. It has four features, and each comes three ways:
-        </p>
-        <dl>
-          <dt>Platter</dt>
-          <dd>round walnut · bamboo hexagon · slate rectangle</dd>
-          <dt>Cheese</dt>
-          <dd>swiss wedge · gouda cubes · brie round</dd>
-          <dt>Meat</dt>
-          <dd>prosciutto ribbon · salami stack · turkey roll-up</dd>
-          <dt>Garnish</dt>
-          <dd>purple grapes · red strawberry · pear slices</dd>
-        </dl>
-        <p>
-          Three cards make a <strong>trio</strong> when every one of those four features is{' '}
-          <em>either the same on all three or different on all three</em>. Two matching and a third
-          odd is not a trio — that is exactly the mistake the game is built to punish.
-        </p>
-        <p>
-          Tap three cards to pick them. If they do not make a trio they flash red and nothing moves.
-          In a race everyone shares one table, so a trio taken by anybody is gone for everybody, and
-          the winner is whoever has taken the most when the deck runs out.
-        </p>
-      </div>
-    </div>
-  );
+function Rules({ onClose }: { onClose: () => void }) {
+  // The same page component as every other game. Trio's rules used to be the
+  // only ones written out by hand, which is how the five of them drifted apart.
+  return <HowToPlay content={TRIO_INSTRUCTIONS} onClose={onClose} />;
 }
 
 // MARK: - Name prompt

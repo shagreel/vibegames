@@ -90,45 +90,6 @@ struct VibeBlurtView: View {
                     banner(warning, symbol: "wifi.slash", tint: VibeTheme.warn)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("HOW IT GOES")
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .kerning(1.5)
-                        .foregroundStyle(VibeTheme.tertiaryText)
-
-                    Text("Two teams of at least two. One person gets a word and "
-                         + "describes it; their team guesses. When they get it, the "
-                         + "word passes to somebody on the **other** team — and the "
-                         + "clock keeps running.")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(VibeTheme.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("Nobody scores for guessing. When the clock runs out, the "
-                         + "point goes to the team that is **not** holding the word. "
-                         + "First to \(BlurtRules.target) wins.")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(VibeTheme.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("The other team can see the word, and gets a red BUZZ "
-                         + "button. If the describer says it, or any part of it, "
-                         + "they press it — and they take the point instead.")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(VibeTheme.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(VibeTheme.surface)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .stroke(VibeTheme.hairline, lineWidth: 1)
-                        }
-                }
-
                 actionCard(title: "Start a game",
                            subtitle: "Everyone joins on their own phone",
                            symbol: "person.2.fill",
@@ -138,6 +99,11 @@ struct VibeBlurtView: View {
                 }
 
                 joinCard
+
+                InstructionsCard(accent: VibeTheme.vibeBlurt,
+                                 identifier: "blurt.instructions.open") {
+                    GameInstructionsPage(instructions: .blurt)
+                }
             }
             .padding(20)
         }

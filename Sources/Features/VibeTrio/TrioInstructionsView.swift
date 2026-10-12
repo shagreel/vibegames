@@ -3,12 +3,10 @@ import UIKit
 
 /// How to play, with real cards from the deck as the examples.
 ///
-/// It lives behind a card on the lobby rather than sitting on it: the rule is
-/// only worth reading once, and everyone who already knows it has to scroll past
-/// it every time otherwise.
+/// It is the one page whose instructions are diagrams rather than prose, so it
+/// supplies its own sections — but the shell around them, including the back
+/// button, comes from `GameInstructionsScaffold` like every other game's page.
 struct TrioInstructionsView: View {
-    @Environment(\.dismiss) private var dismiss
-
     /// The same platter and cheese, with the meat and the garnish all different
     /// — both halves of the rule in one picture. `TrioInstructionTests` checks
     /// the examples really are what the page says they are.
@@ -34,34 +32,39 @@ struct TrioInstructionsView: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                header
-
-                Text("Twelve charcuterie boards are dealt face up. Your job is to find three of them that make a trio.")
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(VibeTheme.secondaryText)
-
-                whatsOnABoard
-                theRule
-                example(title: "This is a trio",
-                        cards: Self.trioExample,
-                        verdict: "Platter and cheese are the same on all three. Meat and garnish are different on all three.",
-                        failing: nil,
-                        tint: VibeTheme.tileCorrect)
-                example(title: "This is not a trio",
-                        cards: Self.notATrioExample,
-                        verdict: "Two of them are prosciutto and the third is salami — two the same and one different. That breaks it.",
-                        failing: "Meat",
-                        tint: VibeTheme.danger)
-                playing
-            }
-            .padding(20)
-            .padding(.bottom, 24)
+        // The same shell as every other game's page. Trio is the one whose
+        // instructions are diagrams rather than prose, so it supplies its own
+        // sections — but the header, the spacing and the framing are shared, and
+        // that is what stops the five pages drifting apart.
+        GameInstructionsScaffold(game: .trio,
+                                 name: "Vibe Trio",
+                                 identifier: "trio.instructions",
+                                 intro: "Twelve charcuterie boards are dealt face up. "
+                                      + "Your job is to find three of them that make a trio.") {
+            whatsOnABoard
+            theRule
+            example(title: "This is a trio",
+                    cards: Self.trioExample,
+                    verdict: "Platter and cheese are the same on all three. Meat and garnish are different on all three.",
+                    failing: nil,
+                    tint: VibeTheme.tileCorrect)
+            example(title: "This is not a trio",
+                    cards: Self.notATrioExample,
+                    verdict: "Two of them are prosciutto and the third is salami — two the same and one different. That breaks it.",
+                    failing: "Meat",
+                    tint: VibeTheme.danger)
+            InstructionsBullets(title: "Playing", bullets: [
+                GameInstructions.Bullet(
+                    lead: "Solo",
+                    text: "Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a trio — the other two are still yours to find."),
+                GameInstructions.Bullet(
+                    lead: "Race",
+                    text: "Everyone gets the same boards on their own phone. First to six trios wins. No hints."),
+                GameInstructions.Bullet(
+                    lead: "Wrong three",
+                    text: "They flash red and nothing moves. Look again — the cards stay put."),
+            ])
         }
-        .vibeCanvas()
-        .toolbar(.hidden, for: .navigationBar)
-        .accessibilityIdentifier("trio.instructions")
     }
 
     /// The cards are a folder reference in the bundle, which SwiftUI's own
@@ -72,31 +75,6 @@ struct TrioInstructionsView: View {
     }
 
     // MARK: - Sections
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(VibeIconButtonStyle())
-            .accessibilityLabel("Back")
-            .accessibilityIdentifier("trio.instructions.back")
-
-            VStack(spacing: 3) {
-                Text("HOW TO PLAY")
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .kerning(3.5)
-                    .foregroundStyle(VibeTheme.primaryText)
-                Text("Vibe Trio")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-            }
-            .frame(maxWidth: .infinity)
-
-            SupportButton(game: .trio)
-        }
-        .padding(.top, 10)
-    }
 
     private var whatsOnABoard: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -205,32 +183,6 @@ struct TrioInstructionsView: View {
         .accessibilityIdentifier(failing == nil ? "trio.example.trio" : "trio.example.notATrio")
     }
 
-    private var playing: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("Playing")
-
-            bullet("Solo", "Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a trio — the other two are still yours to find.")
-            bullet("Race", "Everyone gets the same boards on their own phone. First to six trios wins. No hints.")
-            bullet("Wrong three", "They flash red and nothing moves. Look again — the cards stay put.")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .cardSurface()
-    }
-
-    private func bullet(_ lead: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(VibeTheme.vibeTrioBorder)
-                .frame(width: 6, height: 6)
-                .padding(.top, 7)
-            (Text(lead).bold() + Text(" — ") + Text(.init(text)))
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     private func sectionTitle(_ text: String) -> some View {
         Text(text.uppercased())
             .font(.system(size: 12, weight: .black, design: .rounded))
@@ -240,19 +192,6 @@ struct TrioInstructionsView: View {
 }
 
 // MARK: - Reusable pieces
-
-private extension View {
-    func cardSurface() -> some View {
-        background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(VibeTheme.surface)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(VibeTheme.hairline, lineWidth: 1)
-                }
-        }
-    }
-}
 
 /// One card with a label on each of its four zones, so the words in the list
 /// below have somewhere to point.

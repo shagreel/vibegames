@@ -37,6 +37,7 @@ import {
   type BlurtSnapshot,
 } from './service';
 import { PACKS, PACK_ORDER, PACK_WORDS } from './words.generated';
+import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import './VibeBlurt.css';
 
 /**
@@ -70,6 +71,42 @@ function loadPacks(): string[] {
   return [...PACK_ORDER];
 }
 
+/** The instructions, in this game's own words and with its own live counts. */
+const BLURT_INSTRUCTIONS: HowToPlayContent = {
+  name: 'Vibe Blurt',
+  intro:
+    'Two teams, a phone each, and a word nobody wants to be holding. Describe it without saying it, and get rid of it before the clock stops.',
+  sections: [
+    {
+      title: 'The word is a hot potato',
+      body: 'One person is shown a word and describes it; their team-mates guess. Get it right and the word passes to somebody on the **other** team. The clock does not stop or reset — it belongs to the round, not to the word.',
+    },
+    {
+      title: 'Nobody can count the clock down',
+      body: `A round lasts a random ${SHORTEST_SECONDS} to ${LONGEST_SECONDS} seconds and there is no number on screen. The ticking stays steady and then hurries and grows louder as the end approaches.`,
+    },
+    {
+      title: 'The other team is watching',
+      body: 'The team **not** holding the word can see it, and has one big red BUZZ button. If the describer says the word, or any part of it, they press it — and they take the point instead.',
+    },
+  ],
+  bullets: [
+    {
+      lead: `${MINIMUM_PLAYERS} people`,
+      text: 'Two on each side at least. The app splits the room into teams at random.',
+    },
+    {
+      lead: 'Scoring',
+      text: 'Nobody scores for guessing. The point goes to the team that was not holding the word when the clock stopped — or to the team that caught a blurt.',
+    },
+    { lead: `First to ${TARGET}`, text: 'Wins the game.' },
+    {
+      lead: 'Words',
+      text: `${PACK_ORDER.reduce((total, id) => total + PACK_WORDS[id].length, 0)} to describe across ${PACK_ORDER.length} packs, chosen before the game starts.`,
+    },
+  ],
+};
+
 function VibeBlurt() {
   const id = useMemo(() => playerId(), []);
 
@@ -94,6 +131,7 @@ function VibeBlurt() {
 
   const [now, setNow] = useState(() => Date.now());
   const [showSettings, setShowSettings] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [packs, setPacks] = useState<string[]>(loadPacks);
 
   const myShortId = gameId ? shortId(id, gameId) : null;
@@ -298,21 +336,13 @@ function VibeBlurt() {
 
   // MARK: - Screens
 
+  if (rulesOpen) return <HowToPlay content={BLURT_INSTRUCTIONS} onClose={() => setRulesOpen(false)} />;
+
   if (!gameId) {
     return (
       <div className="blurt">
         <BlurtHeader onLeave={null} gameId={null} />
         <div className="blurt__lobby">
-          <p className="blurt__lede">
-            Two teams. One person gets a word and describes it until their team says it — then the
-            next word. Nobody scores for guessing: when the clock stops, the point goes to the team
-            that was <strong>not</strong> holding the phone. First to {TARGET} wins.
-          </p>
-          <p className="blurt__lede">
-            If the describer says the word, or any part of it, the other team can call it — and they
-            take the point instead.
-          </p>
-
           <button type="button" className="blurt__primary" onClick={create}>
             Start a game
           </button>
@@ -335,6 +365,8 @@ function VibeBlurt() {
             </div>
             {joinError && <p className="blurt__error">{joinError}</p>}
           </div>
+
+          <HowToPlayLink onClick={() => setRulesOpen(true)} />
         </div>
         {askingForName && <NamePrompt onSubmit={submitName} />}
       </div>

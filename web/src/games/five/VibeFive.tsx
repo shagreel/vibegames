@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { ALL_PACK_IDS, PACKS, countIn, type PackId } from './packs';
 import {
   advance,
@@ -82,6 +83,38 @@ function reportRound(previous: FiveState, next: FiveState): void {
   }
 }
 
+/** The instructions, in this game's own words and with its own live counts. */
+const categoryCount = countIn(ALL_PACK_IDS);
+
+const FIVE_INSTRUCTIONS: HowToPlayContent = {
+  name: 'Vibe Five',
+  intro:
+    'A category, five seconds, and one phone passed round the table. Name three things that fit before the buzzer.',
+  sections: [
+    {
+      title: 'The category waits for you',
+      body: 'Press **START** and the category fills the screen with a GET READY badge. No timer is running and none is shown, so read it out, explain it, and argue about it for as long as you like.',
+    },
+    {
+      title: 'Then the clock',
+      body: 'Press **START** again when the table is ready. The dial appears and drains from five to zero, with a tick for each of the last three seconds. The dial appearing is the signal that time is running.',
+    },
+    {
+      title: 'How a round ends',
+      body: 'Either the clock runs out — the buzzer sounds and the screen flashes red — or the player presses **Done!** to end it early. Done! is deliberately silent, because the buzzer means the clock beat you. Either way the dial freezes on the time that was left.',
+    },
+  ],
+  bullets: [
+    { lead: 'START', text: 'Deals a category. Nothing is running yet.' },
+    { lead: 'Done!', text: 'Ends the round early. Silent, so the buzzer keeps its meaning.' },
+    { lead: 'NEXT', text: 'Deals a fresh category and waits for you to start the clock again.' },
+    {
+      lead: 'Packs',
+      text: `${categoryCount} categories across ${ALL_PACK_IDS.length} packs, switched on and off in Game Setup. Only the packs you leave on go into the deck, and no category comes round twice until the pool runs out.`,
+    },
+  ],
+};
+
 function VibeFive() {
   const [enabled, setEnabled] = useState<PackId[]>(loadPacks);
   const [soundOn, setSoundOn] = useState(() => loadFlag(SOUND_KEY, true));
@@ -95,6 +128,7 @@ function VibeFive() {
   const [state, setState] = useState<FiveState>(() => initialState(loadPacks(), seen));
   const [now, setNow] = useState(() => Date.now());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   // The interval reads the live state from here, so it is never working from a
   // stale closure — and side effects stay out of the state updater, which React
@@ -195,6 +229,8 @@ function VibeFive() {
   const remaining = remainingAt(state, now);
   const progress = progressAt(state, now);
 
+  if (rulesOpen) return <HowToPlay content={FIVE_INSTRUCTIONS} onClose={() => setRulesOpen(false)} />;
+
   return (
     <div className="five" data-phase={state.phase}>
       <div className="five__progress" aria-hidden="true">
@@ -243,6 +279,8 @@ function VibeFive() {
       >
         {primaryButtonTitle(state)}
       </button>
+
+      <HowToPlayLink onClick={() => setRulesOpen(true)} />
 
       {/* The red wash when the clock beats you. Rendered only while buzzed, so
           the one-shot animation replays each time the buzzer fires, and no

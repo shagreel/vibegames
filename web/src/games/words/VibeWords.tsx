@@ -4,6 +4,7 @@ import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 // Aliased because this screen has its own `playerName` state. The name is the
@@ -20,6 +21,34 @@ interface Cell {
 
 const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
+
+/** The instructions, in this game's own words and with its own live counts. */
+const WORDS_INSTRUCTIONS: HowToPlayContent = {
+  name: 'Vibe Words',
+  intro:
+    'Guess the five-letter word in six tries. Play solo on this phone, or start a game and race everyone on the same word.',
+  sections: [
+    {
+      title: 'Reading the colours',
+      body: '**Green** is the right letter in the right place. **Amber** means the letter is in the word but somewhere else. **Grey** means it is not in the word at all.',
+    },
+    {
+      title: 'Repeated letters',
+      body: 'Counted properly rather than one letter at a time. Exact matches are claimed first, and what is left of the answer then has to cover the rest: guessing EERIE against SPEED credits two Es and marks the third one absent.',
+    },
+  ],
+  bullets: [
+    { lead: 'Solo', text: 'A fresh word, with no connection needed.' },
+    {
+      lead: 'With friends',
+      text: 'You get a code to share — two short words, like cars-feed — and everyone guesses the same word on their own phone. The first to solve it is announced to the whole room.',
+    },
+    {
+      lead: 'The words',
+      text: `${VALID_WORDS.length} can be guessed, and ${ANSWER_WORDS.length} of them can be the answer.`,
+    },
+  ],
+};
 
 function VibeWords() {
   const [answer, setAnswer] = useState('');
@@ -41,6 +70,7 @@ function VibeWords() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
   const [playerAddedToGame, setPlayerAddedToGame] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   // Track previous answer to detect word changes
   const previousAnswerRef = useRef<string>('');
@@ -583,6 +613,8 @@ function VibeWords() {
     });
   };
 
+  if (rulesOpen) return <HowToPlay content={WORDS_INSTRUCTIONS} onClose={() => setRulesOpen(false)} />;
+
   return (
     <div className="vibewords-container">
       <header className="vibewords-header">
@@ -746,6 +778,8 @@ function VibeWords() {
             </button>
           )}
         </div>
+
+        <HowToPlayLink onClick={() => setRulesOpen(true)} />
       </div>
     </div>
   );

@@ -372,16 +372,40 @@ done.
 
 ### How to play is a page, not a paragraph
 
-The rule used to sit on the lobby as a block of text, which everyone who already
-knows it has to scroll past every time. It is now an option card at the bottom of
-the lobby that opens a full page: a card labelled with its four zones, the three
-options for each feature, and two worked examples — a real trio, and a near miss
-that fails on the meat alone.
+The rules used to sit on the lobby as a block of text, which everyone who already
+knows them has to scroll past every time — and each of the five games did it
+differently. Vibe Trio had a page, Vibe Blurt had four paragraphs in the lobby,
+Vibe Words had a single line under the buttons, and Vibe Sudoku and Vibe Five had
+nothing at all. All five now have one **How to play** control on the main page,
+opening one page.
 
-The examples are `[TrioCard]` values, not file names, and
+They are not five similar pages. `GameInstructions.swift` holds the shell — the
+back button, the `HOW TO PLAY` heading with the game's name under it, the intro,
+the section spacing, the bullet list — and each game supplies only its words, as a
+`GameInstructions` value. Vibe Trio is the one whose page is diagrams rather than
+prose, so it passes its own sections in; everything around them is still the
+shell, which is what stops the five drifting apart again.
+
+Three of the four openers are the same card; Vibe Five's is a quiet line of text,
+because it is the one game with no lobby — its main page is a round in progress,
+and a card there would push the game around for something read once.
+
+The counts in the pages are read from the games rather than typed out: Vibe Words
+says how many words it actually has, Vibe Blurt how many it has to describe, Vibe
+Five how many categories. A page that quotes a stale number is worse than one that
+does not quote it at all.
+
+Trio's examples are `[TrioCard]` values, not file names, and
 `TrioInstructionTests` checks them against the engine: the trio really is a trio,
 the near miss really is not, and it really does fail on the meat and nothing
 else. A page that teaches the wrong rule is worse than no page.
+
+`InstructionsUITests` walks the same path in all five — the game on the hub, the
+opener, the page, the way back — because that sameness is the whole point of it.
+
+The browser has the mirror of it: one `HowToPlay` component and one
+`HowToPlayLink`, with each game passing its own words in. `Trio`'s rules were the
+only hand-written page there, and they are now the same component as the rest.
 
 ### One table, and who got there first
 
@@ -655,12 +679,12 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   image in the bundle, the file numbering runs in deck order, and no two cards
   read out the same. A card whose artwork had gone missing would render as a
   placeholder, which is the sort of thing that is easy to ship and hard to see.
-- `UITests/` — 38 UI tests driving the real screens in a simulator, attaching a
+- `UITests/` — 43 UI tests driving the real screens in a simulator, attaching a
   screenshot at each step to the result bundle. Four of them exist to shoot the
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**216 tests in all: 178 unit and 38 UI.** They are what the numbers above are
+**221 tests in all: 178 unit and 43 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -754,6 +778,7 @@ Sources/
   Model/GameCatalog.swift       The hub's list of games
   Model/PlayerIdentity.swift    The player's id and name, shared by every game
   Design/VibeTheme.swift        Palette, gradients, button styles, canvas
+  Design/GameInstructions.swift The shared "how to play" shell and pages
   Audio/SoundEngine.swift       Runtime-synthesised buzzer / ticks / start blip
   Firebase/
     FirebaseBootstrapper.swift  Optional Firebase + App Check wiring

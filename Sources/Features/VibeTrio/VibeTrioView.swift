@@ -88,17 +88,13 @@ struct VibeTrioView: View {
 
     /// Sits with the other options rather than as a block of text above them:
     /// the rule is worth reading once, and everyone who knows it already would
-    /// otherwise scroll past it every time.
+    /// otherwise scroll past it every time. The card itself is shared with the
+    /// other four games, so they cannot drift apart.
     private var instructionsCard: some View {
-        NavigationLink {
+        InstructionsCard(accent: VibeTheme.vibeTrio,
+                         identifier: "trio.instructions.open") {
             TrioInstructionsView()
-        } label: {
-            cardLabel(title: "How to play",
-                      subtitle: "The rule, with real cards as examples",
-                      symbol: "book.fill")
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("trio.instructions.open")
     }
 
     private var joinCard: some View {
