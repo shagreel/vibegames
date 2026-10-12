@@ -16,10 +16,12 @@ final class VibeBlurtScreenshots: XCTestCase {
 
     private let database = "https://vibe-words-party-default-rtdb.firebaseio.com"
 
-    /// A seed whose first word is "Rainbow", and whose next few are Lion, Mouse
-    /// and Dolphin. Normally the room's seed is random; pinning it here is only
-    /// so the screenshots show a word worth reading.
-    private let seed = 52
+    /// A seed whose first word is "Rainbow", and whose next few are Barn,
+    /// Interpreter and Snowbank. Normally the room's seed is random; pinning it
+    /// here is only so the screenshots show a word worth reading. The word list
+    /// grew from 300 to 2,272, which changed every deal, so this is a seed found
+    /// again rather than the one it used to be.
+    private let seed = 461
 
     override func setUpWithError() throws {
         continueAfterFailure = false

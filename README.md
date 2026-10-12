@@ -130,10 +130,10 @@ project's TypeScript list:
 
 ```sh
 python3 Tools/import_words.py /path/to/web-project/src/wordList.ts
-python3 Tools/check_packs.py     # Vibe Five content
-python3 Tools/check_branding.py  # naming guard
+python3 Tools/check_packs.py       # Vibe Five content
+python3 Tools/check_blurt_words.py # Vibe Blurt words, including the American spellings
+python3 Tools/check_branding.py    # naming guard
 ```
-
 ## Vibe Sudoku
 
 Fill a 9x9 grid so every row, column and 3x3 box holds 1–9. Play solo at the
@@ -517,11 +517,13 @@ the turn still ends if the describer's app has gone to sleep.
 
 Which took finding a real bug, and the bug was not in this game at all.
 
-"Play again" used to deal from a fresh shuffle of all 300 words, which looks
-random and is not good enough: ten words out of 300 twice shares one every third
-game or so, which people notice and say so. Deriving the second shuffle from
-`seed + 1` was meant to fix that and made it dramatically worse — measured at
-**10 of the first 20 words shared, against 1.3 by chance**.
+"Play again" used to deal from a fresh shuffle of the whole library, which looks
+random and is not good enough: ten words out of a few hundred twice shares one or
+two, which people notice and say so. Deriving the second shuffle from `seed + 1`
+was meant to fix that and made it dramatically worse — measured at **10 of the
+first 20 words shared, against 1.3 by chance**. (That was against the 300-word
+library of the time; with the current one the chance is nearer a fifth of a
+word.)
 
 The cause was `SeededGenerator`, shared by every game in the suite. Its
 constructor pre-scrambled the seed (`seed * gamma + constant`) and `next()` then
@@ -545,12 +547,24 @@ Changing the generator changed every seeded board in the suite, so the fixtures
 for Trio, Sudoku and Blurt were all re-dumped from Swift and the browser tests
 re-checked against them.
 
-### 300 things to describe, in eight packs
+### 2,272 things to describe, in eight packs
 
 Food and drink, animals and nature, places and travel, household things, jobs and
 people, sport and music, actions, and celebrations and weather. Written for this
 rather than borrowed — the physical game's list is somebody's copyright, and the
 name is kept out of the code and UI for the same reason the other one is.
+
+**They are American words.** The list was first written in British English by
+accident, which is how it came to contain `Wellies` and `Suncream` — words a
+player in Ohio cannot describe to anybody, because the thing has a different name
+there. So the packs are checked rather than trusted: `Tools/check_blurt_words.py`
+fails on a British-only name (`postman`, `car park`, `fairy lights`), on a
+British spelling (`colour`, `realise`, `centre`, `grey`), on a trademark, and on
+an entry that is not 1–4 words or that contains its own pack's theme word. The
+awkward part is that the two languages share thousands of words — `tap`, `vest`,
+`pudding`, `chips` and `rubber` are all ordinary American words that mean
+something else over there — so those are printed as advisories for a person to
+read rather than failed automatically.
 
 ### How long a round lasts
 
@@ -790,6 +804,7 @@ Tools/make_icon.swift           Renders the app icon and the favicon
 Tools/feedback_to_issues.py     Turns app feedback into issues (scheduled)
 Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
+Tools/check_blurt_words.py      Validates the Vibe Blurt words and their English
 Tools/check_branding.py         Naming guard
 Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces

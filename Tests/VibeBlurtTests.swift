@@ -11,18 +11,23 @@ final class VibeBlurtTests: XCTestCase {
 
     // MARK: - The content
 
-    func testTheDeckIsThreeHundredDistinctThingsToDescribe() {
+    func testTheDeckIsThousandsOfDistinctThingsToDescribe() {
         let words = BlurtWords.all
 
-        XCTAssertEqual(words.count, 300, "the deck size the fixtures were dumped for")
+        // A table playing all evening should not come round again, and the
+        // fixtures were dumped against this library.
+        XCTAssertGreaterThanOrEqual(words.count, 2000, "the deck size the fixtures were dumped for")
         XCTAssertEqual(Set(words).count, words.count, "a repeated word is a wasted turn")
         XCTAssertFalse(words.contains(""), "an empty entry would draw a blank screen")
 
         for word in words {
-            XCTAssertTrue(word.allSatisfy(\.isASCII), "\(word) is not plain ASCII")
+            // Safe inside a Swift string literal. Not strictly ASCII: "Piñata" is
+            // the American spelling and belongs as it is.
             XCTAssertFalse(word.contains("\""), "\(word) would break the Swift literal")
+            XCTAssertFalse(word.contains("\\"), "\(word) would break the Swift literal")
+            XCTAssertFalse(word.contains("\n"), "\(word) would break the Swift literal")
             let pieces = word.split(separator: " ")
-            XCTAssertTrue((1...3).contains(pieces.count), "\(word) is not 1-3 words")
+            XCTAssertTrue((1...4).contains(pieces.count), "\(word) is not 1-4 words")
         }
     }
 
@@ -46,18 +51,19 @@ final class VibeBlurtTests: XCTestCase {
     func testARoomHasOneDeckAndItNeverChanges() {
         // One deck per room, walked across as many games as the table plays.
         // Shuffling afresh for each game is what used to hand back nearly the
-        // same words: 10 out of 300 twice shares one every third game or so.
+        // same words: ten out of a few hundred twice shares one or two.
         let all = Set(BlurtPack.allCases)
         XCTAssertEqual(BlurtDeck.shuffled(seed: 7, packs: all),
                        BlurtDeck.shuffled(seed: 7, packs: all))
-        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, packs: all).count, 300)
+        XCTAssertEqual(BlurtDeck.shuffled(seed: 7, packs: all).count, BlurtWords.all.count)
     }
 
     func testConsecutiveSeedsDoNotDealNearlyTheSameDeck() {
         // The bug that started this: the generator's seeding made seed `n + 1`
         // replay seed `n`'s stream one draw late, so a deck derived from
         // `seed + 1` came back almost identical. Two unrelated shuffles should
-        // share about 20 * 20 / 300 words over their first twenty.
+        // share almost nothing over their first twenty — with thousands of words
+        // to draw from, the expected overlap is a fifth of one word.
         let all = Set(BlurtPack.allCases)
         var shared = 0
         let trials = 60
@@ -67,7 +73,7 @@ final class VibeBlurtTests: XCTestCase {
             shared += second.filter { first.contains($0) }.count
         }
         let average = Double(shared) / Double(trials)
-        XCTAssertLessThan(average, 6, "consecutive seeds are dealing nearly the same deck (\(average) of 20)")
+        XCTAssertLessThan(average, 2, "consecutive seeds are dealing nearly the same deck (\(average) of 20)")
     }
 
     func testTheDeckWrapsRatherThanRunningOut() {
@@ -92,7 +98,7 @@ final class VibeBlurtTests: XCTestCase {
             total += pack.words.count
         }
         XCTAssertEqual(total, BlurtWords.all.count)
-        XCTAssertEqual(BlurtWords.all.count, 300)
+        XCTAssertGreaterThanOrEqual(BlurtWords.all.count, 2000)
     }
 
     func testTheWordsAreGroupedInPackOrderNotSelectionOrder() {

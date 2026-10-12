@@ -164,8 +164,8 @@ enum BlurtDeck {
     // Note: there is deliberately no per-round deck. A room has *one* deck and
     // "play again" carries on through it rather than shuffling a new one, so a
     // table playing several games in a sitting never gets a word twice. Drawing
-    // a fresh shuffle each game only looks random — 10 words out of 300 twice
-    // shares one word every third game or so, which is often enough to notice.
+    // a fresh shuffle each game only looks random — ten words out of a few
+    // hundred twice shares one or two, which is often enough to notice.
 
     /// The word for a turn.
     ///

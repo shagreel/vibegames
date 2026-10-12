@@ -144,8 +144,8 @@ export function wordsIn(packs: readonly string[]): string[] {
  * games as the table plays.
  *
  * There is deliberately no per-round deck. Shuffling afresh for each game only
- * looks random: 10 words out of 300 twice shares a word every third game or so,
- * which is often enough to notice.
+ * looks random: ten words out of a few hundred twice shares one or two, which
+ * is often enough to notice.
  */
 export function shuffled(seed: number, packs: readonly string[]): string[] {
   const generator = new SeededGenerator(seed >>> 0);
