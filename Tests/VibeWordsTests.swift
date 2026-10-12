@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import VibeGames
 
 /// Covers the rules of the word game and the shape of the shared payload.
@@ -104,6 +105,16 @@ final class WordGameEngineTests: XCTestCase {
                                                     guesses: ["ZEBRA"],
                                                     answer: "CRANE")
         XCTAssertEqual(state, .absent)
+    }
+
+    func testTheSymbolKeysResolveToRealSymbols() {
+        // The return and delete keys are drawn as SF Symbols. A symbol name that
+        // does not exist draws *nothing at all* — no error, no placeholder — so
+        // a typo would ship a blank key and the game would look broken rather
+        // than fail. The names are checked against the system instead.
+        for name in ["return", "delete.left.fill"] {
+            XCTAssertNotNil(UIImage(systemName: name), "\(name) is not a symbol on this iOS")
+        }
     }
 
     // MARK: - Validation

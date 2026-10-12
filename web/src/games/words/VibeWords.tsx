@@ -717,15 +717,24 @@ function VibeWords() {
         <div className="keyboard">
           {keyboardRows.map((row, i) => (
             <div key={i} className="keyboard-row">
-              {row.map((key) => (
-                <button
-                  key={key}
-                  className={`key ${getKeyState(key)} ${key.length > 1 ? 'wide' : ''}`}
-                  onClick={() => handleKeyPress(key)}
-                >
-                  {key === 'BACKSPACE' ? '⌫' : key}
-                </button>
-              ))}
+              {row.map((key) => {
+                // The two symbol keys: the word "ENTER" was too wide for one
+                // key and had to be shrunk until it looked like a mistake. The
+                // return arrow says the same thing at any width.
+                const isSymbol = key === 'ENTER' || key === 'BACKSPACE';
+                const label = key === 'ENTER' ? '↵' : key === 'BACKSPACE' ? '⌫' : key;
+                return (
+                  <button
+                    key={key}
+                    className={`key ${getKeyState(key)} ${key.length > 1 ? 'wide' : ''}${
+                      isSymbol ? ' key--symbol' : ''
+                    }`}
+                    onClick={() => handleKeyPress(key)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>

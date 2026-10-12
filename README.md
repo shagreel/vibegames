@@ -655,12 +655,12 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   image in the bundle, the file numbering runs in deck order, and no two cards
   read out the same. A card whose artwork had gone missing would render as a
   placeholder, which is the sort of thing that is easy to ship and hard to see.
-- `UITests/` — 36 UI tests driving the real screens in a simulator, attaching a
+- `UITests/` — 38 UI tests driving the real screens in a simulator, attaching a
   screenshot at each step to the result bundle. Four of them exist to shoot the
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**212 tests in all: 176 unit and 36 UI.** They are what the numbers above are
+**216 tests in all: 178 unit and 38 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.

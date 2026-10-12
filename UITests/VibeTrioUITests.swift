@@ -130,7 +130,11 @@ final class VibeTrioUITests: XCTestCase {
         let codeLabel = app.descendants(matching: .any)["trio.gameCode"].firstMatch
         XCTAssertTrue(codeLabel.waitForExistence(timeout: 25))
         let code = codeLabel.label.split(separator: " ").last.map(String.init) ?? ""
-        XCTAssertEqual(code.count, 8, "got: \(codeLabel.label)")
+        // Two four-letter words, not eight characters of noise — the same shape
+        // the other games share. This still asked for eight characters, which is
+        // what a code used to be.
+        XCTAssertEqual(code.split(separator: "-").map(\.count), [4, 4],
+                       "got: \(codeLabel.label)")
 
         app.buttons["trio.startShared"].tap()
         XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: 10))

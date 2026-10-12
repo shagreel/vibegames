@@ -211,6 +211,17 @@
   font-size: 0.75rem;
 }
 
+/* The return and delete keys are glyphs, not words, so they do not want the
+   small type the wide keys get — and the keyboard uppercases its labels, which
+   a glyph ignores. Two classes, because `.key.wide` above sets a font-size at
+   the same weight and would otherwise win; the narrow-screen rules below shrink
+   `.key.wide` further still, and this has to outrank those too. */
+.key.wide.key--symbol {
+  font-size: 1.15rem;
+  line-height: 1;
+  text-transform: none;
+}
+
 .key.correct {
   background-color: #6aaa64;
 }

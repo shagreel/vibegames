@@ -92,7 +92,10 @@ struct VibeWordsKeyboardView: View {
         case .letter(let character):
             Text(String(character))
         case .enter:
-            Text("ENTER").font(.system(size: 13, weight: .bold, design: .rounded))
+            // Apple's own return glyph rather than the word: "ENTER" was too
+            // wide for one key and had to be shrunk until it looked like a
+            // mistake. The arrow says the same thing at any width.
+            Image(systemName: "return").font(.system(size: 18, weight: .bold))
         case .delete:
             Image(systemName: "delete.left.fill").font(.system(size: 18, weight: .bold))
         }
