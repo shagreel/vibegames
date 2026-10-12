@@ -191,6 +191,10 @@ looks like data. The same reasoning guards every effect-based event.
 
 - User data stored in browser localStorage
 - Each device gets a unique browser ID
+- The name a player types is kept in localStorage too — one name for the whole
+  suite, so the second game does not ask for it again. Vibe Words kept its own
+  copy before the games shared one, and that copy is adopted on first read
+  rather than making anybody type it a second time.
 - No personal information collected
 - Game data stored in Firebase Realtime Database
 - Crash reports carry the error, the page and the browser's user-agent string,

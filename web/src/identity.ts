@@ -8,9 +8,26 @@
 
 const NAME_KEY = 'vibegames.playerName';
 const ID_KEY = 'vibegames.playerID';
+/** Where Vibe Words kept the name before the games shared one. */
+const LEGACY_NAME_KEY = 'vibewords.playerName';
 
 export function playerName(): string {
-  return localStorage.getItem(NAME_KEY)?.trim() ?? '';
+  const name = localStorage.getItem(NAME_KEY)?.trim();
+  if (name) return name;
+
+  // Vibe Words kept its own copy of the name before the suite shared one, so
+  // somebody who has only ever played that has a name in the old place. Adopt it
+  // rather than asking them for it a second time.
+  //
+  // The old key is deliberately left where it is: a browser still running a
+  // cached copy of the previous bundle is still reading it, and a few bytes of
+  // duplicate costs nothing next to losing somebody's name.
+  const legacy = localStorage.getItem(LEGACY_NAME_KEY)?.trim();
+  if (legacy) {
+    localStorage.setItem(NAME_KEY, legacy);
+    return legacy;
+  }
+  return '';
 }
 
 export function setPlayerName(name: string): void {

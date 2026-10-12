@@ -6,6 +6,9 @@ import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
+// Aliased because this screen has its own `playerName` state. The name is the
+// suite's, not this game's, so it is only ever asked for once.
+import { playerName as savedName, setPlayerName as savePlayerName } from '../../identity';
 import './VibeWords.css';
 
 type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'current';
@@ -63,10 +66,11 @@ function VibeWords() {
     // Word will be set by Firebase listener when game is loaded
     // or by the creator when they create the game
 
-    // Load player name from localStorage
-    const savedName = localStorage.getItem('vibewords.playerName');
-    if (savedName) {
-      setPlayerName(savedName);
+    // The name is shared with the other three games, so somebody who has played
+    // any of them is not asked again here.
+    const remembered = savedName();
+    if (remembered) {
+      setPlayerName(remembered);
       setNameSubmitted(true);
     }
   }, []);
@@ -495,7 +499,7 @@ function VibeWords() {
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (playerName.trim()) {
-      localStorage.setItem('vibewords.playerName', playerName.trim());
+      savePlayerName(playerName);
       setNameSubmitted(true);
       // Player will be added to game by the useEffect when gameExists becomes true
     }
