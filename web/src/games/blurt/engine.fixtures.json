@@ -6909,6 +6909,566 @@
       "p5"
     ]
   },
+  "holders" : {
+    "1:5" : [
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p3",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p3"
+        ],
+        "holder" : "p5",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p1",
+          "p3",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p4",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p4"
+        ],
+        "holder" : "p2",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p2",
+          "p4"
+        ],
+        "holder" : "",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p5",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p5"
+        ],
+        "holder" : "p1",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p1",
+          "p3",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p2",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2"
+        ],
+        "holder" : "p4",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2",
+          "p4"
+        ],
+        "holder" : "",
+        "turn" : 3
+      }
+    ],
+    "1:6" : [
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p4",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p4"
+        ],
+        "holder" : "p6",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p1",
+          "p4",
+          "p6"
+        ],
+        "holder" : "",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p5",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p5"
+        ],
+        "holder" : "p2",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p2",
+          "p3",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p6",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p6"
+        ],
+        "holder" : "p1",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p1",
+          "p4",
+          "p6"
+        ],
+        "holder" : "",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p2",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2"
+        ],
+        "holder" : "p5",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2",
+          "p3",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 3
+      }
+    ],
+    "42:5" : [
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p5",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p5"
+        ],
+        "holder" : "p3",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p3",
+          "p4",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p1",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p1"
+        ],
+        "holder" : "p2",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p1",
+          "p2"
+        ],
+        "holder" : "",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p3",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p3"
+        ],
+        "holder" : "p5",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p3",
+          "p4",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p2",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2"
+        ],
+        "holder" : "p1",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p1",
+          "p2"
+        ],
+        "holder" : "",
+        "turn" : 3
+      }
+    ],
+    "42:6" : [
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p5",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p5"
+        ],
+        "holder" : "p3",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p3",
+          "p4",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p1",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p1"
+        ],
+        "holder" : "p2",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p1",
+          "p2",
+          "p6"
+        ],
+        "holder" : "",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p3",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p3"
+        ],
+        "holder" : "p5",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p3",
+          "p4",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p2",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2"
+        ],
+        "holder" : "p6",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p1",
+          "p2",
+          "p6"
+        ],
+        "holder" : "",
+        "turn" : 3
+      }
+    ],
+    "12345:5" : [
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p1",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p1"
+        ],
+        "holder" : "p3",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p1",
+          "p3",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p2",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p2"
+        ],
+        "holder" : "p4",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p2",
+          "p4"
+        ],
+        "holder" : "",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p3",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p3"
+        ],
+        "holder" : "p5",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p1",
+          "p3",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p4",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p4"
+        ],
+        "holder" : "p2",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p2",
+          "p4"
+        ],
+        "holder" : "",
+        "turn" : 3
+      }
+    ],
+    "12345:6" : [
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p1",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p1"
+        ],
+        "holder" : "p2",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+          "p1",
+          "p2",
+          "p6"
+        ],
+        "holder" : "",
+        "turn" : 0
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p3",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p3"
+        ],
+        "holder" : "p4",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+          "p3",
+          "p4",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 1
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p2",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p2"
+        ],
+        "holder" : "p6",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+          "p1",
+          "p2",
+          "p6"
+        ],
+        "holder" : "",
+        "turn" : 2
+      },
+      {
+        "absent" : [
+
+        ],
+        "holder" : "p4",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p4"
+        ],
+        "holder" : "p5",
+        "turn" : 3
+      },
+      {
+        "absent" : [
+          "p3",
+          "p4",
+          "p5"
+        ],
+        "holder" : "",
+        "turn" : 3
+      }
+    ]
+  },
   "minimumPerTeam" : 2,
   "minimumPlayers" : 4,
   "offsets" : {

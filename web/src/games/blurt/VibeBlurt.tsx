@@ -12,6 +12,7 @@ import {
   TARGET,
   TEAMS,
   barFill,
+  holderFor,
   namesOn,
   randomTurnSeconds,
   shuffled,
@@ -139,8 +140,31 @@ function VibeBlurt() {
   const play = snapshot.play;
   const myTeam: Team | null = myShortId ? (snapshot.teams[myShortId] ?? null) : null;
   const winner = winningTeam(play);
-  const isDescriber = play !== null && myShortId !== null && play.describer === myShortId;
-  /** The person this round belongs to has left the room. */
+  /**
+   * Who is actually holding the word.
+   *
+   * The round writes down a describer when it starts, and a phone that leaves
+   * afterwards does not rewrite it — so the round can be pointing at somebody who
+   * is not in the room. Their own team-mates would be told that person is
+   * describing to them, and the other team told to watch for them: a round nobody
+   * can play, with nothing to end it early but the clock.
+   *
+   * `holderFor` resolves it on every snapshot instead — the named describer while
+   * they are here, and the rotation's choice among the people still here once they
+   * have gone, which is the same rule that walks the turn on at the end of a
+   * round. The app resolves it to the same person.
+   */
+  const holder =
+    play !== null && snapshot.seed !== null
+      ? holderFor(play, { players: snapshot.players, teams: snapshot.teams }, snapshot.seed)
+      : (play?.describer ?? null);
+  const isDescriber = holder !== null && myShortId !== null && holder === myShortId;
+  /**
+   * What to call them in a sentence. Empty only when the whole of the describing
+   * side has gone, so nothing gets named that is not in the room.
+   */
+  const holderName = holder !== null ? (snapshot.players[holder] ?? '') : '';
+  /** The person this round was dealt to has left the room. */
   const describerHasLeft =
     play !== null && !play.finished && play.describer !== '' && snapshot.players[play.describer] === undefined;
   /**
@@ -255,14 +279,17 @@ function VibeBlurt() {
   useEffect(() => {
     if (!play) return;
     if (play.state === 'running') {
-      wasHolding.current = play.describer === myShortId;
+      // The *resolved* holder rather than the name written on the round: the word
+      // can have moved to somebody else when the named describer left, and that
+      // person is the one who needs the buzz.
+      wasHolding.current = holder === myShortId;
       return;
     }
     if (play.state === 'ended' && play.reason === 'blurt' && wasHolding.current) {
       wasHolding.current = false;
       navigator.vibrate?.([0, 90, 60, 140]);
     }
-  }, [play, myShortId]);
+  }, [play, myShortId, holder]);
 
   // MARK: - Analytics
 
@@ -541,10 +568,14 @@ function VibeBlurt() {
             <span className="blurt__word-label">Watch for it</span>
             <strong className="blurt__watched-word">{currentWord}</strong>
             {/* The rule, said as a rule and with the name in it: the button is
-                only for one thing, and it is easy to press out of excitement. */}
+                only for one thing, and it is easy to press out of excitement.
+                The name is the resolved holder, so it is always somebody in the
+                room; it is empty in exactly one case, where the whole of the
+                describing side has gone and there is nobody to name. */}
             <p className="blurt__buzz-rule">
-              Watch close — if {snapshot.players[play.describer] ?? 'they'} says the word above, buzz
-              them!
+              {holderName
+                ? `Watch close — if ${holderName} says the word above, buzz them!`
+                : 'Watch close — if they say the word above, buzz them!'}
             </p>
             <button type="button" className="blurt__buzz" onClick={() => void endTurn(gameId, 'blurt')}>
               <strong>BUZZ</strong>
@@ -556,7 +587,9 @@ function VibeBlurt() {
              the room the word must never reach. */
           <div className="blurt__guessing">
             <span className="blurt__word-label">Guess it</span>
-            <h2>{snapshot.players[play.describer] ?? 'Someone'} is describing a word to you</h2>
+            {/* Only ever shown to the holding team, which has somebody in it, so
+                the holder always has a name here. */}
+            <h2>{holderName || 'Your team-mate'} is describing a word to you</h2>
             {/* The headline says what is happening; this says what to do about
                 it, in the team's own colour so it reads as your job. */}
             <strong className={`blurt__guessing-call blurt__my-team--${myTeam ?? 1}`}>
@@ -572,12 +605,11 @@ function VibeBlurt() {
           <span className={`blurt__team-tag blurt__team-tag--${play.team}`}>
             {teamTitle(play.team)}
           </span>
+          {/* No "left" branch: the name is the resolved holder, so it is always
+              somebody in the room. The line below says what to do about a
+              describer who walked out. */}
           <h2>
-            {isDescriber
-              ? "You're up"
-              : describerHasLeft
-                ? `${snapshot.players[play.describer] ?? 'They'} left`
-                : `${snapshot.players[play.describer] ?? 'Someone'} is up`}
+            {isDescriber ? "You're up" : holderName ? `${holderName} is up` : 'Nobody is left to describe'}
           </h2>
           {/* Which side *you* are on, said outright. The scoreboard shows it,
               but this is the screen everyone looks at between rounds. */}
@@ -591,7 +623,9 @@ function VibeBlurt() {
               ? 'Hold the phone so only you can see it, then start the clock.'
               : canStartRound
                 ? 'They have left the room, and nothing is running yet. Anyone on their team can take the round.'
-                : `Pass the phone to ${snapshot.players[play.describer] ?? 'them'}. Everyone else, watch for the word.`}
+                : holderName
+                  ? `Pass the phone to ${holderName}. Everyone else, watch for the word.`
+                  : 'Nobody on that side is in the room, so there is no round to take.'}
           </p>
           {canStartRound && (
             <button

@@ -140,9 +140,44 @@ final class VibeBlurtModel: ObservableObject {
 
     var describingTeam: BlurtTeam? { play?.team }
 
+    /// Who the word belongs to at this moment, by short id.
+    ///
+    /// The round writes down a describer when it starts, and a phone that leaves
+    /// afterwards does not rewrite it — so the round can be pointing at somebody
+    /// who is not in the room. Left at that, their own team-mates are told that
+    /// person is describing to them and the other team is told to watch for them:
+    /// a round nobody can play, with nothing to end it early but the clock.
+    ///
+    /// So the holder is resolved on every snapshot instead. The named describer
+    /// keeps the word while they are here; once they have gone it moves to whoever
+    /// the rotation names among the people still in the room, which is the same
+    /// rule that walks the turn on at the end of a round — a missing player is
+    /// taken out of the order rather than described around. `BlurtRules.holder`
+    /// owns that rule, so the browser resolves it to the same person.
+    ///
+    /// Nil only when the whole of the describing side has gone, which is a room
+    /// with one team in it and not a game.
+    var holderID: String? { Self.holder(in: snapshot) }
+
+    /// `holderID`, for any snapshot rather than the current one: the caught-buzz
+    /// comparison looks back at the round as it stood a moment ago.
+    nonisolated static func holder(in snapshot: BlurtSnapshot) -> String? {
+        guard let play = snapshot.play else { return nil }
+        // Without a seed the rotation cannot be walked, but the seed is written
+        // when the room is made, so this is a waiting room with no round to hold.
+        guard let seed = snapshot.seed else { return play.describer }
+
+        return BlurtRules.holder(named: play.describer,
+                                 team: play.team,
+                                 turn: play.turn,
+                                 teams: snapshot.teams,
+                                 present: Set(snapshot.players.keys),
+                                 seed: seed)
+    }
+
     var isDescriber: Bool {
-        guard let play, let me = myShortID else { return false }
-        return play.describer == me
+        guard let me = myShortID else { return false }
+        return holderID == me
     }
 
     /// The team that is not holding the word.
@@ -202,24 +237,27 @@ final class VibeBlurtModel: ObservableObject {
         team == .one ? scoreOne : scoreTwo
     }
 
-    var describerName: String {
-        guard let play else { return "" }
-        return snapshot.players[play.describer] ?? "Someone"
-    }
-
-    /// Whether the person this round belongs to has left the room.
+    /// What to call the person holding the word.
     ///
-    /// The turn is written down when the word moves, and a phone that leaves
-    /// afterwards does not rewrite it — so the round can be pointing at somebody
-    /// who is not there. Nothing is running yet in that state, so no clock will
-    /// end it either.
-    var describerHasLeft: Bool {
-        guard let play, !play.finished, !play.describer.isEmpty else { return false }
-        return snapshot.players[play.describer] == nil
+    /// Empty when the whole of their side has gone, so nothing gets named that is
+    /// not in the room. The screens that use it are the ones shown to the other
+    /// team and to the holder's own team-mates, both of which are looking at a
+    /// person who is really there.
+    var describerName: String {
+        guard let holder = holderID else { return "" }
+        return snapshot.players[holder] ?? ""
     }
 
     /// Whether this phone can start the round that is waiting: the describer's
-    /// own, or — when they have gone — the next person on their team.
+    /// own, or — when they have gone — anybody still on their team.
+    ///
+    /// The turn is written down when the word moves, and a phone that leaves
+    /// afterwards does not rewrite it, so the round can be pointing at somebody
+    /// who is not there. Nothing is running yet in that state, so no clock will
+    /// end it either — which is why the round has to be offered to somebody else
+    /// rather than left waiting on a phone that has gone. Whoever takes it is
+    /// written down as the describer, so the word lands on the phone that is
+    /// actually in the room.
     var canStartThisRound: Bool {
         Self.canStartRound(play: play,
                            me: myShortID,
@@ -416,19 +454,26 @@ final class VibeBlurtModel: ObservableObject {
     /// Whether a buzz just landed on me.
     ///
     /// Pure and static so it can be tested without a network, and so the rule is
-    /// readable in one place: the round ended on a blurt, I had the word when it
-    /// did, and it is news to me. The clock running out deliberately does *not*
-    /// count — everybody can see the clock, but a buzz is the one thing the
+    /// readable in one place: the round ended on a blurt, I was holding the word
+    /// when it did, and it is news to me. The clock running out deliberately does
+    /// *not* count — everybody can see the clock, but a buzz is the one thing the
     /// person mid-sentence is not looking at.
-    nonisolated static func caughtMe(previous: BlurtPlay?, next: BlurtPlay?, me: String?) -> Bool {
+    ///
+    /// `holder` is the resolved holder of the *previous* snapshot rather than
+    /// `play.describer`, because the word can have moved to somebody else when the
+    /// named describer left — and that person is the one who needs the buzz.
+    nonisolated static func caughtMe(previous: BlurtPlay?, next: BlurtPlay?, holder: String?, me: String?) -> Bool {
         guard let me, previous?.state == .running, next?.state == .ended else { return false }
         guard next?.reason == .blurt else { return false }
-        return previous?.describer == me
+        return holder == me
     }
 
     private func apply(_ newSnapshot: BlurtSnapshot) {
         let previous = snapshot
-        if Self.caughtMe(previous: previous.play, next: newSnapshot.play, me: myShortID) {
+        if Self.caughtMe(previous: previous.play,
+                         next: newSnapshot.play,
+                         holder: Self.holder(in: previous),
+                         me: myShortID) {
             caughtCount += 1
             buzzWhenCaught()
         }

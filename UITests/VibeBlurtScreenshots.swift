@@ -229,6 +229,63 @@ final class VibeBlurtScreenshots: XCTestCase {
                       "everybody still here stays listed — got: \(second.label)")
     }
 
+    /// A round whose describer walks out is handed to somebody still in the room.
+    ///
+    /// The round writes down who is describing when it starts, and a phone that
+    /// leaves afterwards does not rewrite it — so this used to leave the word with
+    /// somebody who had gone. Their team-mate was told that person was describing
+    /// to them and the other side was told to watch for them: a round nobody could
+    /// play, with nothing to end it early but the clock.
+    func testTheWordMovesWhenTheDescriberLeaves() throws {
+        try skipUnlessTheDatabaseAnswers()
+
+        let app = XCUIApplication()
+        app.launch(withName: "Sam")
+        app.descendants(matching: .any)["game.vibe-blurt"].firstMatch.tap()
+
+        let create = app.buttons["blurt.createGame"]
+        XCTAssertTrue(create.waitForExistence(timeout: 15), "the lobby should offer a game")
+        create.tap()
+
+        let codeLabel = app.descendants(matching: .any)["blurt.gameCode"]
+        XCTAssertTrue(codeLabel.waitForExistence(timeout: backendTimeout),
+                      "the room should show a code")
+        let code = roomKey(for: displayedCode(in: codeLabel.label))
+
+        var me: String?
+        for _ in 0..<10 {
+            let (status, roster) = request("GET", "\(code)/players")
+            if status == 200, let players = roster as? [String: Any], let first = players.keys.first {
+                me = first
+                break
+            }
+            Thread.sleep(forTimeInterval: 1)
+        }
+        guard let me else { return XCTFail("the app never registered in its own room") }
+
+        for (index, name) in ["Alex", "Jo", "Robin"].enumerated() {
+            request("PUT", "\(code)/players/ffff00\(index)", body: name)
+        }
+        request("PUT", "\(code)/meta/seed", body: 52)
+        request("PUT", "\(code)/meta/started", body: true)
+        // The app is on the describing side, but Alex is the one with the word.
+        request("PUT", "\(code)/teams", body: [me: 1, "ffff000": 1, "ffff001": 2, "ffff002": 2])
+        writeTurn(code: code, team: 1, describer: "ffff000", word: 0)
+
+        let guessing = app.descendants(matching: .any)["blurt.guessing"].firstMatch
+        XCTAssertTrue(guessing.waitForExistence(timeout: backendTimeout),
+                      "the app starts as the team-mate guessing")
+
+        // Alex's phone goes, with the round in flight.
+        request("DELETE", "\(code)/players/ffff000")
+
+        let word = app.descendants(matching: .any)["blurt.word"].firstMatch
+        XCTAssertTrue(word.waitForExistence(timeout: backendTimeout),
+                      "the word should move to the phone that is still here")
+        XCTAssertFalse(app.descendants(matching: .any)["blurt.guessing"].exists,
+                       "and stop being a guess for the phone now holding it")
+    }
+
     // MARK: - The run
 
     private func capture(appearance: String) throws {

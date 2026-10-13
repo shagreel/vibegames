@@ -653,6 +653,22 @@ ask the same question: who is *here*?
   When the named describer is not in the room, the next person on their team is
   offered it, and whoever starts is written down as the describer — so the word
   lands on the phone that is actually there.
+- **Who is holding the word.** The round writes down a describer when it starts,
+  and a phone that leaves afterwards does not rewrite it — so the turn can be
+  pointing at somebody who is not in the room. `BlurtRules.holder` resolves the
+  holder on every snapshot instead: the named describer while they are here, and
+  the rotation's choice among the people still here once they have gone. Left at
+  the raw field, a round whose describer walked out is a round nobody can play —
+  the other team is shown the word and told to watch for a person who is not there,
+  and the describer's own team-mates are told that person is describing to them.
+  Nobody can buzz, nobody can guess, and nothing ends it early but the clock.
+
+  It is *derived* rather than written, so both clients resolve it to the same
+  phone without a write to race over — the fixtures in `Tools/blurt_fixtures/`
+  hold the browser to the Swift rule. The caught-buzz comparison looks back
+  through it as well, or a buzz on a round whose word has moved would land on a
+  phone that has gone.
+
 - **What the scoreboard says.** The names under each side are the people in the
   room, not the people the team list remembers. A slot with nobody in it has no
   name, and giving it one put "Alex, Someone" on a scoreboard of one — which the
@@ -765,12 +781,12 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   image in the bundle, the file numbering runs in deck order, and no two cards
   read out the same. A card whose artwork had gone missing would render as a
   placeholder, which is the sort of thing that is easy to ship and hard to see.
-- `UITests/` — 46 UI tests driving the real screens in a simulator, attaching a
+- `UITests/` — 47 UI tests driving the real screens in a simulator, attaching a
   screenshot at each step to the result bundle. Four of them exist to shoot the
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**232 tests in all: 186 unit and 46 UI.** They are what the numbers above are
+**237 tests in all: 190 unit and 47 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.

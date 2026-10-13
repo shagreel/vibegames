@@ -252,6 +252,42 @@ enum BlurtRules {
         return roster[(number / 2 + offset) % roster.count]
     }
 
+    /// Who is actually holding the word.
+    ///
+    /// Normally the person the turn was written down for. When that phone has
+    /// left, the round does not carry on around them: the word moves to whoever
+    /// the rotation names among the people still here — the same rule that walks
+    /// the turn on at the end of a round, so a missing player is taken out of the
+    /// order rather than described around.
+    ///
+    /// Leaving the word with somebody who has gone is not a small thing. The other
+    /// team is shown the word and told to watch for a person who is not in the
+    /// room; the describer's own team-mates are told that person is describing to
+    /// them. Nobody can play that round, nothing ends it early, and the clock runs
+    /// down on a turn that was never taken. A player out of the room is out of the
+    /// game until they come back.
+    ///
+    /// `nil` only when the describing team has nobody left in the room at all,
+    /// which is not a game any more.
+    static func holder(named describer: String,
+                       team: BlurtTeam,
+                       turn number: Int,
+                       teams: [String: BlurtTeam],
+                       present: Set<String>,
+                       seed: UInt32) -> String? {
+        if present.contains(describer) { return describer }
+
+        let roster = members(of: team, in: teams)
+        let offsets = describerOffsets(oneMembers: members(of: .one, in: teams).count,
+                                       twoMembers: members(of: .two, in: teams).count,
+                                       seed: seed)
+        return self.describer(for: team,
+                              members: roster,
+                              turn: number,
+                              offset: team == .one ? offsets.one : offsets.two,
+                              present: present)
+    }
+
     /// The team that takes the point when a turn ends — never the one that was
     /// describing. This is the tension the game is built on: describing earns
     /// nothing, it only passes the risk on.

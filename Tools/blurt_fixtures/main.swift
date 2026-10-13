@@ -62,6 +62,44 @@ for seed in seeds {
     }
 }
 
+// Who is holding the word, which is not the same question as who it was dealt to.
+// While the named describer is in the room they hold it; when they have gone it
+// moves to the rotation's choice among the people still there; and there is nobody
+// at all once the whole of their side has gone. The browser has to agree, or the
+// two would disagree about whose phone shows the word.
+var holders: [String: [[String: Any]]] = [:]
+for seed in seeds {
+    for roster in rosters {
+        let key = "\(seed):\(roster.count)"
+        let teams = BlurtRules.split(players: roster, seed: seed)
+        let one = BlurtRules.members(of: .one, in: teams)
+        let two = BlurtRules.members(of: .two, in: teams)
+        let offsets = BlurtRules.describerOffsets(oneMembers: one.count,
+                                                  twoMembers: two.count,
+                                                  seed: seed)
+
+        var cases: [[String: Any]] = []
+        for turn in 0..<4 {
+            let team = BlurtRules.describingTeam(turn: turn)
+            let side = team == .one ? one : two
+            let offset = team == .one ? offsets.one : offsets.two
+            guard let named = BlurtRules.describer(for: team, members: side,
+                                                   turn: turn, offset: offset) else { continue }
+
+            // Everybody here, the one holding it gone, and the whole side gone.
+            for absent in [[], [named], side] {
+                let present = Set(roster).subtracting(absent)
+                let holder = BlurtRules.holder(named: named, team: team, turn: turn,
+                                               teams: teams, present: present, seed: seed)
+                cases.append(["turn": turn,
+                              "absent": absent.sorted(),
+                              "holder": holder ?? ""])
+            }
+        }
+        holders[key] = cases
+    }
+}
+
 // The scoring is small enough to state outright rather than sample.
 var scoring: [String: [String: Any]] = [:]
 for turn in 0..<4 {
@@ -133,6 +171,7 @@ let out: [String: Any] = [
     "splits": splits,
     "offsets": offsetsOut,
     "describers": describers,
+    "holders": holders,
     "scoring": scoring,
     "winners": winners,
 ]

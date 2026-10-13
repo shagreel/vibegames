@@ -15,6 +15,11 @@ bar that pulses; both are driven from `BlurtTiming`. If the two platforms
 disagreed about when the hurry starts, it would look like a bug in whichever one
 the player was not holding.
 
+And it pins **who is holding the word** (`holders`), which is derived rather than
+written down: the named describer while they are in the room, and the rotation's
+choice among the people still there once they have gone. If the two disagreed, one
+platform would be showing the word to somebody the other platform is not watching.
+
 Regenerate after changing `BlurtWords.swift`, `BlurtPack.swift`, a file in
 `Packs/`, `BlurtEngine.swift` or `SeededGenerator.swift`:
 

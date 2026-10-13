@@ -361,6 +361,55 @@ console.log("\n4. a dropped connection puts the player back on the roster");
         `so no seat is left belonging to nobody (${orphans.length} orphaned)`);
 }
 
+// ── 5. A round whose describer leaves with the clock running ──────────────
+
+console.log("\n5. the word moves to somebody still in the room");
+
+{
+  const names = ["Alex", "Sam", "Jo", "Robin"];
+  const seats = await seatsFor(names);
+  const code = await assembleRoom(seats);
+  console.log(`   room ${code}`);
+
+  let starter = null;
+  for (const seat of seats) if (await has(seat, ".blurt__handover .blurt__primary")) starter = seat;
+  check(Boolean(starter), "one phone is asked to start the round");
+  await starter.page.click(".blurt__handover .blurt__primary");
+  await sleep(2500);
+
+  const players = await read(code, "players") ?? {};
+  const teams = await read(code, "teams") ?? {};
+  const idOfSeat = (seat) => Object.keys(players).find((id) => players[id] === seat.name);
+  const sideOf = (seat) => teams[idOfSeat(seat)];
+
+  const starterId = idOfSeat(starter);
+  const side = sideOf(starter);
+  const mate = seats.find((s) => s !== starter && sideOf(s) === side);
+  const other = seats.find((s) => s !== starter && sideOf(s) !== side);
+  check(Boolean(mate) && Boolean(other), "with a team-mate and an opponent in the room");
+
+  // The describer's own team-mate starts as the one guessing, so the word
+  // appearing on that phone is unambiguous.
+  check(!(await has(mate, ".blurt__word")), `${mate.name} starts as the one guessing`);
+
+  // The phone holding the word goes, with the clock running.
+  starter.gone = true;
+  await starter.page.close();
+  const cleared = await until(async () => !(starterId in ((await read(code, "players")) ?? {})));
+  check(Boolean(cleared), "the describer is dropped from the room");
+
+  const took = await until(async () => ((await has(mate, ".blurt__word")) ? true : null));
+  check(Boolean(took), `${mate.name} is given the word rather than left guessing`);
+
+  // The other side is watching for somebody who is actually here.
+  const rule = await other.page
+    .$eval(".blurt__buzz-rule", (el) => el.textContent.trim())
+    .catch(() => "");
+  console.log("   the buzz rule now reads:", JSON.stringify(rule));
+  check(!rule.includes("Someone"), "and nobody is told to watch for a person who is not here");
+  check(rule.includes(mate.name), `the rule names ${mate.name}, who is`);
+}
+
 await browser.close();
 console.log(failures.length ? `\n${failures.length} CHECK(S) FAILED` : "\nAll checks passed.");
 process.exit(failures.length ? 1 : 0);

@@ -546,6 +546,42 @@ final class VibeBlurtTests: XCTestCase {
             "bo", "and it is theirs again the moment they are back")
     }
 
+    func testTheWordMovesToSomebodyWhoIsStillHere() {
+        let teams: [String: BlurtTeam] = ["ann": .one, "bo": .one, "cass": .two, "dee": .two]
+
+        // While the named describer is in the room the word is theirs, whatever
+        // the rotation would have said.
+        XCTAssertEqual(BlurtRules.holder(named: "bo", team: .one, turn: 0, teams: teams,
+                                         present: ["ann", "bo", "cass", "dee"], seed: 7),
+                       "bo")
+
+        // Once they have gone it moves to somebody on their own side who is here.
+        // Never to the other team, and never to a phone that has left.
+        XCTAssertEqual(BlurtRules.holder(named: "bo", team: .one, turn: 0, teams: teams,
+                                         present: ["ann", "cass", "dee"], seed: 7),
+                       "ann", "a round cannot be described by somebody who is not here")
+
+        // And there is nobody to name once the whole of that side has gone.
+        XCTAssertNil(BlurtRules.holder(named: "bo", team: .one, turn: 0, teams: teams,
+                                       present: ["cass", "dee"], seed: 7),
+                     "a room with one team in it is not a game")
+    }
+
+    func testTheWordComesBackWhenTheDescriberDoes() {
+        // Somebody who steps out and returns is in the game again, so the word can
+        // come back to them — the team list never lost their place.
+        let teams: [String: BlurtTeam] = ["ann": .one, "bo": .one, "cass": .two, "dee": .two]
+        let withoutBo: Set<String> = ["ann", "cass", "dee"]
+        let everybody: Set<String> = ["ann", "bo", "cass", "dee"]
+
+        XCTAssertEqual(BlurtRules.holder(named: "bo", team: .one, turn: 0, teams: teams,
+                                         present: withoutBo, seed: 7),
+                       "ann", "the word moves while they are away")
+        XCTAssertEqual(BlurtRules.holder(named: "bo", team: .one, turn: 0, teams: teams,
+                                         present: everybody, seed: 7),
+                       "bo", "and it is theirs again the moment they are back")
+    }
+
     // MARK: - The buzz you feel
 
     private func running(describer: String) -> BlurtPlay {
@@ -581,6 +617,7 @@ final class VibeBlurtTests: XCTestCase {
 
         XCTAssertTrue(VibeBlurtModel.caughtMe(previous: holding,
                                               next: ended(holding, reason: .blurt),
+                                              holder: "me",
                                               me: "me"))
     }
 
@@ -590,8 +627,10 @@ final class VibeBlurtTests: XCTestCase {
 
         // The team that pressed the button knows already, and so does everyone
         // else — it is the describer who needs telling.
-        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: buzzed, me: "someone-else"))
-        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: buzzed, me: nil))
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: buzzed,
+                                               holder: "me", me: "someone-else"))
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: buzzed,
+                                               holder: "me", me: nil))
     }
 
     func testRunningOutOfTimeDoesNotBuzzAnybody() {
@@ -601,6 +640,7 @@ final class VibeBlurtTests: XCTestCase {
 
         XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding,
                                                next: ended(holding, reason: .time),
+                                               holder: "me",
                                                me: "me"))
     }
 
@@ -611,13 +651,51 @@ final class VibeBlurtTests: XCTestCase {
 
         XCTAssertFalse(VibeBlurtModel.caughtMe(previous: waiting,
                                                next: ended(holding, reason: .blurt),
+                                               holder: "me",
                                                me: "me"),
                        "a round nobody had started cannot be caught")
 
         // And a snapshot that has not changed is not a buzz either, however many
         // times the observer hands it over.
         let alreadyOver = ended(holding, reason: .blurt)
-        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: alreadyOver, next: alreadyOver, me: "me"))
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: alreadyOver, next: alreadyOver,
+                                               holder: "me", me: "me"))
+    }
+
+    func testTheBuzzFollowsTheWordWhenItHasMoved() {
+        // The named describer left and the rotation gave the word to somebody
+        // else. The buzz belongs to whoever is actually holding it — otherwise the
+        // one person who was mid-sentence is the one phone that never feels it.
+        let holding = running(describer: "gone")
+        let next = ended(holding, reason: .blurt)
+
+        XCTAssertTrue(VibeBlurtModel.caughtMe(previous: holding, next: next,
+                                              holder: "took-over", me: "took-over"))
+        XCTAssertFalse(VibeBlurtModel.caughtMe(previous: holding, next: next,
+                                               holder: "took-over", me: "gone"))
+    }
+
+    func testASnapshotResolvesTheHolderForTheCaughtBuzzLookBack() {
+        // `holder(in:)` is what the caught-buzz comparison looks back with, so it
+        // has to answer for a snapshot that is not the current one.
+        var snapshot = BlurtSnapshot()
+        snapshot.seed = 7
+        snapshot.teams = ["ann": .one, "bo": .one, "cass": .two, "dee": .two]
+        snapshot.players = ["ann": "Ann", "cass": "Cass", "dee": "Dee"]
+
+        var play = BlurtPlay()
+        play.turn = 0
+        play.team = .one
+        play.describer = "bo"
+        play.state = .running
+        snapshot.play = play
+
+        XCTAssertEqual(VibeBlurtModel.holder(in: snapshot), "ann",
+                       "bo has gone, so the word is somebody else's")
+
+        snapshot.players = ["cass": "Cass", "dee": "Dee"]
+        XCTAssertNil(VibeBlurtModel.holder(in: snapshot),
+                     "and nobody holds it once that whole side has gone")
     }
 
     // MARK: - The room, against the real database

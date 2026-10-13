@@ -16,6 +16,7 @@ import {
   describerFor,
   describerOffsets,
   describingTeam,
+  holderFor,
   membersOf,
   namesOn,
   randomTurnSeconds,
@@ -352,6 +353,73 @@ describe('the round length and its hurry', () => {
     // And the last gap is hurrying.
     const lastGap = schedule[schedule.length - 1].at - schedule[schedule.length - 2].at;
     expect(lastGap).toBeLessThan(STEADY_INTERVAL / 2);
+  });
+});
+
+describe('who is holding the word', () => {
+  it('matches the Swift engine, case for case', () => {
+    // The fixtures are dumped from Swift by `Tools/blurt_fixtures/`, so this is
+    // the check that the two engines agree about whose phone shows the word —
+    // which, like the deck itself, is derived rather than written down.
+    // `fromEntries` rather than indexing the JSON: its keys are literal types.
+    const splits: Record<string, Record<string, number>> = Object.fromEntries(
+      Object.entries(fixtures.splits),
+    );
+    const describers: Record<string, string[]> = Object.fromEntries(
+      Object.entries(fixtures.describers),
+    );
+
+    for (const [key, cases] of Object.entries(fixtures.holders)) {
+      const [seed] = key.split(':').map(Number);
+      const teams = splits[key] as Record<string, Team>;
+      const everyone = Object.keys(teams).sort();
+      const named = describers[key];
+
+      for (const scenario of cases) {
+        const absent = new Set(scenario.absent);
+        const players: Record<string, string> = {};
+        for (const id of everyone) if (!absent.has(id)) players[id] = id.toUpperCase();
+
+        const holder = holderFor(
+          { describer: named[scenario.turn], team: describingTeam(scenario.turn), turn: scenario.turn },
+          { players, teams },
+          seed,
+        );
+
+        expect(holder ?? '', `${key} turn ${scenario.turn}, gone: ${scenario.absent.join()}`)
+          .toBe(scenario.holder);
+      }
+    }
+  });
+
+  it('keeps the word with the named describer while they are here', () => {
+    const teams: Record<string, Team> = { a: 1, b: 1, c: 2, d: 2 };
+    const here = { a: 'Alex', b: 'Bo', c: 'Cass', d: 'Dee' };
+    const holder = holderFor({ describer: 'a', team: 1, turn: 0 }, { players: here, teams }, 7);
+    expect(holder).toBe('a');
+  });
+
+  it('moves it to somebody still in the room when they leave', () => {
+    // The whole point: a round whose describer has gone is a round nobody can
+    // play — the other side is told to watch for a person who is not there.
+    const teams: Record<string, Team> = { a: 1, b: 1, c: 2, d: 2 };
+    const holder = holderFor(
+      { describer: 'a', team: 1, turn: 0 },
+      { players: { b: 'Bo', c: 'Cass', d: 'Dee' }, teams },
+      7,
+    );
+    expect(holder).toBe('b');
+    expect(holder).not.toBe('a');
+  });
+
+  it('names nobody when the whole of the describing side has gone', () => {
+    const teams: Record<string, Team> = { a: 1, b: 1, c: 2, d: 2 };
+    const holder = holderFor(
+      { describer: 'a', team: 1, turn: 0 },
+      { players: { c: 'Cass', d: 'Dee' }, teams },
+      7,
+    );
+    expect(holder).toBeNull();
   });
 });
 

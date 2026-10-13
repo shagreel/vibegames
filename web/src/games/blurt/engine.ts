@@ -260,6 +260,48 @@ export function describerFor(
   return roster[(Math.floor(turn / 2) + offset) % roster.length];
 }
 
+/**
+ * Who is actually holding the word.
+ *
+ * Normally the person the turn was written down for. When that phone has left,
+ * the round does not carry on around them: the word moves to whoever the rotation
+ * names among the people still here — the same rule that walks the turn on at the
+ * end of a round, so the missing player is taken out of the order rather than
+ * described around.
+ *
+ * Leaving the word with somebody who has gone is not a small thing. The other
+ * team is shown the word and told to watch for a person who is not in the room;
+ * the describer's own team-mates are told that person is describing to them.
+ * Nobody can play that round, nothing ends it early, and the clock runs down on a
+ * turn that was never taken. A player out of the room is out of the game until
+ * they come back.
+ *
+ * `null` only when the describing team has nobody left in the room at all.
+ *
+ * Matches `BlurtRules.holder` in Swift, and checked against it by the fixtures.
+ */
+export function holderFor(
+  play: { describer: string; team: Team; turn: number },
+  roster: Roster,
+  seed: number,
+): string | null {
+  // A present player is one with an entry in the roster, whatever they are
+  // called — the same thing the Swift engine means by its `present` set.
+  if (roster.players[play.describer] !== undefined) return play.describer;
+
+  const offsets = describerOffsets(
+    membersOf(1, roster.teams).length,
+    membersOf(2, roster.teams).length,
+    seed,
+  );
+  return describerFor(
+    membersOf(play.team, roster.teams),
+    play.turn,
+    play.team === 1 ? offsets.one : offsets.two,
+    new Set(Object.keys(roster.players)),
+  );
+}
+
 /** The team that takes the point — never the one that was describing. */
 export function scoringTeam(describing: Team): Team {
   return other(describing);

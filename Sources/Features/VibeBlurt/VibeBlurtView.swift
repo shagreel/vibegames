@@ -598,7 +598,12 @@ struct VibeBlurtView: View {
 
             // The rule, said as a rule and with the name in it: the button is
             // only for one thing, and it is easy to press out of excitement.
-            Text("Watch close — if \(model.describerName) says the word above, buzz them!")
+            // The name is the resolved holder, so it is always somebody in the
+            // room — it is empty in exactly one case, where the whole of the
+            // describing side has gone and there is nobody to name.
+            Text(model.describerName.isEmpty
+                 ? "Watch close — if they say the word above, buzz them!"
+                 : "Watch close — if \(model.describerName) says the word above, buzz them!")
                 .font(.system(size: 16.5, weight: .bold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
                 .multilineTextAlignment(.center)
@@ -618,7 +623,9 @@ struct VibeBlurtView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("blurt.buzz")
-            .accessibilityLabel("Buzz — \(model.describerName) said the word")
+            .accessibilityLabel(model.describerName.isEmpty
+                                ? "Buzz"
+                                : "Buzz — \(model.describerName) said the word")
 
             Text("Saying any part of it counts too.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -687,10 +694,13 @@ struct VibeBlurtView: View {
                 .kerning(2)
                 .foregroundStyle(VibeTheme.blurtTeam(play.team))
 
+            // No "has left" branch: the name here is the resolved holder, so it
+            // is always somebody in the room. The line below says what to do
+            // about a describer who walked out.
             Text(model.isDescriber
                  ? "You're up"
-                 : model.describerHasLeft
-                   ? "\(model.describerName) has left"
+                 : model.describerName.isEmpty
+                   ? "Nobody is left to describe"
                    : "\(model.describerName) is up")
                 .font(.system(size: 30, weight: .black, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
@@ -708,7 +718,9 @@ struct VibeBlurtView: View {
                  ? "Hold the phone so only you can see it, then start the clock."
                  : model.canStartThisRound
                    ? "They have left the room, and nothing is running yet. Anyone on their team can take the round."
-                   : "Pass the phone to \(model.describerName). Everyone else, watch for the word.")
+                   : model.describerName.isEmpty
+                     ? "Nobody on that side is in the room, so there is no round to take."
+                     : "Pass the phone to \(model.describerName). Everyone else, watch for the word.")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .multilineTextAlignment(.center)
