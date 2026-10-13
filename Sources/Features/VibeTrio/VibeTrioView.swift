@@ -71,7 +71,7 @@ struct VibeTrioView: View {
                 }
 
                 actionCard(title: "Race your friends",
-                           subtitle: "One table of cards. Take a trio before anyone else does.",
+                           subtitle: "One table of cards. Take a good pairing before anyone else does.",
                            symbol: "person.2.fill",
                            identifier: "trio.createGame",
                            isEnabled: model.backendUnavailableMessage == nil) {
@@ -241,7 +241,7 @@ struct VibeTrioView: View {
             // many people are hunting is half the tension.
             parts.append(model.playerCount == 1 ? "1 player" : "\(model.playerCount) players")
         }
-        parts.append("\(model.myScore) trios")
+        parts.append(model.myScore == 1 ? "1 good pairing" : "\(model.myScore) good pairings")
         parts.append(model.formattedElapsed)
         if model.isShared, let id = model.sharedGameID {
             parts.append("code \(GameCode.display(id))")
@@ -417,14 +417,14 @@ struct VibeTrioView: View {
                     .accessibilityIdentifier("trio.result")
                 Text(model.isShared
                      ? "\(model.formattedElapsed) · \(model.playerCount == 1 ? "1 player" : "\(model.playerCount) players")"
-                     : "\(model.myScore) trios in \(model.formattedElapsed)")
+                     : "\(model.myScore == 1 ? "1 good pairing" : "\(model.myScore) good pairings") in \(model.formattedElapsed)")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(VibeTheme.tertiaryText)
             }
             .padding(.top, 8)
 
             if rows.isEmpty {
-                Text("Nobody cleared a trio this time.")
+                Text("Nobody cleared a good pairing this time.")
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(VibeTheme.secondaryText)
             } else {
@@ -503,7 +503,7 @@ struct VibeTrioView: View {
                 .accessibilityIdentifier("trio.gameCode")
 
             Text(model.isHost
-                 ? "Start when everyone has joined. Clear the deck together — first trio taken is yours."
+                 ? "Start when everyone has joined. Clear the deck together — first good pairing taken is yours."
                  : "Waiting for \(model.snapshot.creator ?? "the host") to start…")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)

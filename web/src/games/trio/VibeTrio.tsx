@@ -431,7 +431,7 @@ function subtitle(
   if (gameId) {
     parts.push(`${snapshot.playerCount} ${snapshot.playerCount === 1 ? 'player' : 'players'}`);
   }
-  parts.push(`${myTakes} ${myTakes === 1 ? 'trio' : 'trios'}`);
+  parts.push(`${myTakes} ${myTakes === 1 ? 'good pairing' : 'good pairings'}`);
   parts.push(formatElapsed(elapsed));
   if (gameId) parts.push(`code ${displayGameCode(gameId)}`);
   void table;
@@ -465,7 +465,7 @@ function Lobby(props: {
 
       <button type="button" className="trio-card-button" onClick={props.onCreate}>
         <strong>Race your friends</strong>
-        <span>One table of cards. Take a trio before anyone else does.</span>
+        <span>One table of cards. Take a good pairing before anyone else does.</span>
       </button>
 
       <form
@@ -511,7 +511,7 @@ function Waiting(props: {
       <p className="trio__code">Code {displayGameCode(props.gameId)}</p>
       <p className="trio__waiting-text">
         {props.isHost
-          ? 'Start when everyone has joined. Clear the deck together — the first to spot a trio takes it.'
+          ? 'Start when everyone has joined. Clear the deck together — the first to spot a good pairing takes it.'
           : `Waiting for ${props.snapshot.creator ?? 'the host'} to start…`}
       </p>
       <p className="trio__players">
@@ -735,7 +735,7 @@ function Leaderboard(props: {
       <p className="trio__result-sub">
         {props.gameId
           ? `${formatElapsed(props.elapsed)} · ${props.snapshot.playerCount} ${props.snapshot.playerCount === 1 ? 'player' : 'players'}`
-          : `${props.myTakes} trios in ${formatElapsed(props.elapsed)}`}
+          : `${props.myTakes} ${props.myTakes === 1 ? 'good pairing' : 'good pairings'} in ${formatElapsed(props.elapsed)}`}
       </p>
 
       {rows.length > 0 && (
@@ -763,7 +763,7 @@ function Leaderboard(props: {
 /** The instructions, in this game's own words. */
 const TRIO_INSTRUCTIONS: HowToPlayContent = {
   name: 'Vibe Pairings',
-  intro: 'Twelve charcuterie boards are dealt face up. Your job is to find three of them that make a trio.',
+  intro: 'Twelve charcuterie boards are dealt face up. Your job is to find three of them that make a good pairing.',
   sections: [
     {
       title: "What's on a board",
@@ -771,12 +771,12 @@ const TRIO_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'The rule',
-      body: 'Three cards make a trio when every one of those four features is **either the same on all three or different on all three**. Two matching and a third odd is not a trio — that is exactly the mistake the game is built to punish.',
+      body: 'Three cards make a good pairing when every one of those four features is **either the same on all three or different on all three**. Two matching and a third odd is not a good pairing — that is exactly the mistake the game is built to punish.',
     },
   ],
   bullets: [
-    { lead: 'Solo', text: 'Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a trio — the other two are still yours to find.' },
-    { lead: 'Race', text: 'Everyone shares one table, so a trio taken by anybody is gone for everybody. The winner is whoever has taken the most when the deck runs out. No hints.' },
+    { lead: 'Solo', text: 'Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a good pairing — the other two are still yours to find.' },
+    { lead: 'Race', text: 'Everyone shares one table, so a good pairing taken by anybody is gone for everybody. The winner is whoever has taken the most when the deck runs out. No hints.' },
     { lead: 'Wrong three', text: 'They flash red and nothing moves. Look again — the cards stay put.' },
   ],
 };

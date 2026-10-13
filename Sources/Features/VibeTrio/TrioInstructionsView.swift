@@ -43,20 +43,20 @@ struct TrioInstructionsView: View {
                                       + "Your job is to find three of them that make a good pairing.") {
             whatsOnABoard
             theRule
-            example(title: "This is a trio",
+            example(title: "This is a good pairing",
                     cards: Self.trioExample,
                     verdict: "Platter and cheese are the same on all three. Meat and garnish are different on all three. An excellent pairing.",
                     failing: nil,
                     tint: VibeTheme.tileCorrect)
-            example(title: "This is not a trio",
+            example(title: "This is not a good pairing",
                     cards: Self.notATrioExample,
-                    verdict: "Two of them are prosciutto and the third is salami — two the same and one different. That's not a good pairing'.",
+                    verdict: "Two of them are prosciutto and the third is salami — two the same and one different. That's not a good pairing.",
                     failing: "Meat",
                     tint: VibeTheme.danger)
             InstructionsBullets(title: "Playing", bullets: [
                 GameInstructions.Bullet(
                     lead: "Solo",
-                    text: "Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a trio — the other two are still yours to find."),
+                    text: "Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a good pairing — the other two are still yours to find."),
                 GameInstructions.Bullet(
                     lead: "Race",
                     text: "Everyone gets the same boards on their own phone. Whoever finds the most pairings wins."),

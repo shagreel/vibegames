@@ -287,6 +287,12 @@ other.
 
 ## Vibe Pairings
 
+**The screen calls this a good pairing; the code and the database call it a trio.**
+The game's name changed and its identifiers did not, and the type names *are* the
+identifiers — `TrioTable`, `TrioCard`, `trio.leaderboard`, the `trio` tree. This
+section uses "trio" for the thing itself, because that is what everything below
+the UI calls it.
+
 Twelve cards are face up, each a charcuterie board. A card varies along four
 features, three options each, so there are 3⁴ = 81 cards:
 
@@ -585,9 +591,9 @@ same thing in its own way: it remembers every prompt it has dealt, in
 used up — so a second game cannot deal the first one's cards even if the pool is
 a single pack.
 
-Changing the generator changed every seeded board in the suite, so the fixtures
-for Trio, Sudoku and Blurt were all re-dumped from Swift and the browser tests
-re-checked against them.
+Changing the generator changed every seeded board in the suite, so the fixtures in
+`Tools/trio_fixtures`, `Tools/sudoku_fixtures` and `Tools/blurt_fixtures` were all
+re-dumped from Swift and the browser tests re-checked against them.
 
 ### 2,272 things to describe, in eight packs
 

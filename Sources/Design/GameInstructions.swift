@@ -133,8 +133,8 @@ struct GameInstructions {
                         + "into teams at random."),
             Bullet(lead: "Scoring", text: "Nobody scores for guessing. The point goes to the team "
                         + "that was not holding the word when the clock stops — or to the team "
-                        + "that caught a blurt."),
-            Bullet(lead: "Winning", text: "First team to \(BlurtRules.target) points Wins the game."),
+                        + "that caught a slip."),
+            Bullet(lead: "Winning", text: "First team to \(BlurtRules.target) points wins the game."),
         ])
 
     /// Every game that has a page, in the order the hub lists them.
