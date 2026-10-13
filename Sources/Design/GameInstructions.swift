@@ -118,22 +118,24 @@ struct GameInstructions {
         identifier: "blurt.instructions",
         intro: "Describe a word without saying it, so your team can guess it before the clock stops.",
         sections: [
-            Section(title: "The word is a hot potato",
-                    body: "One person is shown a word and describes it; their teammates guess. "
-                        + "Get it right and a new word is shown to somebody on the **other** team. "
+            Section(title: "Use similar words",
+                    body: "One person is shown a word and describes it using similar words, without "
+                        + "saying it. Their teammates try to guess the word. "
+                        + "If they get it right a new word is shown to somebody on the **other** team. "
                         + "A round lasts about a minute. Make sure you don't have the word when "
-                        + "the time runs out."),
-            Section(title: "The other team is watching",
+                        + "the time runs out or the other team gets a point — whoever is left "
+                        + "holding it starts the next round."),
+            Section(title: "A giveaway",
                     body: "The team **not** holding the word can see it, and has one big red "
                         + "BUZZ button. If the describer says the word, or any part of it, they "
-                        + "press it — and they take the point."),
+                        + "press it — and take the point."),
         ],
         bullets: [
             Bullet(lead: "Four people", text: "Two on each side at least. The app splits the room "
                         + "into teams at random."),
             Bullet(lead: "Scoring", text: "Nobody scores for guessing. The point goes to the team "
-                        + "that was not holding the word when the clock stops — or to the team "
-                        + "that caught a giveaway."),
+                        + "that was not holding the word when the clock stops — unless one team "
+                        + "gives away their word."),
             Bullet(lead: "Winning", text: "First team to \(BlurtRules.target) points wins the game."),
         ])
 

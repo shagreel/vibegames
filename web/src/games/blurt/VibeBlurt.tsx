@@ -79,16 +79,16 @@ const BLURT_INSTRUCTIONS: HowToPlayContent = {
     'Two teams, a phone each, and a word nobody wants to be holding. Describe it without saying it, and get rid of it before the clock stops.',
   sections: [
     {
-      title: 'The word is a hot potato',
-      body: 'One person is shown a word and describes it; their team-mates guess. Get it right and the word passes to somebody on the **other** team. The clock does not stop or reset — it belongs to the round, not to the word.',
+      title: 'Use similar words',
+      body: 'One person is shown a word and describes it using similar words, without saying it. Their team-mates try to guess the word. Get it right and a new word is shown to somebody on the **other** team. Whoever is left holding the word starts the next round — so do not still have it when the time runs out, or the other team gets the point. The clock does not stop or reset: it belongs to the round, not to the word.',
     },
     {
       title: 'Nobody can count the clock down',
       body: `A round lasts a random ${SHORTEST_SECONDS} to ${LONGEST_SECONDS} seconds and there is no number on screen. The ticking stays steady and then hurries and grows louder as the end approaches.`,
     },
     {
-      title: 'The other team is watching',
-      body: 'The team **not** holding the word can see it, and has one big red BUZZ button. If the describer says the word, or any part of it, they press it — and they take the point instead.',
+      title: 'A giveaway',
+      body: 'The team **not** holding the word can see it, and has one big red BUZZ button. If the describer says the word, or any part of it, they press it — and take the point.',
     },
   ],
   bullets: [
@@ -98,7 +98,7 @@ const BLURT_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       lead: 'Scoring',
-      text: 'Nobody scores for guessing. The point goes to the team that was not holding the word when the clock stopped — or to the team that caught a giveaway.',
+      text: 'Nobody scores for guessing. The point goes to the team that was not holding the word when the clock stopped — unless one team gives away their word.',
     },
     { lead: `First to ${TARGET}`, text: 'Wins the game.' },
     {

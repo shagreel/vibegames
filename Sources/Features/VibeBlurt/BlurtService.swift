@@ -503,12 +503,14 @@ final class VibeBlurtService {
     ///
     /// The clock running out and somebody pressing BUZZ pay exactly the same
     /// way: the team *not* holding the word takes the point. The transaction is
-    /// what makes that fair — a room that all shouts at once still scores once —
-    /// and it also sets the next round's rotation up behind the result.
+    /// what makes that fair — a room that all shouts at once still scores once.
+    ///
+    /// Nothing about the rotation is needed to do that any more, since the holder
+    /// keeps the word into the next round: see the note in the block below. That
+    /// takes three reads off the path every phone takes when the clock stops.
     @discardableResult
     func endTurn(gameID: String, reason: BlurtEnd) async -> Bool {
-        guard let reference = gameReference(gameID)?.child("play"),
-              let rotation = await rotation(gameID: gameID) else { return false }
+        guard let reference = gameReference(gameID)?.child("play") else { return false }
 
         return await withCheckedContinuation { continuation in
             reference.runTransactionBlock({ current in
@@ -527,16 +529,23 @@ final class VibeBlurtService {
                 play.startedAt = nil
                 play.endsAt = nil
 
-                // The next round starts one further round the rotation, so the
-                // order keeps moving rather than the same person being caught
-                // twice. A finished game keeps the last round's shape; nobody
+                // **The person left holding the word starts the next round.**
+                //
+                // The potato moves when a team guesses it — that is `passWord` —
+                // so it does not move on at the boundary either, and whoever was
+                // handed it seconds before the clock stopped is not skipped past.
+                // Their turn used to be spent on a word they never got to
+                // describe: the rotation walked on to the other side, and by the
+                // time it came back round they had been and gone.
+                //
+                // The trade is that the sides no longer alternate by themselves.
+                // A round nobody gets right leaves the same person describing
+                // again, and the other team only takes the word when it is passed
+                // to them — which is the point: the potato stays where it was
+                // left. A finished game keeps the last round's shape; nobody
                 // plays it.
                 if !play.finished {
-                    Self.advance(&play,
-                                 one: rotation.one,
-                                 two: rotation.two,
-                                 offsets: rotation.offsets,
-                                 present: rotation.present)
+                    play.word += 1
                 }
 
                 current.value = play.value

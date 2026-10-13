@@ -38,8 +38,28 @@
 import puppeteer from "/Users/pajones/projects/vibe_games/.build/qrtool/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js";
 
 const SITE = process.env.SITE ?? "https://play.vibegames.party";
+const DB = "https://vibe-words-party-default-rtdb.firebaseio.com";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const say = (...a) => console.log("  ", ...a);
+
+/** Reads a node straight from the database, for what the screens cannot show. */
+async function read(code, path) {
+  const res = await fetch(`${DB}/blurt/${code}/${path}.json`);
+  return res.ok ? await res.json() : null;
+}
+
+/**
+ * The room key for a code as it is *displayed*.
+ *
+ * The screen shows two words a space apart — the separator is a reading aid and
+ * not part of the code — while the room in the database keeps a hyphen. Anything
+ * that reads the code off the screen and then talks to the database has to put it
+ * back. `Tools/blurt_presence_e2e.mjs` has the same helper.
+ */
+function roomKey(displayed) {
+  const cleaned = displayed.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  return /^[a-z]{8}$/.test(cleaned) ? `${cleaned.slice(0, 4)}-${cleaned.slice(4)}` : cleaned;
+}
 
 const failures = [];
 function check(ok, what) {
@@ -251,6 +271,9 @@ say("scores mid-round:", JSON.stringify((await roleOf(players[0].page)).scores))
 // ── the team facing the word buzzes ─────────────────────────────────────
 const buzzer = afterPass.find((d) => d.role.canBuzz);
 if (buzzer) {
+  // Who is holding the word as the round ends, and which word they were on.
+  const beforeBuzz = await read(roomKey(code), "play");
+
   await buzzer.player.page.click(".blurt__buzz");
   await sleep(2500);
   const result = await roleOf(players[0].page);
@@ -261,6 +284,25 @@ if (buzzer) {
       .catch(() => "(none)"),
   );
   say("scores after the buzz:", JSON.stringify(result.scores));
+
+  // The holder keeps the word into the next round. It used to move on to the
+  // next person in the rotation, which meant somebody handed the word seconds
+  // before the clock stopped never got to describe it — their turn was spent on
+  // a word they never read out.
+  const afterBuzz = await read(roomKey(code), "play");
+  check(
+    afterBuzz.describer === beforeBuzz.describer,
+    `whoever is left holding the word starts the next round (${beforeBuzz.describer} -> ${afterBuzz.describer})`,
+  );
+  check(
+    afterBuzz.word === beforeBuzz.word + 1,
+    `with a new word, not the same one (${beforeBuzz.word} -> ${afterBuzz.word})`,
+  );
+  check(
+    afterBuzz.team === beforeBuzz.team,
+    `and on the same side, which is the side that lost the point (${beforeBuzz.team})`,
+  );
+
   check(
     result.scores.reduce((sum, value) => sum + Number(value), 0) === 1,
     "the buzz scored exactly one point",

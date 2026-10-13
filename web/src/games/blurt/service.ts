@@ -412,14 +412,14 @@ export async function passWord(gameId: string): Promise<boolean> {
  * Ends the round, once, whoever gets there first.
  *
  * The clock running out and somebody pressing BUZZ pay exactly the same way:
- * the team *not* holding the word takes the point. The transaction is what
- * makes that fair — a room that all shouts at once still scores once — and it
- * also sets the next round's rotation up behind the result.
+ * the team *not* holding the word takes the point. The transaction is what makes
+ * that fair — a room that all shouts at once still scores once.
+ *
+ * Nothing about the rotation is needed to do that any more, since the holder
+ * keeps the word into the next round: see the note in the block below. That takes
+ * three reads off the path every phone takes when the clock stops.
  */
 export async function endTurn(gameId: string, reason: EndReason): Promise<boolean> {
-  const spin = await rotation(gameId);
-  if (!spin) return false;
-
   const result = await runTransaction(
     ref(database, `blurt/${gameId}/play`),
     (current: BlurtPlay | null) => {
@@ -437,10 +437,20 @@ export async function endTurn(gameId: string, reason: EndReason): Promise<boolea
       next.finished = winner(next.one, next.two, TARGET) !== null;
       next.state = 'ended';
 
-      // The next round starts one further round the rotation, so the order
-      // keeps moving rather than the same person being caught twice. A finished
-      // game keeps the last round's shape; nobody plays it.
-      if (!next.finished) next = advance(next, spin.one, spin.two, spin.offsets, spin.present);
+      // **The person left holding the word starts the next round.**
+      //
+      // The potato moves when a team guesses it — that is `passWord` — so it does
+      // not move on at the boundary either, and whoever was handed it seconds
+      // before the clock stopped is not skipped past. Their turn used to be spent
+      // on a word they never got to describe: the rotation walked on to the other
+      // side, and by the time it came back round they had been and gone.
+      //
+      // The trade is that the sides no longer alternate by themselves. A round
+      // nobody gets right leaves the same person describing again, and the other
+      // team only takes the word when it is passed to them — which is the point:
+      // the potato stays where it was left. A finished game keeps the last
+      // round's shape; nobody plays it.
+      if (!next.finished) next = { ...next, word: next.word + 1 };
       return next;
     },
   );
