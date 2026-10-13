@@ -38,7 +38,7 @@ final class VibeBlurtScreenshots: XCTestCase {
     /// The describer's own phone has to notice that it was caught — that is what
     /// the buzz is for. The haptic cannot be felt by a test, but the screen it
     /// comes with can be read, and both hang off the same decision in the model:
-    /// if the result says "caught a slip", the phone was told.
+    /// if the result says "caught a giveaway", the phone was told.
     func testTheDescriberIsToldWhenTheyAreCaught() throws {
         try skipUnlessTheDatabaseAnswers()
 
@@ -105,7 +105,7 @@ final class VibeBlurtScreenshots: XCTestCase {
         let result = app.descendants(matching: .any)["blurt.status"].firstMatch
         XCTAssertTrue(result.waitForExistence(timeout: 20),
                       "the caught phone should be told the round ended")
-        XCTAssertTrue(result.label.contains("caught a slip"),
+        XCTAssertTrue(result.label.contains("caught a giveaway"),
                       "and why — got: \(result.label)")
     }
 

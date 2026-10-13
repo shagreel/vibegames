@@ -133,7 +133,7 @@ struct GameInstructions {
                         + "into teams at random."),
             Bullet(lead: "Scoring", text: "Nobody scores for guessing. The point goes to the team "
                         + "that was not holding the word when the clock stops — or to the team "
-                        + "that caught a slip."),
+                        + "that caught a giveaway."),
             Bullet(lead: "Winning", text: "First team to \(BlurtRules.target) points wins the game."),
         ])
 

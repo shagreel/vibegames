@@ -212,13 +212,13 @@ final class VibeBlurtModel: ObservableObject {
 
     /// How the round ended, for the result line.
     ///
-    /// A slip is the foul: the describer said the word, or part of it, and the
-    /// other team buzzed them. The same term is in `GameInstructions.blurt` and
-    /// in the web client's two copies — change them together.
+    /// A giveaway is the foul: the describer said the word, or part of it, and
+    /// the other team buzzed them. The same term is in `GameInstructions.blurt`
+    /// and in the web client's two copies — change them together.
     var lastRoundSummary: String {
         guard let play, let scorer = play.scorer else { return "Round over" }
         switch play.reason {
-        case .blurt: return "\(scorer.title) takes the point — caught a slip"
+        case .blurt: return "\(scorer.title) takes the point — caught a giveaway"
         case .time, .none: return "\(scorer.title) takes the point — the clock ran out"
         }
     }

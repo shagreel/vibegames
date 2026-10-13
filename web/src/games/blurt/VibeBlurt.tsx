@@ -98,7 +98,7 @@ const BLURT_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       lead: 'Scoring',
-      text: 'Nobody scores for guessing. The point goes to the team that was not holding the word when the clock stopped — or to the team that caught a slip.',
+      text: 'Nobody scores for guessing. The point goes to the team that was not holding the word when the clock stopped — or to the team that caught a giveaway.',
     },
     { lead: `First to ${TARGET}`, text: 'Wins the game.' },
     {
@@ -518,10 +518,10 @@ function VibeBlurt() {
       {play.state === 'ended' && (
         <p className={`blurt__result blurt__result--${play.scorer ?? 1}`}>
           {play.scorer ? teamTitle(play.scorer) : 'Nobody'} takes the point —{' '}
-          {/* A slip is the foul — the describer said the word, or part of it. The
-              same term is in the instructions above and in the app; change them
-              together. */}
-          {play.reason === 'blurt' ? 'caught a slip' : 'the clock ran out'}
+          {/* A giveaway is the foul — the describer said the word, or part of it.
+              The same term is in the instructions above and in the app; change
+              them together. */}
+          {play.reason === 'blurt' ? 'caught a giveaway' : 'the clock ran out'}
         </p>
       )}
 
