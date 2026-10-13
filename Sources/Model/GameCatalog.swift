@@ -61,17 +61,6 @@ struct GameEntry: Identifiable {
             tagline: "Describe it. Don't say it. Two teams, one word.",
             symbol: "bubble.left.and.exclamationmark.bubble.right.fill",
             gradient: VibeTheme.vibeBlurt
-        ),
-        GameEntry(
-            id: "odd-one-out",
-            route: nil,
-            title: "Odd One Out",
-            tagline: "Spot the impostor, fast.",
-            symbol: "square.on.circle",
-            gradient: LinearGradient(
-                colors: [Color(red: 0.24, green: 0.80, blue: 0.62),
-                         Color(red: 0.62, green: 0.92, blue: 0.36)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
         )
     ]
 }

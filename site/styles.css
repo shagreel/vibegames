@@ -141,6 +141,10 @@ code {
   margin-bottom: 1rem;
 }
 
+.hero a.game__play {
+    background: var(--five-a);
+}
+
 .lede {
   font-size: clamp(1.05rem, 2.1vw, 1.3rem);
   color: var(--ink-soft);

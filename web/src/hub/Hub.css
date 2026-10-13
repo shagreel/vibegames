@@ -463,7 +463,8 @@
   color: #8b9197;
 }
 
-/* The ways to help are the second ask, not the first: folded away. */
+/* The ways to help are the second ask, not the first — so they sit under a rule
+   below the form, rather than behind a disclosure triangle. */
 .support-more {
   margin-top: 0.9rem;
   padding-top: 0.9rem;
@@ -471,27 +472,9 @@
   text-align: left;
 }
 
-.support-more summary {
-  cursor: pointer;
+.support-more__title {
+  margin: 0 0 0.6rem;
   font-size: 0.85rem;
   font-weight: 700;
   color: #9aa0a6;
-  list-style: none;
-}
-
-.support-more summary::-webkit-details-marker {
-  display: none;
-}
-
-.support-more summary::before {
-  content: '▸ ';
-  color: var(--heart);
-}
-
-.support-more[open] summary::before {
-  content: '▾ ';
-}
-
-.support-more summary:hover {
-  color: #ffffff;
 }

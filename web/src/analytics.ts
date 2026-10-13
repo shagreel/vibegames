@@ -33,7 +33,7 @@
 
 const MEASUREMENT_ID = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string | undefined;
 
-/** The four games. The strings are the routes, and match the iOS client. */
+/** The five games. The strings are the routes, and match the iOS client. */
 export const GAMES = {
   five: 'vibe-five',
   words: 'vibe-words',

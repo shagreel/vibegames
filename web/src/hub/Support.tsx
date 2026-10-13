@@ -108,14 +108,14 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
 
         <h2>Made with love</h2>
         <p className="support-blurb">
-          I built these four games for my own family. We play them in the evenings — it is how we
+          I built these five games for my own family. We play them in the evenings — it is how we
           wind down together and stay close — and I wanted to share that with other families.
         </p>
 
         <FeedbackForm game={game} />
 
-        <details className="support-more">
-          <summary>Other ways to help</summary>
+        <section className="support-more">
+          <h3 className="support-more__title">Other ways to help</h3>
 
           <p className="support-blurb">
             Every game is free. Nothing to unlock, no adverts, no account. If you would like to say
@@ -160,7 +160,7 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
           <button type="button" className="support-copy" onClick={copy}>
             {copied ? 'Copied' : 'Copy the Venmo handle'}
           </button>
-        </details>
+        </section>
 
         <p className="support-foot">Nothing here is expected. The games are free either way.</p>
       </div>

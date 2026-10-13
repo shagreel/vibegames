@@ -1062,7 +1062,7 @@ Two things it has to get right, both of which are easy to get wrong quietly:
 
 Nobody playing these games has a GitHub account, and asking someone to make one
 to report a bug means the bug never gets reported. So there is a heart in the
-corner of **every screen** — the hub, all four games, and the instructions page —
+corner of **every screen** — the hub, all five games, and the instructions page —
 and behind it a panel with one box and a send button.
 
     app  →  feedback/{key} in the database  →  a scheduled Action  →  an issue
@@ -1203,7 +1203,7 @@ way to get a number that looks like data and is not:
 
 - **One file per client.** `Sources/Firebase/AppAnalytics.swift` and
   `web/src/analytics.ts` hold every event name. A report is only worth reading if
-  `game_start` means the same thing in all four games and in both apps.
+  `game_start` means the same thing in all five games and in both apps.
 - **Off is a build-time fact on the web, and a console fact on iOS.** The web
   measurement id is baked in at build time, so with none set no gtag script is
   ever created. iOS needs nothing beyond the property existing on the project:
