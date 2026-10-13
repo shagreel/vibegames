@@ -59,11 +59,9 @@ struct VibeBlurtView: View {
                 action?()
             }
         }
-        // The phone of whoever is holding the word buzzes when the other team
-        // catches them. An error notification rather than a tap, because it
-        // means "you have been caught" and should be unmistakable through a
-        // pocket.
-        .sensoryFeedback(trigger: model.caughtCount) { _, _ in .error }
+        // The buzz for being caught is fired by the model, not from here: see
+        // `buzzWhenCaught`. It has to survive the whole screen being replaced in
+        // the same update, which is what happens when a round ends.
         .onChange(of: model.play?.turn) { _, _ in
             AppAnalytics.gameStart(.blurt, mode: .shared)
         }

@@ -35,6 +35,76 @@ final class VibeBlurtScreenshots: XCTestCase {
         try capture(appearance: "dark")
     }
 
+    /// The describer's own phone has to notice that it was caught — that is what
+    /// the buzz is for. The haptic cannot be felt by a test, but the screen it
+    /// comes with can be read, and both hang off the same decision in the model:
+    /// if the result says "caught a blurt", the phone was told.
+    func testTheDescriberIsToldWhenTheyAreCaught() throws {
+        try skipUnlessTheDatabaseAnswers()
+
+        let app = XCUIApplication()
+        app.launch(withName: "Sam")
+        app.descendants(matching: .any)["game.vibe-blurt"].firstMatch.tap()
+
+        let create = app.buttons["blurt.createGame"]
+        XCTAssertTrue(create.waitForExistence(timeout: 15), "the lobby should offer a game")
+        create.tap()
+
+        let codeLabel = app.descendants(matching: .any)["blurt.gameCode"]
+        XCTAssertTrue(codeLabel.waitForExistence(timeout: 25), "the room should show a code")
+        let code = codeLabel.label.components(separatedBy: " ").last?.lowercased() ?? ""
+
+        // Who the app is, as far as this room is concerned — the only way to
+        // learn its short id is to read the roster back.
+        var me: String?
+        for _ in 0..<10 {
+            let (status, roster) = request("GET", "\(code)/players")
+            if status == 200, let players = roster as? [String: Any], let first = players.keys.first {
+                me = first
+                break
+            }
+            Thread.sleep(forTimeInterval: 1)
+        }
+        guard let me else { return XCTFail("the app never registered in its own room") }
+
+        for (index, name) in ["Alex", "Jo", "Robin"].enumerated() {
+            request("PUT", "\(code)/players/ffff00\(index)", body: name)
+        }
+        request("PUT", "\(code)/meta/seed", body: 52)
+        request("PUT", "\(code)/meta/started", body: true)
+        request("PUT", "\(code)/teams", body: [me: 1, "ffff000": 1, "ffff001": 2, "ffff002": 2])
+
+        // The app is holding the word, and the clock is going.
+        writeTurn(code: code, team: 1, describer: me, word: 0)
+        let word = app.descendants(matching: .any)["blurt.word"]
+        XCTAssertTrue(word.waitForExistence(timeout: 20), "the describer should be given a word")
+
+        // Now the other team catches them, as the buzz transaction writes it: the
+        // round ends, the point goes the other way, and the rotation moves on.
+        let now = Int(Date().timeIntervalSince1970 * 1000)
+        request("PUT", "\(code)/play", body: [
+            "round": 0,
+            "turn": 1,
+            "team": 2,
+            "describer": "ffff001",
+            "word": 1,
+            "state": "ended",
+            "reason": "blurt",
+            "scorer": 2,
+            "one": 0,
+            "two": 1,
+            "finished": false,
+            "startedAt": now,
+            "endsAt": now + 45_000,
+        ])
+
+        let result = app.descendants(matching: .any)["blurt.status"].firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 20),
+                      "the caught phone should be told the round ended")
+        XCTAssertTrue(result.label.contains("caught a blurt"),
+                      "and why — got: \(result.label)")
+    }
+
     // MARK: - The run
 
     private func capture(appearance: String) throws {

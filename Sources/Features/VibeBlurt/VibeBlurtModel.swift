@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 
 /// Drives a game of Vibe Blurt.
 ///
@@ -28,10 +29,30 @@ final class VibeBlurtModel: ObservableObject {
     @Published var errorMessage: String?
     /// Bumped when somebody catches *me* holding the word.
     ///
-    /// A counter rather than a flag, because SwiftUI's `.sensoryFeedback` fires
-    /// on a change and a flag that has to be reset is a state machine waiting to
-    /// get stuck. The view watches this and buzzes the phone.
+    /// A counter rather than a flag because being caught can happen more than
+    /// once in a game, and a flag that has to be reset is a state machine waiting
+    /// to get stuck. It is what makes the decision assertable — the haptic itself
+    /// cannot be felt by a test, but this and the result on screen can.
     @Published private(set) var caughtCount = 0
+
+    /// The buzz the phone gives when it has been caught.
+    ///
+    /// Fired from here rather than from a `.sensoryFeedback` trigger in the view,
+    /// which is what it used to be and what did not happen in a live game. The
+    /// rule that decides "that was me" is evaluated here anyway, and a caught
+    /// round replaces the whole screen in the same update — a trigger watches for
+    /// a value change across a body evaluation, and a subtree that is being
+    /// swapped underneath it is the case it is least reliable in. A haptic that
+    /// silently does nothing is worse than none, because the phone still looks
+    /// like it is working.
+    ///
+    /// The decision itself stays testable through `caughtCount`.
+    var buzzWhenCaught: () -> Void = { VibeBlurtModel.caughtBuzzer.notificationOccurred(.error) }
+
+    /// Held rather than made on demand, and prepared when a round starts, so the
+    /// buzz is immediate: a cue that arrives late is a cue that arrives after
+    /// somebody has already started arguing.
+    private static let caughtBuzzer = UINotificationFeedbackGenerator()
     /// The host's own preference, remembered between games and written into the
     /// room when they make one. Not read from the room once a game exists — the
     /// room is the authority then, so everyone deals the same deck.
@@ -403,6 +424,7 @@ final class VibeBlurtModel: ObservableObject {
         let previous = snapshot
         if Self.caughtMe(previous: previous.play, next: newSnapshot.play, me: myShortID) {
             caughtCount += 1
+            buzzWhenCaught()
         }
         snapshot = newSnapshot
 
@@ -416,6 +438,7 @@ final class VibeBlurtModel: ObservableObject {
 
         if isRunning {
             startClock()
+            Self.caughtBuzzer.prepare()
             if !wasRunning {
                 // Not for a phone that opened the app mid-round: nothing started
                 // on this screen, so nothing should announce that it did.
