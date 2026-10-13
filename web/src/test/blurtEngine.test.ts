@@ -9,6 +9,7 @@ import {
   STEADY_VOLUME,
   TAIL_FRACTION,
   TARGET,
+  TEAMS,
   URGENT_INTERVAL,
   URGENT_VOLUME,
   barFill,
@@ -16,6 +17,7 @@ import {
   describerOffsets,
   describingTeam,
   membersOf,
+  namesOn,
   randomTurnSeconds,
   scoringTeam,
   split,
@@ -27,6 +29,7 @@ import {
   wordAt,
   wordsIn,
   shuffled,
+  type Team,
 } from '../games/blurt/engine';
 import { PACK_ORDER, PACK_WORDS } from '../games/blurt/words.generated';
 
@@ -349,5 +352,41 @@ describe('the round length and its hurry', () => {
     // And the last gap is hurrying.
     const lastGap = schedule[schedule.length - 1].at - schedule[schedule.length - 2].at;
     expect(lastGap).toBeLessThan(STEADY_INTERVAL / 2);
+  });
+});
+
+describe('the scoreboard names', () => {
+  /** Just the two parts of a room `namesOn` reads. */
+  const room = (players: Record<string, string>, teams: Record<string, Team>) => ({
+    players,
+    teams,
+  });
+
+  it('shows only the people who are actually in the room', () => {
+    // A team slot deliberately outlives the player sitting in it — that is what
+    // puts somebody back on their own side when they return — so `teams` still
+    // lists them long after they have gone. They must not reach the scoreboard.
+    expect(namesOn(room({ a: 'Alex', c: 'Jo' }, { a: 1, b: 1, c: 2 }), 1)).toEqual(['Alex']);
+  });
+
+  it('says nothing at all when a side has emptied out', () => {
+    // Not an empty line where the names used to be, and never a stand-in name.
+    expect(namesOn(room({}, { a: 1, b: 1 }), 1)).toEqual([]);
+    expect(namesOn(room({ z: 'Zoe' }, { a: 1, b: 2 }), 1)).toEqual([]);
+  });
+
+  it('keeps each side to its own players, in a stable order', () => {
+    const both = room({ a: 'Alex', b: 'Jo', c: 'Sam' }, { a: 1, b: 2, c: 1 });
+    expect(namesOn(both, 1)).toEqual(['Alex', 'Sam']);
+    expect(namesOn(both, 2)).toEqual(['Jo']);
+  });
+
+  it('never puts the word "Someone" on the board', () => {
+    // The exact regression: a slot with nobody in it was named "Someone", so a
+    // scoreboard read "Alex, Someone" for a table of one.
+    const halfEmpty = room({ a: 'Alex' }, { a: 1, b: 1, c: 2, d: 2 });
+    const shown = TEAMS.flatMap((team) => namesOn(halfEmpty, team)).join(', ');
+    expect(shown).not.toContain('Someone');
+    expect(shown).toBe('Alex');
   });
 });

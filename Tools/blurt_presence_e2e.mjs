@@ -28,13 +28,17 @@
  *
  *     node Tools/blurt_presence_e2e.mjs
  *
+ * Or against a local build first, as the other two browser scripts do:
+ *
+ *     SITE=http://localhost:4173 node Tools/blurt_presence_e2e.mjs
+ *
  * It leaves finished games behind in the database. There is no harm in that,
  * but the rooms are never pruned.
  */
 
 import puppeteer from "/Users/pajones/projects/vibe_games/.build/qrtool/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js";
 
-const SITE = "https://play.vibegames.party";
+const SITE = process.env.SITE ?? "https://play.vibegames.party";
 const DB = "https://vibe-words-party-default-rtdb.firebaseio.com";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -58,6 +62,19 @@ async function until(fn, timeout = 15000) {
     if (Date.now() - started > timeout) return null;
     await sleep(500);
   }
+}
+
+/**
+ * The room key for a code as it is *displayed*.
+ *
+ * The screen shows two words a space apart — the separator is a reading aid and
+ * not part of the code — while the room in the database keeps a hyphen. Anything
+ * that reads the code off the screen and then talks to the database has to put it
+ * back, which is the mirror of `GameCode.normalise` and `normaliseGameCode`.
+ */
+function roomKey(displayed) {
+  const cleaned = displayed.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  return /^[a-z]{8}$/.test(cleaned) ? `${cleaned.slice(0, 4)}-${cleaned.slice(4)}` : cleaned;
 }
 
 async function nameSelf(page, name) {
@@ -97,7 +114,10 @@ async function assembleRoom(seats) {
   await seats[0].page.click(".blurt__lobby .blurt__primary");
   await nameSelf(seats[0].page, seats[0].name);
   await seats[0].page.waitForSelector(".blurt__code-value", { timeout: 20000 });
-  const code = (await seats[0].page.$eval(".blurt__code-value", (el) => el.textContent.trim())).toLowerCase();
+  const shown = await seats[0].page.$eval(".blurt__code-value", (el) => el.textContent.trim());
+  // What is on screen is for a person to read out; the key is what the database
+  // is filed under.
+  const code = roomKey(shown);
 
   for (const seat of seats.slice(1)) {
     await seat.page.goto(`${SITE}/blurt?game=${code}`, { waitUntil: "networkidle0" });
@@ -141,6 +161,22 @@ console.log("\n1. a leaver, a new arrival, and a return");
   await leaver.page.close();
   const dropped = await until(async () => !(robinId in ((await read(code, "players")) ?? {})));
   check(Boolean(dropped), "a phone going away drops that player from the room");
+
+  // And drops them from what everybody else can read. The slot in `teams` is
+  // what brings them back to their own side later, so it stays — but the name
+  // must go with the player, not with the slot. This used to render "Jo,
+  // Someone" on the scoreboard of a room with three people in it.
+  const watch = (seats.find((s) => s.name === "Alex") ?? seats[0]).page;
+  const boardNames = await until(async () => {
+    const shown = await watch
+      .$$eval(".blurt__score-names", (els) => els.map((el) => el.textContent.trim()))
+      .catch(() => []);
+    return shown.length > 0 && !shown.some((text) => text.includes("Robin")) ? shown : null;
+  });
+  check(Boolean(boardNames),
+        `the scoreboard drops the player who left (now ${JSON.stringify(boardNames)})`);
+  check(!(boardNames ?? ["Someone"]).some((text) => text.includes("Someone")),
+        "and no empty slot is given a name");
 
   const here = await read(code, "players") ?? {};
   const teamsNow = await read(code, "teams") ?? {};

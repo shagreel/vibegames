@@ -12,6 +12,7 @@ import {
   TARGET,
   TEAMS,
   barFill,
+  namesOn,
   randomTurnSeconds,
   shuffled,
   teamTitle,
@@ -26,7 +27,6 @@ import {
   createGame,
   endTurn,
   joinGame,
-  namesOn,
   observeGame,
   passWord,
   playAgain,
@@ -470,17 +470,22 @@ function VibeBlurt() {
       {/* The names matter as much as the scores: with four people passing one
           word around, the first thing anybody asks is which side they are on. */}
       <div className="blurt__scores">
-        {TEAMS.map((team) => (
-          <div
-            key={team}
-            className={`blurt__score blurt__score--${team}${myTeam === team ? ' is-mine' : ''}`}
-          >
-            <span>{teamTitle(team)}</span>
-            <strong>{playScore(play, team)}</strong>
-            <em className="blurt__score-names">{namesOn(snapshot, team).join(', ')}</em>
-            {myTeam === team && <em className="blurt__score-mine">Your team</em>}
-          </div>
-        ))}
+        {TEAMS.map((team) => {
+          const names = namesOn(snapshot, team);
+          return (
+            <div
+              key={team}
+              className={`blurt__score blurt__score--${team}${myTeam === team ? ' is-mine' : ''}`}
+            >
+              <span>{teamTitle(team)}</span>
+              <strong>{playScore(play, team)}</strong>
+              {/* Nothing at all once a side has emptied out, rather than an empty
+                  line where the names used to be. */}
+              {names.length > 0 && <em className="blurt__score-names">{names.join(', ')}</em>}
+              {myTeam === team && <em className="blurt__score-mine">Your team</em>}
+            </div>
+          );
+        })}
       </div>
 
       {play.state === 'ended' && (

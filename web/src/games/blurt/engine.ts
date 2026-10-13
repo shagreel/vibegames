@@ -187,6 +187,33 @@ export function membersOf(team: Team, teams: Record<string, Team>): string[] {
     .sort();
 }
 
+/**
+ * The two parts of a room these name helpers need, named structurally so the
+ * engine does not have to know the service's snapshot — and so this stays
+ * testable without dragging in Firebase.
+ */
+export interface Roster {
+  players: Record<string, string>;
+  teams: Record<string, Team>;
+}
+
+/**
+ * One team's players, by name, as they should be shown.
+ *
+ * Only the people who are actually in the room. A team slot deliberately
+ * outlives the player sitting in it — that is what puts somebody back on their
+ * own side when they return — so the slot list is not the roster. This used to
+ * fall back to "Someone" for a slot nobody was in, which put a line in the
+ * scoreboard for a person who was not there. The rotation has always skipped
+ * them; the scoreboard does now too, which is what the app's `names(on:)` has
+ * always done.
+ */
+export function namesOn(roster: Roster, team: Team): string[] {
+  return membersOf(team, roster.teams)
+    .map((player) => roster.players[player])
+    .filter((name) => Boolean(name));
+}
+
 /** Turns alternate, and team one has the first one. */
 export function describingTeam(turn: number): Team {
   return turn % 2 === 0 ? 1 : 2;

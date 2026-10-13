@@ -168,6 +168,67 @@ final class VibeBlurtScreenshots: XCTestCase {
                       "the sheet should show this room's code, got: \(shown.label)")
     }
 
+    /// A team slot outlives the player in it, so the scoreboard has to be told
+    /// who is *here* rather than who was dealt a side.
+    ///
+    /// The slot staying put is deliberate: it is what puts somebody back on their
+    /// own side when they come back. The name must not stay with it, though —
+    /// naming an empty slot put "Alex, Someone" on a scoreboard of one, and the
+    /// browser version of the game shipped exactly that.
+    func testTheScoreboardDropsThePlayersWhoLeft() throws {
+        try skipUnlessTheDatabaseAnswers()
+
+        let app = XCUIApplication()
+        app.launch(withName: "Sam")
+        app.descendants(matching: .any)["game.vibe-blurt"].firstMatch.tap()
+
+        let create = app.buttons["blurt.createGame"]
+        XCTAssertTrue(create.waitForExistence(timeout: 15), "the lobby should offer a game")
+        create.tap()
+
+        let codeLabel = app.descendants(matching: .any)["blurt.gameCode"]
+        XCTAssertTrue(codeLabel.waitForExistence(timeout: backendTimeout),
+                      "the room should show a code")
+        let code = roomKey(for: displayedCode(in: codeLabel.label))
+
+        var me: String?
+        for _ in 0..<10 {
+            let (status, roster) = request("GET", "\(code)/players")
+            if status == 200, let players = roster as? [String: Any], let first = players.keys.first {
+                me = first
+                break
+            }
+            Thread.sleep(forTimeInterval: 1)
+        }
+        guard let me else { return XCTFail("the app never registered in its own room") }
+
+        for (index, name) in ["Alex", "Jo", "Robin"].enumerated() {
+            request("PUT", "\(code)/players/ffff00\(index)", body: name)
+        }
+        request("PUT", "\(code)/meta/seed", body: 52)
+        request("PUT", "\(code)/meta/started", body: true)
+        request("PUT", "\(code)/teams", body: [me: 1, "ffff000": 1, "ffff001": 2, "ffff002": 2])
+        writeTurn(code: code, team: 1, describer: me, word: 0)
+
+        // Team two is Jo and Robin, and the board names them both.
+        let second = app.descendants(matching: .any)["blurt.score.2"].firstMatch
+        XCTAssertTrue(second.waitForExistence(timeout: backendTimeout), "the scoreboard should be up")
+        wait(for: [expectation(for: NSPredicate(format: "label CONTAINS %@", "Robin"),
+                               evaluatedWith: second)],
+             timeout: backendTimeout)
+
+        // Robin goes. The slot stays behind; the name must not.
+        request("DELETE", "\(code)/players/ffff002")
+        wait(for: [expectation(for: NSPredicate(format: "NOT (label CONTAINS %@)", "Robin"),
+                               evaluatedWith: second)],
+             timeout: backendTimeout)
+
+        XCTAssertFalse(second.label.contains("Someone"),
+                       "a missing player should not be named at all — got: \(second.label)")
+        XCTAssertTrue(second.label.contains("Jo"),
+                      "everybody still here stays listed — got: \(second.label)")
+    }
+
     // MARK: - The run
 
     private func capture(appearance: String) throws {

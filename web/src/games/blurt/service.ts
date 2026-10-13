@@ -89,13 +89,6 @@ export function winningTeam(play: BlurtPlay | null): Team | null {
   return winner(play.one, play.two, TARGET);
 }
 
-export function namesOn(snapshot: BlurtSnapshot, team: Team): string[] {
-  return Object.keys(snapshot.teams)
-    .filter((id) => snapshot.teams[id] === team)
-    .sort()
-    .map((id) => snapshot.players[id] ?? 'Someone');
-}
-
 // MARK: - Observing
 
 export function observeGame(

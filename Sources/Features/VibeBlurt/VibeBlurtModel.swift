@@ -185,6 +185,15 @@ final class VibeBlurtModel: ObservableObject {
     }
 
     /// Everyone on a team, by name, for the scoreboard and the handover.
+    /// One team's players, by name, as they should be shown.
+    ///
+    /// Only the people who are actually in the room. `teams` deliberately
+    /// outlives the players in it — that is what puts somebody back on their own
+    /// side when they return — so the team list is not the roster, and this is
+    /// the `compactMap` that keeps the difference out of the scoreboard. A slot
+    /// with nobody in it has no name, and inventing one ("Someone") puts a line
+    /// on the board for a person who is not there. The browser shipped exactly
+    /// that bug; `namesOn` in `web/src/games/blurt/engine.ts` is its twin.
     func names(on team: BlurtTeam) -> [String] {
         BlurtRules.members(of: team, in: snapshot.teams).compactMap { snapshot.players[$0] }
     }
