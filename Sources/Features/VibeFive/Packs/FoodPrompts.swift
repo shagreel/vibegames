@@ -38,7 +38,7 @@ enum FoodPrompts {
         "Foods you eat cold",
         "Things at a birthday party",
         "Foods that are sour",
-        "Types of crisps",
+        "Types of chips",
         "Things in a fridge",
         "Foods you can fry",
         "Things you spread on a bagel",
@@ -101,7 +101,7 @@ enum FoodPrompts {
         "Baking ingredients",
         "Ice cream toppings",
         "Milkshake flavours",
-        "Types of chilli",
+        "Types of chili",
         "Types of milk",
     ]
 }

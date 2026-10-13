@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { GAME_CODE_WORDS } from '../lib/gameCodeWords.generated';
-import { makeGameCode, normaliseGameCode } from '../lib/gameCode';
+import { displayGameCode, makeGameCode, normaliseGameCode } from '../lib/gameCode';
 
 /**
  * The code that shares a game.
@@ -138,5 +138,36 @@ describe('a code somebody typed', () => {
       expect(normaliseGameCode(input)).toMatch(/^[a-z0-9-]*$/);
     }
     expect(normaliseGameCode('!!!')).toBe('');
+  });
+
+  it('puts a space between the two words', () => {
+    // The space is a reading aid: it is what stops `carsfeed` reading as one long
+    // noise. It is not part of the code, and typing it is optional — but it is
+    // what the screen shows, because the code is read out loud. Matches
+    // `GameCode.display` in Swift, and the table in `Tests/GameCodeTests.swift`.
+    expect(displayGameCode('cars-feed')).toBe('CARS FEED');
+    expect(displayGameCode('dock-time')).toBe('DOCK TIME');
+
+    // Harmless on a code that never had one, and on the older numeric codes: the
+    // display is applied to whatever the room happens to hold.
+    expect(displayGameCode('CARS FEED')).toBe('CARS FEED');
+    expect(displayGameCode('carsfeed')).toBe('CARSFEED');
+    expect(displayGameCode('abc12345')).toBe('ABC12345');
+    expect(displayGameCode('')).toBe('');
+  });
+
+  it('shows something that can be typed straight back', () => {
+    // Whatever the screen shows has to work when it is typed in as it appears.
+    // The space and the hyphen are both dropped on the way in, so the separator
+    // is genuinely optional rather than something to get right.
+    for (const code of ['cars-feed', 'dock-time', 'game-code']) {
+      expect(normaliseGameCode(displayGameCode(code)), code).toBe(code);
+    }
+  });
+
+  it('shows two words of four letters, and never a dash', () => {
+    for (let i = 0; i < 200; i += 1) {
+      expect(displayGameCode(makeGameCode())).toMatch(/^[A-Z]{4} [A-Z]{4}$/);
+    }
   });
 });

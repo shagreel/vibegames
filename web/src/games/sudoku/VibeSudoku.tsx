@@ -28,7 +28,7 @@ import {
   startGame,
   type SudokuSnapshot,
 } from './service';
-import { normaliseGameCode } from '../../lib/gameCode';
+import { displayGameCode, normaliseGameCode } from '../../lib/gameCode';
 import './VibeSudoku.css';
 
 /**
@@ -518,7 +518,7 @@ function subtitle(
   parts.push(snapshot.difficulty ?? difficulty);
   parts.push(`${filled}/${CELL_COUNT}`);
   parts.push(formatElapsed(elapsed));
-  if (gameId) parts.push(`code ${gameId}`);
+  if (gameId) parts.push(`code ${displayGameCode(gameId)}`);
   return parts.join(' · ');
 }
 
@@ -687,7 +687,7 @@ function Lobby(props: {
             id="sudoku-join"
             value={props.joinCode}
             onChange={(event) => props.onJoinCode(event.target.value)}
-            placeholder="cars-feed"
+            placeholder="cars feed"
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}
@@ -714,7 +714,7 @@ function Waiting(props: {
 }) {
   return (
     <div className="sudoku__waiting">
-      <p className="sudoku__code">Code {props.gameId.toUpperCase()}</p>
+      <p className="sudoku__code">Code {displayGameCode(props.gameId)}</p>
       <p className="sudoku__waiting-text">
         {props.isHost
           ? `Everyone races the same ${props.snapshot.difficulty} board. Start when they have joined.`

@@ -36,28 +36,32 @@ struct GameInstructions {
         game: .five,
         name: "Vibe Five",
         identifier: "five.instructions",
-        intro: "A category, five seconds, and one phone passed round the table. "
-             + "Name three things that fit before the buzzer.",
+        intro: "It's easy right? Just name 3 things that fit in the category...in only 5 seconds. ",
         sections: [
-            Section(title: "The category waits for you",
-                    body: "Press **START** and the category fills the screen with a "
-                        + "GET READY badge. No timer is running and none is shown, so read it "
-                        + "out, explain it, and argue about it for as long as you like."),
-            Section(title: "Then the clock",
-                    body: "Press **START** again when the table is ready. The dial appears and "
-                        + "drains from five to zero, with a tick for each of the last three "
-                        + "seconds. The dial appearing *is* the signal that time is running."),
+            Section(title: "Game host",
+                    body: "We find the games works best if one player is the game host. "
+                        + "It's also helpful if you can cast the screen onto a larger TV "
+                        + "that everyone can see, but it's not required. The host will "
+                        + "press **START** to see the first clue. The first job of the host is to "
+                        + "read the clue, very clearly, so the players can understand it. "
+                        + "Once the host has finished reading the clue they press the **START** "
+                        + "button again. "),
             Section(title: "How a round ends",
                     body: "Either the clock runs out — the buzzer sounds and the screen flashes "
-                        + "red — or the player presses **Done!** to end it early. Done! is "
+                        + "red — or the host presses **Done!** to end it early. Done! is "
                         + "deliberately silent, because the buzzer means the clock beat you. "
                         + "Either way the dial freezes on the time that was left, so the table "
-                        + "can see what they had to spare."),
+                        + "can see how much time they had to spare."),
+            Section(title: "Alternative Play",
+                    body: "If you don't want to have a single person as a host, you can "
+                        + "also pass the phone from person to person. You can also play "
+                        + "solo this way if you want to practice."),
         ],
         bullets: [
-            Bullet(lead: "START", text: "Deals a category. Nothing is running yet."),
-            Bullet(lead: "Done!", text: "Ends the round early. Silent, so the buzzer keeps its meaning."),
-            Bullet(lead: "NEXT", text: "Deals a fresh category and waits for you to start the clock again."),
+            Bullet(lead: "START", text: "Shows a category."),
+            Bullet(lead: "Buzzer", text: "You didn't get it fast enough."),
+            Bullet(lead: "Done!", text: "You got it! Congratulations."),
+            Bullet(lead: "NEXT", text: "Show a new category."),
             Bullet(lead: "Packs", text: "\(CategoryLibrary.all.count) categories across "
                         + "\(CategoryPack.allCases.count) packs, switched on and off in Game Setup. "
                         + "Only the packs you leave on go into the deck, and no category comes "
@@ -76,18 +80,15 @@ struct GameInstructions {
                         + "letter is in the word but somewhere else. **Grey** means it is not in "
                         + "the word at all."),
             Section(title: "Repeated letters",
-                    body: "Counted properly rather than one letter at a time. Exact matches are "
-                        + "claimed first, and what is left of the answer then has to cover the "
-                        + "rest: guessing EERIE against SPEED credits two Es and marks the "
+                    body: "Exact matches are claimed first, and what is left "
+                        + "of the answer then has to cover the rest: guessing "
+                        + "EERIE against SPEED credits two Es and marks the "
                         + "third one absent."),
         ],
         bullets: [
             Bullet(lead: "Solo", text: "A fresh word, with no connection needed."),
-            Bullet(lead: "With friends", text: "You get a code to share — two short words, like "
-                        + "cars-feed — and everyone guesses the same word on their own phone. "
+            Bullet(lead: "With friends", text: "Everyone guesses the same word on their own phone. "
                         + "The first to solve it is announced to the whole room."),
-            Bullet(lead: "The words", text: "\(WordLists.valid.count) can be guessed, and "
-                        + "\(WordLists.answers.count) of them can be the answer."),
         ])
 
     static let sudoku = GameInstructions(
@@ -97,12 +98,11 @@ struct GameInstructions {
         intro: "Fill the 9x9 grid so every row, every column and every 3x3 box holds "
              + "1 to 9. Play solo, or race friends on an identical board.",
         sections: [
-            Section(title: "Difficulty means something",
-                    body: "Easy, Medium and Hard are graded by the technique a puzzle actually "
-                        + "needs, not by how many clues it has — so Hard is hard rather than "
-                        + "merely sparse. If you host a race, guests play whatever difficulty "
-                        + "you picked, so everybody gets the same board."),
-            Section(title: "If you get stuck",
+            Section(title: "Difficulty",
+                    body: "Easy, Medium and Hard are graded by the technique a puzzle "
+                        + "needs to solve it. If you host a race, you choose the difficulty "
+                        + "and everybody gets the same board."),
+            Section(title: "Notes",
                     body: "**Notes** lets you pencil candidates into a square. Anything that "
                         + "clashes with a number in the same row, column or box is highlighted, "
                         + "so a mistake shows up before it spreads."),
@@ -110,42 +110,31 @@ struct GameInstructions {
         bullets: [
             Bullet(lead: "Solo", text: "An endless supply of boards, at the difficulty you choose."),
             Bullet(lead: "Race", text: "Everyone gets the same board. First to fill it wins."),
-            Bullet(lead: "Nothing is stored", text: "A puzzle is a pure function of its seed, so "
-                        + "a shared game sends one number instead of a grid — and the solution "
-                        + "is never written anywhere."),
         ])
 
     static let blurt = GameInstructions(
         game: .blurt,
         name: "Vibe Blurt",
         identifier: "blurt.instructions",
-        intro: "Two teams, a phone each, and a word nobody wants to be holding. "
-             + "Describe it without saying it, and get rid of it before the clock stops.",
+        intro: "Describe a word without saying it, so your team can guess it before the clock stops.",
         sections: [
             Section(title: "The word is a hot potato",
-                    body: "One person is shown a word and describes it; their team-mates guess. "
-                        + "Get it right and the word passes to somebody on the **other** team. "
-                        + "The clock does not stop or reset — it belongs to the round, not to "
-                        + "the word."),
-            Section(title: "Nobody can count the clock down",
-                    body: "A round lasts a random 50 to 70 seconds and there is no number on "
-                        + "screen. The ticking stays steady and then hurries and grows louder as "
-                        + "the end approaches; in a browser, which has no sound here, the bar "
-                        + "changes colour and pulses instead."),
+                    body: "One person is shown a word and describes it; their teammates guess. "
+                        + "Get it right and a new word is shown to somebody on the **other** team. "
+                        + "A round lasts about a minute. Make sure you don't have the word when "
+                        + "the time runs out."),
             Section(title: "The other team is watching",
                     body: "The team **not** holding the word can see it, and has one big red "
                         + "BUZZ button. If the describer says the word, or any part of it, they "
-                        + "press it — and they take the point instead."),
+                        + "press it — and they take the point."),
         ],
         bullets: [
             Bullet(lead: "Four people", text: "Two on each side at least. The app splits the room "
                         + "into teams at random."),
             Bullet(lead: "Scoring", text: "Nobody scores for guessing. The point goes to the team "
-                        + "that was not holding the word when the clock stopped — or to the team "
+                        + "that was not holding the word when the clock stops — or to the team "
                         + "that caught a blurt."),
-            Bullet(lead: "First to \(BlurtRules.target)", text: "Wins the game."),
-            Bullet(lead: "Words", text: "\(BlurtWords.all.count) to describe across "
-                        + "\(BlurtPack.allCases.count) packs, chosen before the game starts."),
+            Bullet(lead: "Winning", text: "First team to \(BlurtRules.target) points Wins the game."),
         ])
 
     /// Every game that has a page, in the order the hub lists them.

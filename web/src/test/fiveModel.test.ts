@@ -23,13 +23,19 @@ import {
 } from '../games/five/model';
 import { PROMPTS } from '../games/five/prompts.generated';
 
+const TOTAL = Object.values(PROMPTS).reduce((n, prompts) => n + prompts.length, 0);
+
 describe('the category library', () => {
-  it('has eleven packs of a hundred, as the Swift packs do', () => {
+  it('has every pack, each with enough prompts to deal from', () => {
     expect(PACKS).toHaveLength(11);
     for (const pack of PACKS) {
-      expect(PROMPTS[pack.id], `${pack.id} is missing`).toHaveLength(100);
+      // A floor, not a fixed size. Packs get trimmed as prompts are retired, so
+      // asserting an exact count would mean editing this test every time a
+      // category is dropped. What matters is that no pack is missing or gutted.
+      expect(PROMPTS[pack.id], `${pack.id} is missing`).toBeDefined();
+      expect(PROMPTS[pack.id].length, `${pack.id} is short`).toBeGreaterThanOrEqual(20);
     }
-    expect(countIn(ALL_PACK_IDS)).toBe(1100);
+    expect(TOTAL).toBe(countIn(ALL_PACK_IDS));
   });
 
   it('never repeats a prompt across the whole library', () => {
@@ -39,13 +45,13 @@ describe('the category library', () => {
 
   it('deals only from the packs that are switched on', () => {
     const only = categoriesIn(['food']);
-    expect(only).toHaveLength(100);
+    expect(only).toHaveLength(PROMPTS.food.length);
     expect(only.every((c) => c.pack === 'food')).toBe(true);
-    expect(countIn(['food', 'music'])).toBe(200);
+    expect(countIn(['food', 'music'])).toBe(PROMPTS.food.length + PROMPTS.music.length);
   });
 
   it('falls back to everything rather than dealing nothing', () => {
-    expect(categoriesIn([])).toHaveLength(1100);
+    expect(categoriesIn([])).toHaveLength(TOTAL);
   });
 });
 

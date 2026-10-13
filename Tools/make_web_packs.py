@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates the web app's Vibe Five categories from the Swift pack files.
 
-The 1,100 prompts live in `Sources/Features/VibeFive/Packs/` as Swift string
+The prompts live in `Sources/Features/VibeFive/Packs/` as Swift string
 arrays, and that stays the single source of truth — the app and the browser must
 offer the same categories, and a second hand-maintained copy would drift.
 

@@ -99,7 +99,7 @@ final class VibeSudokuUITests: XCTestCase {
         // The waiting room only appears once the game has been written and read
         // back, so this covers both directions of the round trip.
         let code = app.descendants(matching: .any)["sudoku.gameCode"].firstMatch
-        XCTAssertTrue(code.waitForExistence(timeout: 25),
+        XCTAssertTrue(code.waitForExistence(timeout: backendTimeout),
                       "Should land in the waiting room after creating a game")
         XCTAssertTrue(code.label.uppercased().contains("CODE"),
                       "Expected a game code, got: \(code.label)")

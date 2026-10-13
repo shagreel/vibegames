@@ -108,4 +108,45 @@ final class GameCodeTests: XCTestCase {
         }
         XCTAssertEqual(GameCode.normalise("!!!"), "")
     }
+
+    func testTheDisplayPutsASpaceBetweenTheWords() {
+        // The space is a reading aid: it is what stops `carsfeed` reading as one
+        // long noise, and it is why somebody who hears the code can hold it in
+        // their head long enough to type it. It is not part of the code, and
+        // typing it is optional — but it is what the screen shows, because the
+        // code is read out loud.
+        XCTAssertEqual(GameCode.display("cars-feed"), "CARS FEED")
+        XCTAssertEqual(GameCode.display("dock-time"), "DOCK TIME")
+
+        // Harmless on a code that never had one, and on the older numeric codes,
+        // because the display is applied to whatever the room happens to hold.
+        XCTAssertEqual(GameCode.display("CARS FEED"), "CARS FEED")
+        XCTAssertEqual(GameCode.display("carsfeed"), "CARSFEED")
+        XCTAssertEqual(GameCode.display("abc12345"), "ABC12345")
+        XCTAssertEqual(GameCode.display(""), "")
+    }
+
+    func testWhatIsDisplayedCanBeTypedStraightBack() {
+        // Whatever the screen shows has to work when it is typed in as it
+        // appears. The space and the hyphen are both dropped on the way in, so
+        // the separator is genuinely optional rather than something to get right.
+        for code in ["cars-feed", "dock-time", "game-code"] {
+            XCTAssertEqual(GameCode.normalise(GameCode.display(code)), code,
+                           "\(GameCode.display(code)) did not resolve back to \(code)")
+        }
+    }
+
+    func testTheDisplayedCodeIsTwoWordsOfFourLetters() {
+        // Checked over fresh codes rather than examples, so it holds for whatever
+        // `make` starts returning.
+        for _ in 0..<200 {
+            let shown = GameCode.display(GameCode.make())
+            let words = shown.split(separator: " ", omittingEmptySubsequences: false)
+            XCTAssertEqual(words.count, 2, "\(shown) is not two words")
+            XCTAssertTrue(words.allSatisfy { $0.count == 4 }, "\(shown) is not four and four")
+            XCTAssertTrue(shown.allSatisfy { $0.isLetter || $0 == " " },
+                          "\(shown) is not letters and a space")
+            XCTAssertFalse(shown.contains("-"), "\(shown) still shows the hyphen")
+        }
+    }
 }

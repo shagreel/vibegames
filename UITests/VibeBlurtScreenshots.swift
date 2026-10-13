@@ -51,8 +51,12 @@ final class VibeBlurtScreenshots: XCTestCase {
         create.tap()
 
         let codeLabel = app.descendants(matching: .any)["blurt.gameCode"]
-        XCTAssertTrue(codeLabel.waitForExistence(timeout: 25), "the room should show a code")
-        let code = codeLabel.label.components(separatedBy: " ").last?.lowercased() ?? ""
+        XCTAssertTrue(codeLabel.waitForExistence(timeout: backendTimeout), "the room should show a code")
+        let displayed = displayedCode(in: codeLabel.label)
+        assertLooksLikeADisplayedCode(displayed, label: codeLabel.label)
+        // The screen shows the code the way a person reads it, two words a space
+        // apart; the room in the database keeps a hyphen.
+        let code = roomKey(for: displayed)
 
         // Who the app is, as far as this room is concerned — the only way to
         // learn its short id is to read the roster back.
@@ -105,6 +109,65 @@ final class VibeBlurtScreenshots: XCTestCase {
                       "and why — got: \(result.label)")
     }
 
+    /// The code has to be readable from a game that is already under way.
+    ///
+    /// It used to be out of reach the moment a round started: the big card only
+    /// lives in the lobby, and the join field only exists before a game does.
+    /// That is exactly when somebody new turns up — Blurt takes a late arrival
+    /// and puts them on the smaller team — so the board has to offer the code.
+    func testTheRunningGameStillShowsTheCode() throws {
+        try skipUnlessTheDatabaseAnswers()
+
+        let app = XCUIApplication()
+        app.launch(withName: "Sam")
+        app.descendants(matching: .any)["game.vibe-blurt"].firstMatch.tap()
+
+        let create = app.buttons["blurt.createGame"]
+        XCTAssertTrue(create.waitForExistence(timeout: 15), "the lobby should offer a game")
+        create.tap()
+
+        let codeLabel = app.descendants(matching: .any)["blurt.gameCode"]
+        XCTAssertTrue(codeLabel.waitForExistence(timeout: backendTimeout), "the room should show a code")
+        let displayed = displayedCode(in: codeLabel.label)
+        assertLooksLikeADisplayedCode(displayed, label: codeLabel.label)
+        let code = roomKey(for: displayed)
+
+        // Fill the other three seats and start it, so the app is looking at a
+        // live round rather than a lobby.
+        var me: String?
+        for _ in 0..<10 {
+            let (status, roster) = request("GET", "\(code)/players")
+            if status == 200, let players = roster as? [String: Any], let first = players.keys.first {
+                me = first
+                break
+            }
+            Thread.sleep(forTimeInterval: 1)
+        }
+        guard let me else { return XCTFail("the app never registered in its own room") }
+
+        for (index, name) in ["Alex", "Jo", "Robin"].enumerated() {
+            request("PUT", "\(code)/players/ffff00\(index)", body: name)
+        }
+        request("PUT", "\(code)/meta/seed", body: 52)
+        request("PUT", "\(code)/meta/started", body: true)
+        request("PUT", "\(code)/teams", body: [me: 1, "ffff000": 1, "ffff001": 2, "ffff002": 2])
+        writeTurn(code: code, team: 1, describer: me, word: 0)
+
+        let word = app.descendants(matching: .any)["blurt.word"]
+        XCTAssertTrue(word.waitForExistence(timeout: 20), "the describer should be given a word")
+
+        // The round is running, and the code is still one tap away.
+        let codeButton = app.buttons["blurt.showCode"]
+        XCTAssertTrue(codeButton.waitForExistence(timeout: backendTimeout),
+                      "a running game should still offer the code")
+        codeButton.tap()
+
+        let shown = app.descendants(matching: .any)["blurt.gameCode"].firstMatch
+        XCTAssertTrue(shown.waitForExistence(timeout: 5), "the sheet should show the code")
+        XCTAssertTrue(shown.label.contains(displayed),
+                      "the sheet should show this room's code, got: \(shown.label)")
+    }
+
     // MARK: - The run
 
     private func capture(appearance: String) throws {
@@ -121,17 +184,18 @@ final class VibeBlurtScreenshots: XCTestCase {
 
         // The code, read out of the room the app just made.
         let codeLabel = app.descendants(matching: .any)["blurt.gameCode"]
-        if !codeLabel.waitForExistence(timeout: 25) {
+        if !codeLabel.waitForExistence(timeout: backendTimeout) {
             // Say what was actually on screen rather than just that the code was
             // not: this failed once and the log gave nothing to go on.
             attach(app, named: "\(appearance)-blurt-no-code")
             return XCTFail("the room never showed a code. On screen: "
                            + String(app.debugDescription.prefix(3000)))
         }
-        let code = codeLabel.label.components(separatedBy: " ").last?.lowercased() ?? ""
-        // Two four-letter words: the shape a code has to have to be sayable.
-        XCTAssertEqual(code.split(separator: "-").map(\.count), [4, 4],
-                       "unexpected code: \(codeLabel.label)")
+        let displayed = displayedCode(in: codeLabel.label)
+        // Two four-letter words, a space apart: the shape a code has to have to
+        // be sayable. See `GameCode.display`.
+        assertLooksLikeADisplayedCode(displayed, label: codeLabel.label)
+        let code = roomKey(for: displayed)
         attach(app, named: "\(appearance)-blurt-lobby")
 
         // Who the app is, as far as this room is concerned. Reading the roster

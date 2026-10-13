@@ -40,17 +40,17 @@ struct TrioInstructionsView: View {
                                  name: "Vibe Trio",
                                  identifier: "trio.instructions",
                                  intro: "Twelve charcuterie boards are dealt face up. "
-                                      + "Your job is to find three of them that make a trio.") {
+                                      + "Your job is to find three of them that make a good pairing.") {
             whatsOnABoard
             theRule
             example(title: "This is a trio",
                     cards: Self.trioExample,
-                    verdict: "Platter and cheese are the same on all three. Meat and garnish are different on all three.",
+                    verdict: "Platter and cheese are the same on all three. Meat and garnish are different on all three. An excellent pairing.",
                     failing: nil,
                     tint: VibeTheme.tileCorrect)
             example(title: "This is not a trio",
                     cards: Self.notATrioExample,
-                    verdict: "Two of them are prosciutto and the third is salami — two the same and one different. That breaks it.",
+                    verdict: "Two of them are prosciutto and the third is salami — two the same and one different. That's not a good pairing'.",
                     failing: "Meat",
                     tint: VibeTheme.danger)
             InstructionsBullets(title: "Playing", bullets: [
@@ -59,10 +59,10 @@ struct TrioInstructionsView: View {
                     text: "Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a trio — the other two are still yours to find."),
                 GameInstructions.Bullet(
                     lead: "Race",
-                    text: "Everyone gets the same boards on their own phone. First to six trios wins. No hints."),
+                    text: "Everyone gets the same boards on their own phone. Whoever finds the most pairings wins."),
                 GameInstructions.Bullet(
                     lead: "Wrong three",
-                    text: "They flash red and nothing moves. Look again — the cards stay put."),
+                    text: "They flash red and nothing moves. Keep trying."),
             ])
         }
     }
@@ -116,12 +116,12 @@ struct TrioInstructionsView: View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("The rule")
 
-            Text("Three cards make a trio when **every one of the four features is either the same on all three cards, or different on all three**.")
+            Text("Three cards make a good pairing when **every one of the four features is either the same on all three cards, or different on all three**.")
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Two matching and a third different is not a trio — on any feature.")
+            Text("Two matching and a third different is not a good pairing — on any feature.")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
         }

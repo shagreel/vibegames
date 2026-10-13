@@ -25,13 +25,19 @@
  *
  *     node Tools/blurt_e2e.mjs
  *
+ * Or against a local build, which is what to do before deploying — `npm run
+ * build` then `npm run preview` in `web/` serves `dist` on port 4173 and the
+ * game talks to the same live database either way:
+ *
+ *     SITE=http://127.0.0.1:4173 node Tools/blurt_e2e.mjs
+ *
  * It leaves a finished game behind in the database. There is no harm in that,
  * but the room is never pruned.
  */
 
 import puppeteer from "/Users/pajones/projects/vibe_games/.build/qrtool/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js";
 
-const SITE = "https://play.vibegames.party";
+const SITE = process.env.SITE ?? "https://play.vibegames.party";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const say = (...a) => console.log("  ", ...a);
 
@@ -103,14 +109,18 @@ await nameSelf(players[0].page, players[0].name);
 await players[0].page.waitForSelector(".blurt__code-value", { timeout: 20000 });
 const code = await players[0].page.$eval(".blurt__code-value", (el) => el.textContent.trim());
 say("code shown to the host:", code);
+// The display puts a space between the words: the separator is a reading aid
+// rather than part of the code, so it is shown but never required.
+check(/^[A-Z]{4} [A-Z]{4}$/.test(code), `the code reads as two words, a space apart (got ${code})`);
 
 // The other three arrive on a link whose code has been retyped by hand rather
-// than copied: capitalised, and without the hyphen. That is how a code gets
-// shared in practice — read out loud, typed from memory — and it is the only
-// thing that checks the code is normalised on the way in. The host's screen
-// shows it in capitals, so this is also the exact string somebody would copy
-// down.
-const retyped = code.toUpperCase().replace(/-/g, "");
+// than copied: lower case, with a hyphen where the screen showed a space. That
+// is how a code gets shared in practice — read out loud, typed from memory — and
+// it is the only thing that checks the code is normalised on the way in. The
+// screen shows eight capitals and a space, so the interesting case is somebody
+// reaching for the wrong separator.
+const [wordOne, wordTwo] = code.toLowerCase().split(" ");
+const retyped = `${wordOne}-${wordTwo}`;
 say("the others retype it as:", retyped);
 
 for (const player of players.slice(1)) {
@@ -188,6 +198,25 @@ check(
   `the round length is a random 50-70 seconds (${secs(before.roundLength)}s)`,
 );
 check(before.ownWord !== null, `the describer has a word: ${JSON.stringify(before.ownWord)}`);
+
+// ── the code is still reachable now the game is under way ───────────────
+// It used to be out of reach from a running game: the big card only lives in
+// the lobby, and the join field only exists before a game starts. That is
+// exactly when somebody new turns up, and Blurt puts a late arrival on the
+// smaller team.
+const gear = await firstDescriber.player.page.$(".blurt__code-button");
+check(gear !== null, "a running game offers the code");
+if (gear) {
+  await firstDescriber.player.page.click(".blurt__code-button");
+  await sleep(400);
+  const shown = await firstDescriber.player.page
+    .$eval(".blurt__sheet .blurt__code-value", (el) => el.textContent.trim())
+    .catch(() => null);
+  check(shown === code, `the sheet shows the room's code (got ${JSON.stringify(shown)})`);
+  // Closed again, so the round carries on underneath it.
+  await firstDescriber.player.page.click(".blurt__sheet .blurt__skip");
+  await sleep(400);
+}
 
 // ── "got it" passes the word to the other team, and the clock keeps going ─
 const startedAt = before.clock;

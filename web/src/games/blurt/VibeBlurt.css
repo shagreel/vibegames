@@ -46,6 +46,35 @@
   cursor: pointer;
 }
 
+/* The code, once a game is under way. A peer of the heart rather than an
+   overlay on the board: the scoreboard is the busiest screen in the game, and
+   the code is only wanted for the few seconds somebody is reading it out. */
+.blurt__code-button {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+.blurt__code-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.blurt__code-button:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
 .blurt__titles {
   display: flex;
   flex-direction: column;
@@ -546,6 +575,13 @@
   margin: 0;
   font-size: 0.85rem;
   color: #c9c9d1;
+}
+
+/* The code keeps its lobby size inside the sheet: `.blurt__sheet > p` is more
+   specific than `.blurt__code-value` alone and would shrink it to body text. */
+.blurt__sheet > .blurt__code-value {
+  font-size: 2.1rem;
+  text-align: center;
 }
 
 .blurt__sheet input {

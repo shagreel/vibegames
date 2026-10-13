@@ -4,7 +4,7 @@ import { SupportButton } from '../../hub/Support';
 import { hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
 import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
-import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
+import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
   LONGEST_SECONDS,
   MINIMUM_PLAYERS,
@@ -131,6 +131,7 @@ function VibeBlurt() {
 
   const [now, setNow] = useState(() => Date.now());
   const [showSettings, setShowSettings] = useState(false);
+  const [showCode, setShowCode] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [packs, setPacks] = useState<string[]>(loadPacks);
 
@@ -374,7 +375,7 @@ function VibeBlurt() {
                 id="blurt-code"
                 value={joinCode}
                 onChange={(event) => setJoinCode(event.target.value)}
-                placeholder="cars-feed"
+                placeholder="cars feed"
                 maxLength={12}
                 autoComplete="off"
                 autoCapitalize="none"
@@ -400,7 +401,7 @@ function VibeBlurt() {
         <div className="blurt__lobby">
           <div className="blurt__code">
             <span className="blurt__code-label">Read this out</span>
-            <strong className="blurt__code-value">{gameId.toUpperCase()}</strong>
+            <strong className="blurt__code-value">{displayGameCode(gameId)}</strong>
             <span className="blurt__code-hint">
               Everyone else: Vibe Blurt → Join with a code
             </span>
@@ -464,7 +465,7 @@ function VibeBlurt() {
 
   return (
     <div className="blurt">
-      <BlurtHeader onLeave={leave} gameId={gameId} />
+      <BlurtHeader onLeave={leave} gameId={gameId} onShowCode={() => setShowCode(true)} />
 
       {/* The names matter as much as the scores: with four people passing one
           word around, the first thing anybody asks is which side they are on. */}
@@ -599,6 +600,7 @@ function VibeBlurt() {
         </div>
       )}
 
+      {showCode && <CodeSheet gameId={gameId} onClose={() => setShowCode(false)} />}
       {askingForName && <NamePrompt onSubmit={submitName} />}
     </div>
   );
@@ -609,9 +611,11 @@ function VibeBlurt() {
 function BlurtHeader({
   onLeave,
   gameId,
+  onShowCode,
 }: {
   onLeave: (() => void) | null;
   gameId: string | null;
+  onShowCode?: (() => void) | null;
 }) {
   return (
     <header className="blurt__header">
@@ -626,6 +630,25 @@ function BlurtHeader({
         <strong>Vibe Blurt</strong>
         <span>{gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}</span>
       </div>
+      {/* The code, once the game is under way. It used to be out of reach from
+          the board entirely: the big card only lives in the lobby and the join
+          field only exists before a game starts. A late arrival is normal here
+          — they get put on the smaller team and play carries on — so the code
+          has to be readable from the scoreboard. */}
+      {onShowCode && (
+        <button
+          type="button"
+          className="blurt__code-button"
+          onClick={onShowCode}
+          aria-label="Game code"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h8M18 7h2M4 17h2M12 17h8" />
+            <circle cx="15" cy="7" r="2.2" />
+            <circle cx="9" cy="17" r="2.2" />
+          </svg>
+        </button>
+      )}
       <SupportButton game="blurt" />
     </header>
   );
@@ -694,6 +717,39 @@ function SettingsSheet({
         </p>
 
         <button type="button" className="blurt__primary" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The code on its own, for a game already in progress. */
+function CodeSheet({ gameId, onClose }: { gameId: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const inviteUrl = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
+
+  return (
+    <div className="blurt__overlay" role="dialog" aria-label="Game code">
+      <div className="blurt__sheet">
+        <h2>Game code</h2>
+        <p className="blurt__code-value">{displayGameCode(gameId)}</p>
+        <p className="blurt__hint">
+          Read it out. Anyone who joins now goes on the smaller team, and the game carries on.
+        </p>
+        <button
+          type="button"
+          className="blurt__primary"
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(inviteUrl)
+              .then(() => setCopied(true))
+              .catch(() => setCopied(false));
+          }}
+        >
+          {copied ? 'Link copied' : 'Copy invite link'}
+        </button>
+        <button type="button" className="blurt__skip" onClick={onClose}>
           Done
         </button>
       </div>

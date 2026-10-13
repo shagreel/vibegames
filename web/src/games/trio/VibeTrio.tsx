@@ -19,7 +19,7 @@ import {
   startGame,
   type TrioSnapshot,
 } from './service';
-import { normaliseGameCode } from '../../lib/gameCode';
+import { displayGameCode, normaliseGameCode } from '../../lib/gameCode';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import BackToGames from '../../hub/BackToGames';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
@@ -433,7 +433,7 @@ function subtitle(
   }
   parts.push(`${myTakes} ${myTakes === 1 ? 'trio' : 'trios'}`);
   parts.push(formatElapsed(elapsed));
-  if (gameId) parts.push(`code ${gameId}`);
+  if (gameId) parts.push(`code ${displayGameCode(gameId)}`);
   void table;
   return parts.join(' · ');
 }
@@ -481,7 +481,7 @@ function Lobby(props: {
             id="trio-join"
             value={props.joinCode}
             onChange={(event) => props.onJoinCode(event.target.value)}
-            placeholder="cars-feed"
+            placeholder="cars feed"
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}
@@ -508,7 +508,7 @@ function Waiting(props: {
 }) {
   return (
     <div className="trio__waiting">
-      <p className="trio__code">Code {props.gameId.toUpperCase()}</p>
+      <p className="trio__code">Code {displayGameCode(props.gameId)}</p>
       <p className="trio__waiting-text">
         {props.isHost
           ? 'Start when everyone has joined. Clear the deck together — the first to spot a trio takes it.'

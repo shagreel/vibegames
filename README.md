@@ -42,29 +42,40 @@ dealt from one shuffled deck so no category repeats until the pool is exhausted.
 
 ### Category packs
 
-Eleven packs, **100 categories each**, all toggleable in Game Setup. The deck is
-built only from the packs you leave switched on.
+Eleven packs, all toggleable in Game Setup. The deck is built only from the packs
+you leave switched on.
 
-| Pack | Categories |
-| --- | ---: |
-| Everyday Life | 100 |
-| Food & Drink | 100 |
-| Animals & Nature | 100 |
-| Movies & Cinema | 100 |
-| Music | 100 |
-| TV & Streaming | 100 |
-| Places & Travel | 100 |
-| Sports | 100 |
-| Games & Play | 100 |
-| People & Jobs | 100 |
-| Random & Silly | 100 |
-| **Total** | **1,100** |
+| Pack |
+| --- |
+| Everyday Life |
+| Food & Drink |
+| Animals & Nature |
+| Movies & Cinema |
+| Music |
+| TV & Streaming |
+| Places & Travel |
+| Sports |
+| Games & Play |
+| People & Jobs |
+| Random & Silly |
 
-`python3 Tools/check_packs.py` re-validates all of that — per-pack counts, no
-duplicates within or across packs, word counts and formatting.
+Categories get retired from time to time, so the packs are deliberately not a
+fixed size and no count is quoted here to go stale. `python3 Tools/check_packs.py`
+re-validates them — no pack below its floor, no duplicates within or across
+packs, word counts and formatting. Run `python3 Tools/make_web_packs.py` first if
+you have edited one, so the web copy is regenerated from the Swift source.
 
 Sound and haptics can be switched off independently. Preferences persist in
 `UserDefaults`.
+
+Haptics are also gated by the phone, and silently: **Settings → Sounds & Haptics
+→ System Haptics** switches off every app's haptics at once, and no API can read
+that setting, so a cue nobody feels is indistinguishable from a cue that was
+never written. That is what made the time-up buzz look broken when it was the
+setting. The Simulator has no Taptic Engine at all either, which is why no test
+covers the feeling — only that the code asked for it. `Sources/Audio/Haptics.swift`
+holds one continuous half-second buzz for exactly this reason: the older impact
+generators fire for about 15ms, which reads as a click, not an alarm.
 
 ## Vibe Words
 
@@ -82,16 +93,23 @@ wins.
 ### Playing with friends
 
 The host taps **Start a game with friends** and shares the code — two short
-words, `cars-feed`, because it gets read out loud across a room.
+words, `cars feed`, because it gets read out loud across a room.
 Everyone else taps **Join with a code**. Players disappear automatically when
 they leave, and a round ends with a countdown before the next word.
 
 Codes are two four-letter words rather than eight characters of noise because
 they are said out loud and typed in by somebody who only heard them. What is
-typed is forgiven: capitals, a forgotten hyphen (`carsfeed`) and a stray space
-all resolve to the same room, and the same shape works in all four games that
-have one. Digits are kept rather than stripped, so a code from before the words
-changed still names the room it named.
+typed is forgiven: capitals, a hyphen (`cars-feed`), a space (`cars feed`) and
+the two words run together (`carsfeed`) all resolve to the same room, and the
+same shape works in all four games that have one. Digits are kept rather than
+stripped, so a code from before the words changed still names the room it named.
+
+What is **shown** is the two words a space apart — `CARS FEED`. The separator is
+a reading aid rather than part of the code: it is what stops `carsfeed` reading
+as one long noise, and it is not something anybody has to reproduce, because
+nothing that is not a letter survives the trip into the room. `GameCode.display`
+and its web twin `displayGameCode` are the only places a code is laid out for a
+screen.
 
 The vocabulary is shared, which is not automatic — a code made on a phone has to
 be joinable in a browser. `Sources/Model/GameCodeWords.swift` is the single
@@ -220,7 +238,7 @@ the table. 512 is measured, not guessed: the largest a card is ever drawn is
 The odd one out: Vibe Five has no database behind it, in the app or on the web,
 because it is one phone handed round a table. Nothing about it is shared.
 
-Its 1,100 categories live in `Sources/Features/VibeFive/Packs/` as Swift and stay
+Its categories live in `Sources/Features/VibeFive/Packs/` as Swift and stay
 the single source of truth — the app and the browser must offer the same prompts,
 and a second hand-maintained copy would drift.
 `Tools/make_web_packs.py` generates `web/src/games/five/prompts.generated.ts`
@@ -636,6 +654,13 @@ ask the same question: who is *here*?
   offered it, and whoever starts is written down as the describer — so the word
   lands on the phone that is actually there.
 
+**The code is reachable from a game already in progress**, which is when a late
+arrival actually turns up. It used to be out of reach: the big "read this out"
+card lives in the lobby and the join field only exists before a game starts, so
+the moment a round began the room had no way to say how to get into it. The board
+now carries the code behind one icon in the header, on both clients, and it is
+the same sheet that shows it — one place that decides how a code looks.
+
 `Tools/blurt_presence_e2e.mjs` covers all four against the deployed site and the
 real database — a leaver and a returner, a round in progress when the holder
 goes, a round nobody can start, and a connection that drops and comes back under
@@ -695,13 +720,15 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
 - `Tests/VibeWordsTests.swift` — 30 unit tests covering the scoring rules
   (especially repeated letters, where a naive implementation gets it wrong), the
   shared database payload shape, and the backend configuration state.
-- `Tests/GameCodeTests.swift` — 9 unit tests on the code that shares a game, now
+- `Tests/GameCodeTests.swift` — 13 unit tests on the code that shares a game, now
   two four-letter words (`cars-feed`) rather than eight characters of noise. The
   words are checked to be four lowercase letters drawn from the list, never the
   same word twice, and the forgiveness is checked with the ways people actually
-  type a code they only heard: capitals, a forgotten hyphen, a stray space. A
-  code from before the words changed is left alone rather than silently becoming
-  a different room.
+  type a code they only heard: capitals, an added or forgotten hyphen, a stray
+  space. What is displayed is checked to be two four-letter words a space apart —
+  and to be accepted straight back, because a display nobody can type in is
+  worse than no display. A code from before the words changed is left alone
+  rather than silently becoming a different room.
 - `Tests/SudokuTests.swift` — 19 unit tests. The generator gets the most
   scrutiny because it is the part that can be quietly wrong: determinism from a
   seed, that every solution is a legal grid, that the givens agree with it, that
@@ -732,12 +759,12 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   image in the bundle, the file numbering runs in deck order, and no two cards
   read out the same. A card whose artwork had gone missing would render as a
   placeholder, which is the sort of thing that is easy to ship and hard to see.
-- `UITests/` — 43 UI tests driving the real screens in a simulator, attaching a
+- `UITests/` — 45 UI tests driving the real screens in a simulator, attaching a
   screenshot at each step to the result bundle. Four of them exist to shoot the
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**226 tests in all: 183 unit and 43 UI.** They are what the numbers above are
+**231 tests in all: 186 unit and 45 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -746,6 +773,16 @@ Four tests talk to the **real backend** (creating a shared Vibe Words game, a
 shared Sudoku game, a shared Vibe Trio game, and taking a trio and rejoining to
 find it still gone) and skip themselves when Firebase is not configured, so a
 checkout without the config file still gets a green suite.
+
+Two **browser** scripts go further and play whole games against the real
+database — `Tools/blurt_e2e.mjs` with four players in four browser contexts, and
+`Tools/words_e2e.mjs` for the one web game with no other end-to-end coverage.
+Both take `SITE` so they can run against a local build before deploying:
+
+```sh
+cd web && npm run build && npm run preview
+SITE=http://localhost:4173 node Tools/words_e2e.mjs
+```
 
 One Vibe Five test sits on a revealed category for six seconds — longer than a
 whole round — and asserts that nothing starts by itself. One Vibe Words test
@@ -888,7 +925,9 @@ Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories
 Tools/make_web_game_codes.py    Mirrors the code words into the web app
+Tools/blurt_e2e.mjs             A real four-player game of Vibe Blurt, in browsers
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
+Tools/words_e2e.mjs             A real game of Vibe Words, in a browser
 Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
 Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
 Tools/prune_games.py            Deletes old games (admin — clients cannot)

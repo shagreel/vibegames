@@ -28,6 +28,7 @@ struct VibeFiveView: View {
         .task {
             AppAnalytics.screen(.five)
             SoundEngine.shared.warmUp()
+            Haptics.shared.prepare()
         }
         .onDisappear { model.endSession() }
         // Five has no winner, only whether the table beat the clock: stopping
@@ -49,9 +50,8 @@ struct VibeFiveView: View {
         .sensoryFeedback(trigger: model.tickCount) { _, _ in
             model.hapticsEnabled ? .impact(weight: .light, intensity: 0.55) : nil
         }
-        .sensoryFeedback(trigger: model.buzzCount) { _, _ in
-            model.hapticsEnabled ? .impact(weight: .heavy, intensity: 1.0) : nil
-        }
+        // The time-up buzz is not here: it is a half-second hold rather than a
+        // fixed short pattern, so the model fires it. See `Haptics`.
         .sensoryFeedback(trigger: model.phase) { _, newPhase in
             guard model.hapticsEnabled else { return nil }
             switch newPhase {
@@ -286,7 +286,7 @@ struct VibeFiveView: View {
                 .foregroundStyle(VibeTheme.secondaryText)
                 .multilineTextAlignment(.center)
 
-            Text("Read it out, then start the clock when you're ready")
+            Text("Read it out loud, then quickly start the clock")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .multilineTextAlignment(.center)

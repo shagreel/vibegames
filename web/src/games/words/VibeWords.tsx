@@ -41,7 +41,7 @@ const WORDS_INSTRUCTIONS: HowToPlayContent = {
     { lead: 'Solo', text: 'A fresh word, with no connection needed.' },
     {
       lead: 'With friends',
-      text: 'You get a code to share — two short words, like cars-feed — and everyone guesses the same word on their own phone. The first to solve it is announced to the whole room.',
+      text: 'You get a code to share — two short words, like cars feed — and everyone guesses the same word on their own phone. The first to solve it is announced to the whole room.',
     },
     {
       lead: 'The words',
@@ -59,10 +59,14 @@ function VibeWords() {
   const [message, setMessage] = useState('');
   const [shake, setShake] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
-  const [playerName, setPlayerName] = useState('');
-  const [nameSubmitted, setNameSubmitted] = useState(false);
+  const [playerName, setPlayerName] = useState(() => savedName());
+  // The name is shared with the other three games, so somebody who has played
+  // any of them is not asked again here.
+  const [nameSubmitted, setNameSubmitted] = useState(() => savedName() !== '');
   const [winner, setWinner] = useState<{ name: string; timestamp: number } | null>(null);
-  const [gameId, setGameId] = useState<string | null>(null);
+  // Worked out once, from the address bar, before the first paint. There is no
+  // setter: nothing else ever decides which room this is.
+  const [gameId] = useState(() => arrivedAtRoom());
   const [isCreator, setIsCreator] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameExists, setGameExists] = useState(false);
@@ -75,44 +79,14 @@ function VibeWords() {
   // Track previous answer to detect word changes
   const previousAnswerRef = useRef<string>('');
 
-  // Initialize game
+  // The countdown only means anything while a restart is pending. Deriving it
+  // rather than clearing it in the effect keeps the number and the flag that says
+  // there is a number in step, and stops a stale one outliving its restart time.
+  const visibleCountdown = restartTime === null ? null : countdown;
+
+  // Listen for game state and winner updates. Every game is a room — there is no
+  // room-less mode left to branch on — so this always subscribes.
   useEffect(() => {
-    // Check for query parameter, or generate a new game ID. A code that arrived
-    // in a link is normalised, because it may have been retyped by hand.
-    const urlParams = new URLSearchParams(window.location.search);
-    const typed = urlParams.get('game');
-    let currentGameId = typed ? normaliseGameCode(typed) : '';
-
-    if (!currentGameId) {
-      // Generate a new game ID
-      currentGameId = makeGameCode();
-      // Update URL without reloading the page
-      const newUrl = `${window.location.pathname}?game=${currentGameId}`;
-      window.history.replaceState({}, '', newUrl);
-    }
-
-    setGameId(currentGameId);
-
-    // Word will be set by Firebase listener when game is loaded
-    // or by the creator when they create the game
-
-    // The name is shared with the other three games, so somebody who has played
-    // any of them is not asked again here.
-    const remembered = savedName();
-    if (remembered) {
-      setPlayerName(remembered);
-      setNameSubmitted(true);
-    }
-  }, []);
-
-  // Listen for game state and winner updates when in a shared game
-  useEffect(() => {
-    if (!gameId) {
-      // Solo game - always started
-      setGameStarted(true);
-      return;
-    }
-
     // Listen for game existence (so we know when someone creates it)
     const gameRef = ref(database, `games/${gameId}`);
     const gameExistsUnsubscribe = onValue(gameRef, (snapshot) => {
@@ -254,10 +228,10 @@ function VibeWords() {
 
   // Countdown timer effect
   useEffect(() => {
-    if (!restartTime) {
-      setCountdown(null);
-      return;
-    }
+    // Nothing pending, so nothing to count. This used to clear the number here,
+    // which is a state update during the effect for something already derivable;
+    // the render reads it through `visibleCountdown` instead.
+    if (!restartTime) return;
 
     let hasCleared = false;
     const currentGameId = gameId; // Capture gameId at the time effect runs
@@ -299,7 +273,7 @@ function VibeWords() {
     const interval = setInterval(updateCountdown, 100);
 
     return () => clearInterval(interval);
-  }, [restartTime]);
+  }, [restartTime, gameId]);
 
   // Get letter state for a specific guess
   const getLetterState = (letter: string, index: number, guess: string): LetterState => {
@@ -696,25 +670,25 @@ function VibeWords() {
         )}
 
         {/* Countdown for restart */}
-        {countdown !== null && (
+        {visibleCountdown !== null && (
           <div className="countdown-container">
             <p className="countdown-message">
               New game starting in...
             </p>
             <div className="countdown-number">
-              {countdown}
+              {visibleCountdown}
             </div>
           </div>
         )}
 
         {/* Winner announcement */}
-        {winner && winner.name !== playerName && !countdown && (
+        {winner && winner.name !== playerName && !visibleCountdown && (
           <div className="winner-announcement">
             🏆 {winner.name} won this game!
           </div>
         )}
 
-        {message && !countdown && (
+        {message && !visibleCountdown && (
           <div className={`message ${won ? 'success' : ''}`}>
             {message}
           </div>
@@ -772,7 +746,7 @@ function VibeWords() {
         </div>
 
         <div className="button-container">
-          {!countdown && winner !== null && (
+          {!visibleCountdown && winner !== null && (
             <button className="reset-button" onClick={handlePlayAgain}>
               Play Again
             </button>
@@ -783,6 +757,31 @@ function VibeWords() {
       </div>
     </div>
   );
+}
+
+/**
+ * The room this browser is in, from the address bar, making one if there is none.
+ *
+ * A code in a link may have been retyped by hand rather than copied, so it is
+ * normalised — and the address bar is left holding the room's own code, so a link
+ * copied out of it is one that works. Other query parameters are kept: a shared
+ * link can carry more than a room.
+ *
+ * Idempotent on purpose. React runs a state initialiser twice in development, and
+ * writing the code back is what makes the second run read the code the first one
+ * settled on instead of minting another one — which would leave the address bar
+ * and the game pointing at different rooms.
+ */
+function arrivedAtRoom(): string {
+  const typed = new URLSearchParams(window.location.search).get('game');
+  const given = typed ? normaliseGameCode(typed) : '';
+  const room = given || makeGameCode();
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('game', room);
+  window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+
+  return room;
 }
 
 export default VibeWords;

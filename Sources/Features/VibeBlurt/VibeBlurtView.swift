@@ -18,6 +18,7 @@ struct VibeBlurtView: View {
     @State private var joinCode = ""
     @State private var showingNamePrompt = false
     @State private var showingSettings = false
+    @State private var showingCode = false
     @State private var pendingAction: (() -> Void)?
 
     var body: some View {
@@ -46,6 +47,11 @@ struct VibeBlurtView: View {
                                   isEditable: model.canChangeSettings) { packs in
                 Task { await model.updateSettings(packs: packs) }
             }
+        }
+        .sheet(isPresented: $showingCode) {
+            codeSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingNamePrompt) {
             NamePromptView(accent: VibeTheme.vibeBlurt,
@@ -115,7 +121,7 @@ struct VibeBlurtView: View {
                 .foregroundStyle(VibeTheme.tertiaryText)
 
             HStack(spacing: 10) {
-                TextField("cars-feed", text: $joinCode)
+                TextField("cars feed", text: $joinCode)
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(VibeTheme.primaryText)
@@ -218,7 +224,7 @@ struct VibeBlurtView: View {
                 .kerning(1.8)
                 .foregroundStyle(VibeTheme.tertiaryText)
 
-            Text((model.sharedGameID ?? "").uppercased())
+            Text(GameCode.display(model.sharedGameID ?? ""))
                 .font(.system(size: 40, weight: .black, design: .monospaced))
                 .kerning(6)
                 .minimumScaleFactor(0.5)
@@ -226,7 +232,7 @@ struct VibeBlurtView: View {
                 .foregroundStyle(VibeTheme.primaryText)
                 .textSelection(.enabled)
                 .accessibilityIdentifier("blurt.gameCode")
-                .accessibilityLabel("Game code \((model.sharedGameID ?? "").uppercased())")
+                .accessibilityLabel("Game code \(GameCode.display(model.sharedGameID ?? ""))")
 
             Text("Everyone else: Vibe Blurt → Join with a code")
                 .font(.system(size: 12.5, weight: .medium, design: .rounded))
@@ -244,6 +250,35 @@ struct VibeBlurtView: View {
                         .stroke(VibeTheme.hairline, lineWidth: 1)
                 }
         }
+    }
+
+    /// The code on its own, for a game that has already started.
+    ///
+    /// It reuses `codeCard` rather than drawing the code again, so the one place
+    /// that decides how a code looks stays the one place a code is drawn.
+    private var codeSheet: some View {
+        VStack(spacing: 18) {
+            codeCard
+
+            if let code = model.sharedGameID {
+                ShareLink(item: shareText(code)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(VibeTheme.primaryText)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(VibeTheme.surfaceStrong)
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .vibeCanvas()
     }
 
     /// What the room is playing: how long a turn is and what gets described.
@@ -798,6 +833,23 @@ struct VibeBlurtView: View {
                     .buttonStyle(VibeIconButtonStyle())
                     .accessibilityLabel("Share game code")
                 }
+
+                // Once the game is under way the code moves behind one icon.
+                // It used to vanish entirely: the big card only lives in the
+                // lobby and the share button was drawn only before the start.
+                // That is exactly when somebody new turns up — Blurt takes a
+                // late arrival and puts them on a team — so the code has to be
+                // reachable from the board, not only from the lobby.
+                if model.sharedGameID != nil, model.hasStarted {
+                    Button {
+                        showingCode = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                    .buttonStyle(VibeIconButtonStyle())
+                    .accessibilityLabel("Game code")
+                    .accessibilityIdentifier("blurt.showCode")
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -806,7 +858,7 @@ struct VibeBlurtView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        "Describe it, don't say it — Vibe Blurt. Open the app and enter code \(code.uppercased())"
+        "Describe it, don't say it — Vibe Blurt. Open the app and enter code \(GameCode.display(code))"
     }
 
     /// Runs a shared-game action, collecting a name first if there is not one.

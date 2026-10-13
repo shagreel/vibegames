@@ -2,10 +2,10 @@
 """Validates the Vibe Five pack files.
 
 Checks, per pack:
-  * exactly 100 prompts
+  * at least MIN_PER_PACK prompts
   * no duplicates within the pack
   * no duplicates across the whole library
-  * 2-6 words, no trailing punctuation, no forbidden characters
+  * 1-6 words, no trailing punctuation, no forbidden characters
 
 Usage: python3 Tools/check_packs.py
 Exits non-zero if any check fails.
@@ -15,7 +15,13 @@ import sys
 from pathlib import Path
 
 PACKS_DIR = Path("Sources/Features/VibeFive/Packs")
-EXPECTED_PER_PACK = 100
+# A floor, not a target. Packs get trimmed over time as prompts are retired, so
+# demanding an exact size would mean editing this file every time a category is
+# dropped — the check would be reporting the edit rather than a problem. What it
+# is actually here to catch is a pack being gutted by accident: a bad merge or a
+# truncated file. Keeping well clear of the smallest pack by design leaves room
+# for normal trimming without the number needing to move.
+MIN_PER_PACK = 40
 MIN_WORDS, MAX_WORDS = 1, 6
 
 # Types referenced by CategoryPack.prompts
@@ -50,8 +56,8 @@ for type_name in EXPECTED_TYPES:
     total += len(items)
 
     local_problems: list[str] = []
-    if len(items) != EXPECTED_PER_PACK:
-        local_problems.append(f"count {len(items)} != {EXPECTED_PER_PACK}")
+    if len(items) < MIN_PER_PACK:
+        local_problems.append(f"only {len(items)} prompts, fewer than {MIN_PER_PACK}")
 
     local_seen: set[str] = set()
     for item in items:

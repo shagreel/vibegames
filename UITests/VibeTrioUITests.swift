@@ -42,7 +42,7 @@ final class VibeTrioUITests: XCTestCase {
         openSolo(app)
 
         let deckCounter = app.descendants(matching: .any)["trio.deckCount"].firstMatch
-        XCTAssertTrue(deckCounter.waitForExistence(timeout: 10))
+        XCTAssertTrue(deckCounter.waitForExistence(timeout: backendTimeout))
         let before = remaining(in: deckCounter)
         XCTAssertGreaterThan(before, 3)
 
@@ -65,7 +65,7 @@ final class VibeTrioUITests: XCTestCase {
         openSolo(app)
 
         let deckCounter = app.descendants(matching: .any)["trio.deckCount"].firstMatch
-        XCTAssertTrue(deckCounter.waitForExistence(timeout: 10))
+        XCTAssertTrue(deckCounter.waitForExistence(timeout: backendTimeout))
         let before = remaining(in: deckCounter)
         let beforeLabel = deckCounter.label
 
@@ -92,7 +92,7 @@ final class VibeTrioUITests: XCTestCase {
         create.tap()
 
         let code = app.descendants(matching: .any)["trio.gameCode"].firstMatch
-        XCTAssertTrue(code.waitForExistence(timeout: 25),
+        XCTAssertTrue(code.waitForExistence(timeout: backendTimeout),
                       "Should land in the waiting room after creating a game")
         XCTAssertTrue(code.label.uppercased().contains("CODE"), "got: \(code.label)")
         XCTAssertTrue(app.buttons["trio.startShared"].exists)
@@ -128,19 +128,18 @@ final class VibeTrioUITests: XCTestCase {
         create.tap()
 
         let codeLabel = app.descendants(matching: .any)["trio.gameCode"].firstMatch
-        XCTAssertTrue(codeLabel.waitForExistence(timeout: 25))
-        let code = codeLabel.label.split(separator: " ").last.map(String.init) ?? ""
-        // Two four-letter words, not eight characters of noise — the same shape
-        // the other games share. This still asked for eight characters, which is
-        // what a code used to be.
-        XCTAssertEqual(code.split(separator: "-").map(\.count), [4, 4],
-                       "got: \(codeLabel.label)")
+        XCTAssertTrue(codeLabel.waitForExistence(timeout: backendTimeout))
+        let code = displayedCode(in: codeLabel.label)
+        // Two four-letter words a space apart — the shape the other games share.
+        // It is typed back in further down exactly as it appears here, so this
+        // also covers the promise that what is displayed is what can be entered.
+        assertLooksLikeADisplayedCode(code, label: codeLabel.label)
 
         app.buttons["trio.startShared"].tap()
-        XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: backendTimeout))
 
         let deckCounter = app.descendants(matching: .any)["trio.deckCount"].firstMatch
-        XCTAssertTrue(deckCounter.waitForExistence(timeout: 10))
+        XCTAssertTrue(deckCounter.waitForExistence(timeout: backendTimeout))
         let before = remaining(in: deckCounter)
 
         let trio = try solveTrio(in: app)
@@ -151,7 +150,7 @@ final class VibeTrioUITests: XCTestCase {
         let moved = expectation(for: NSPredicate(format: "label != %@", beforeLabel),
                                 evaluatedWith: deckCounter)
         for index in trio { app.buttons["trio.card.\(index)"].tap() }
-        wait(for: [moved], timeout: 10)
+        wait(for: [moved], timeout: backendTimeout)
         let after = remaining(in: deckCounter)
         XCTAssertLessThan(after, before, "the take should reach the server")
         attach(app, named: "58-trio-shared-taken")
@@ -165,16 +164,16 @@ final class VibeTrioUITests: XCTestCase {
         joinField.typeText(code)
         app.buttons["trio.joinButton"].tap()
 
-        XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: 25),
+        XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: backendTimeout),
                       "the code should let this device back in")
         let rejoined = app.descendants(matching: .any)["trio.deckCount"].firstMatch
-        XCTAssertTrue(rejoined.waitForExistence(timeout: 10))
+        XCTAssertTrue(rejoined.waitForExistence(timeout: backendTimeout))
 
         let restored = expectation(
             for: NSPredicate(format: "label == %@", "\(after) left in the deck"),
             evaluatedWith: rejoined
         )
-        wait(for: [restored], timeout: 15)
+        wait(for: [restored], timeout: backendTimeout)
         attach(app, named: "59-trio-shared-rejoined")
     }
 
@@ -230,10 +229,10 @@ final class VibeTrioUITests: XCTestCase {
         create.tap()
 
         let code = app.descendants(matching: .any)["trio.gameCode"].firstMatch
-        XCTAssertTrue(code.waitForExistence(timeout: 25))
+        XCTAssertTrue(code.waitForExistence(timeout: backendTimeout))
         app.buttons["trio.startShared"].tap()
 
-        XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: backendTimeout))
         XCTAssertFalse(app.buttons["trio.hint"].exists,
                        "a race is about who spots it first, so no hints")
     }
@@ -332,7 +331,7 @@ final class VibeTrioUITests: XCTestCase {
         create.tap()
 
         let code = app.descendants(matching: .any)["trio.gameCode"].firstMatch
-        XCTAssertTrue(code.waitForExistence(timeout: 25))
+        XCTAssertTrue(code.waitForExistence(timeout: backendTimeout))
         attach(app, named: shared)
     }
 

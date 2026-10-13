@@ -151,7 +151,7 @@ final class VibeWordsUITests: XCTestCase {
         // database *and* read back by the observer, so this covers both
         // directions of the round trip.
         let code = app.descendants(matching: .any)["words.gameCode"].firstMatch
-        XCTAssertTrue(code.waitForExistence(timeout: 25),
+        XCTAssertTrue(code.waitForExistence(timeout: backendTimeout),
                       "Should land in the waiting room after creating a game")
         XCTAssertTrue(code.label.uppercased().contains("CODE"),
                       "Expected the game code to be shown, got: \(code.label)")

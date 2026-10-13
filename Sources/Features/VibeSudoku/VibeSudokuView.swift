@@ -145,7 +145,7 @@ struct VibeSudokuView: View {
                 .foregroundStyle(VibeTheme.tertiaryText)
 
             HStack(spacing: 10) {
-                TextField("cars-feed", text: $joinCode)
+                TextField("cars feed", text: $joinCode)
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(VibeTheme.primaryText)
@@ -292,7 +292,7 @@ struct VibeSudokuView: View {
         parts.append(model.formattedElapsed)
         parts.append("\(model.filledCount)/81")
         if model.isShared, let id = model.sharedGameID {
-            parts.append("code \(id)")
+            parts.append("code \(GameCode.display(id))")
         }
         return parts.joined(separator: " · ")
     }
@@ -326,7 +326,7 @@ struct VibeSudokuView: View {
 
     private var waitingPanel: some View {
         VStack(spacing: 10) {
-            Text("CODE \(model.sharedGameID?.uppercased() ?? "")")
+            Text("CODE \(GameCode.display(model.sharedGameID ?? ""))")
                 .font(.system(size: 15, weight: .black, design: .monospaced))
                 .kerning(2)
                 .foregroundStyle(VibeTheme.primaryText)
@@ -411,7 +411,7 @@ struct VibeSudokuView: View {
 
     private var shareText: String {
         let code = model.sharedGameID ?? ""
-        return "Race me at Vibe Sudoku — open the app and enter code \(code.uppercased())"
+        return "Race me at Vibe Sudoku — open the app and enter code \(GameCode.display(code))"
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

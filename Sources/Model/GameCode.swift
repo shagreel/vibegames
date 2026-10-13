@@ -26,6 +26,19 @@ enum GameCode {
         return "\(first)-\(second)"
     }
 
+    /// How a code is shown to a person: two words, a space apart.
+    ///
+    /// The separator is a reading aid and nothing more. It is what stops
+    /// `carsfeed` reading as one long noise, and it is why somebody who hears the
+    /// code can hold it in their head long enough to type it. It is *not* part of
+    /// the code: nothing has to type it, `normalise` drops whatever punctuation
+    /// arrives with it, and a hyphen, a space, or nothing at all all resolve to
+    /// the same room. So the display can show the words the way they are said —
+    /// and what is on screen is not a format anybody has to reproduce exactly.
+    static func display(_ code: String) -> String {
+        code.replacingOccurrences(of: "-", with: " ").uppercased()
+    }
+
     /// Turns whatever somebody typed into what the database holds.
     ///
     /// Deliberately forgiving, because these arrive second-hand: somebody hears

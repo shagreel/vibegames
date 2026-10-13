@@ -352,6 +352,10 @@ final class VibeFiveModel: ObservableObject {
         phase = .buzzed
         buzzCount += 1
         releaseIdleTimer()
+        // Fired here rather than from a `.sensoryFeedback` trigger, because the
+        // cue is a half-second buzz: a `SensoryFeedback` value is a fixed short
+        // pattern, and the shortest ones read as a click. See `Haptics`.
+        if hapticsEnabled { Haptics.shared.buzz() }
         if soundEnabled { SoundEngine.shared.play(.buzzer) }
     }
 

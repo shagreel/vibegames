@@ -161,7 +161,7 @@ struct VibeWordsView: View {
                 .foregroundStyle(VibeTheme.tertiaryText)
 
             HStack(spacing: 10) {
-                TextField("cars-feed", text: $joinCode)
+                TextField("cars feed", text: $joinCode)
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(VibeTheme.primaryText)
@@ -246,7 +246,7 @@ struct VibeWordsView: View {
     private var gameSubtitle: String {
         if model.isShared {
             let count = model.snapshot.players.count
-            return "\(count) \(count == 1 ? "player" : "players") · code \(model.sharedGameID ?? "")"
+            return "\(count) \(count == 1 ? "player" : "players") · code \(GameCode.display(model.sharedGameID ?? ""))"
         }
         return "Solo game"
     }
@@ -277,7 +277,7 @@ struct VibeWordsView: View {
 
     private var waitingPanel: some View {
         VStack(spacing: 10) {
-            Text("CODE \(model.sharedGameID?.uppercased() ?? "")")
+            Text("CODE \(GameCode.display(model.sharedGameID ?? ""))")
                 .font(.system(size: 15, weight: .black, design: .monospaced))
                 .kerning(2)
                 .foregroundStyle(VibeTheme.primaryText)
@@ -365,7 +365,7 @@ struct VibeWordsView: View {
 
     private var shareText: String {
         let code = model.sharedGameID ?? ""
-        return "Join my Vibe Words game — open the app and enter code \(code.uppercased())"
+        return "Join my Vibe Words game — open the app and enter code \(GameCode.display(code))"
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

@@ -105,7 +105,7 @@ struct VibeTrioView: View {
                 .foregroundStyle(VibeTheme.tertiaryText)
 
             HStack(spacing: 10) {
-                TextField("cars-feed", text: $joinCode)
+                TextField("cars feed", text: $joinCode)
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(VibeTheme.primaryText)
@@ -244,7 +244,7 @@ struct VibeTrioView: View {
         parts.append("\(model.myScore) trios")
         parts.append(model.formattedElapsed)
         if model.isShared, let id = model.sharedGameID {
-            parts.append("code \(id)")
+            parts.append("code \(GameCode.display(id))")
         }
         return parts.joined(separator: " · ")
     }
@@ -496,7 +496,7 @@ struct VibeTrioView: View {
 
     private var waitingPanel: some View {
         VStack(spacing: 10) {
-            Text("CODE \(model.sharedGameID?.uppercased() ?? "")")
+            Text("CODE \(GameCode.display(model.sharedGameID ?? ""))")
                 .font(.system(size: 15, weight: .black, design: .monospaced))
                 .kerning(2)
                 .foregroundStyle(VibeTheme.primaryText)
@@ -581,7 +581,7 @@ struct VibeTrioView: View {
 
     private var shareText: String {
         let code = model.sharedGameID ?? ""
-        return "Race me at Vibe Trio — open the app and enter code \(code.uppercased())"
+        return "Race me at Vibe Trio — open the app and enter code \(GameCode.display(code))"
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

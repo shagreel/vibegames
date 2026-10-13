@@ -22,8 +22,6 @@ struct VibeBlurtSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     words
-                    lengthNote
-                    footnote
                 }
                 .padding(20)
             }
@@ -40,45 +38,6 @@ struct VibeBlurtSettingsView: View {
         }
     }
 
-    // MARK: - Turn length
-
-    /// A short line where the length used to be chosen, so nobody goes looking
-    /// for the setting or wonders why the clock has no number on it.
-    private var lengthNote: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("TURN LENGTH")
-
-            HStack(spacing: 12) {
-                Image(systemName: "clock.badge.questionmark")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(VibeTheme.vibeBlurt)
-                    }
-
-                Text("Somewhere between \(BlurtTiming.shortest) and \(BlurtTiming.longest) "
-                     + "seconds, and not the same twice. Nobody knows which, so nobody can "
-                     + "count it down — the ticking speeds up when it is nearly over.")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(VibeTheme.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Spacer(minLength: 0)
-            }
-            .padding(14)
-            .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(VibeTheme.surface)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(VibeTheme.hairline, lineWidth: 1)
-                    }
-            }
-            .accessibilityIdentifier("blurt.turnLengthNote")
-        }
-    }
 
     // MARK: - Words
 
@@ -150,14 +109,6 @@ struct VibeBlurtSettingsView: View {
         }
     }
 
-    private var footnote: some View {
-        Text(isEditable
-             ? "Everyone in the room gets these, so you will all be describing the same things."
-             : "Only the host can change these, and only before the game starts.")
-            .font(.system(size: 13, weight: .medium, design: .rounded))
-            .foregroundStyle(VibeTheme.tertiaryText)
-            .fixedSize(horizontal: false, vertical: true)
-    }
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 12, weight: .black, design: .rounded))
