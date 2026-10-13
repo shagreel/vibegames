@@ -735,9 +735,32 @@ Deployment target is iOS 17.0; it builds against the iOS 27 SDK.
 ### Running the tests
 
 ```sh
+Tools/test.sh            # unit tests, then the functional UI tests
+Tools/test.sh --all      # everything, including the screenshot fixtures
+Tools/test.sh --unit     # unit tests only, about 30 seconds
+```
+
+`Tools/test.sh` is a thin wrapper over xcodebuild, and the default skips the eight
+tests whose only job is to shoot the landing page's screenshots. Those are the
+slowest tests in the suite — the Vibe Trio leaderboard pair plays two complete
+games of two dozen rounds each, and the pair alone is 100 seconds of the run.
+
+The underlying command, if you want it directly:
+
+```sh
 xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
   -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
+
+**What the time goes on**, measured from the test logs rather than guessed at,
+because the obvious levers do not work: a UI test method spends about six seconds
+launching the app and setting up the automation session before it asserts
+anything, and about half a second per interaction after that. Running them in
+parallel across four simulator clones was *slower* (717s against 644s serially —
+four simulators do not fit on one Mac), and making the Trio board's one-second
+spring instant changed nothing, because XCUITest does not wait on SwiftUI's
+implicit animations. Reading the Trio board with one query instead of 24 was real,
+and is worth a few seconds. Beyond that, the only lever is running fewer tests.
 
 - `Tests/VibeWordsTests.swift` — 30 unit tests covering the scoring rules
   (especially repeated letters, where a naive implementation gets it wrong), the
@@ -804,6 +827,13 @@ Both take `SITE` so they can run against a local build before deploying:
 ```sh
 cd web && npm run build && npm run preview
 SITE=http://localhost:4173 node Tools/words_e2e.mjs
+```
+
+The **daily cleanup** in `functions/` has its own tests, which need no database
+and no credential — they are about which rooms are old enough to delete:
+
+```sh
+cd functions && npm test
 ```
 
 One Vibe Five test sits on a revealed category for six seconds — longer than a
@@ -885,6 +915,10 @@ web/                            Browser versions, served at play.vibegames.party
   src/firebase.ts               Firebase wiring, incl. App Check
   .env.local                    Firebase config (git-ignored)
   .firebaserc                   Hosting project
+functions/                      The daily cleanup, deployed to Cloud Functions
+  index.js                      The scheduled function itself
+  prune.js                      Which rooms are old enough to delete
+  prune.test.js                 That rule, tested without a database
 Sources/
   App/VibeGamesApp.swift        @main + NavigationStack root
   Model/GameCatalog.swift       The hub's list of games

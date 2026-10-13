@@ -37,9 +37,13 @@ from firebase_database import access_token  # noqa: E402
 
 DATABASE = "https://{project}-default-rtdb.firebaseio.com"
 
-# The games, and the field each keeps its creation time in.
+# The games, and the field each keeps its creation time in. Vibe Blurt was
+# missing from this list, which is why its rooms had never been cleared by hand;
+# the scheduled function in `functions/` covers the same four, so if you change
+# one, change the other.
 TREES = {
     "trio": ("meta/createdAt", "createdAt"),
+    "blurt": ("meta/createdAt", "createdAt"),
     "games": ("createdAt",),
     "sudoku": ("createdAt",),
 }

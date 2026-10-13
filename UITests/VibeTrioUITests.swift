@@ -377,11 +377,22 @@ final class VibeTrioUITests: XCTestCase {
             && ok(a.garnish, b.garnish, c.garnish)
     }
 
+    /// The cards on the table, read in a single pass.
+    ///
+    /// Every `exists` and every `.label` is a round trip to the app's
+    /// accessibility tree, and asking about indices one at a time cost more than
+    /// everything else this file does put together: the board is read once a
+    /// round, there are up to 24 cards to ask about, and a game that runs to the
+    /// leaderboard is two dozen rounds. One query, and the labels come off the
+    /// snapshot it returns.
     private func readBoard(_ app: XCUIApplication) -> [Int: Card] {
         var cards: [Int: Card] = [:]
-        for index in 0..<24 {
-            let element = app.buttons["trio.card.\(index)"]
-            guard element.exists, let parsed = parse(element.label) else { continue }
+        let all = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "trio.card.")
+        )
+        for element in all.allElementsBoundByIndex {
+            guard let index = Int(element.identifier.dropFirst("trio.card.".count)),
+                  let parsed = parse(element.label) else { continue }
             cards[index] = parsed
         }
         return cards
