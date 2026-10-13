@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import UIKit
 
-/// Drives a game of Vibe Blurt.
+/// Drives a game of Similar Vibe.
 ///
 /// The database holds a seed, a roster, the teams and one `play` node. The words
 /// themselves are never sent: every phone derives the same deck from the seed

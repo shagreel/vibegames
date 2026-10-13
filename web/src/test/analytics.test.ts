@@ -228,7 +228,7 @@ describe('game events', () => {
   it('leaves out what a game does not know, rather than sending zero', async () => {
     const analytics = await ready();
 
-    // Vibe Words tracks no elapsed time; a zero would read as instant.
+    // Word Vibe tracks no elapsed time; a zero would read as instant.
     analytics.trackGameFinish(analytics.GAMES.words, { mode: 'solo', outcome: 'lost', score: 6 });
 
     expect(events()[0].params).not.toHaveProperty('seconds');

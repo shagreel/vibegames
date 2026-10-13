@@ -5,8 +5,8 @@ import './HowToPlay.css';
  * The "how to play" page, shared by every game.
  *
  * The five games used to explain themselves in five different places — a page in
- * Vibe Trio, a wall of prose in the Vibe Blurt lobby, one line under the buttons
- * in Vibe Words. They are all one page behind one link now, and this decides
+ * Vibe Pairings, a wall of prose in the Similar Vibe lobby, one line under the buttons
+ * in Word Vibe. They are all one page behind one link now, and this decides
  * what that page looks like.
  *
  * Each game supplies its own words, because the counts in them have to come from

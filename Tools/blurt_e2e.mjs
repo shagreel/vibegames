@@ -1,5 +1,5 @@
 /**
- * Plays a real game of Vibe Blurt with four players, against the live site and
+ * Plays a real game of Similar Vibe with four players, against the live site and
  * the live database, each in its own browser context so they have genuinely
  * separate identities.
  *

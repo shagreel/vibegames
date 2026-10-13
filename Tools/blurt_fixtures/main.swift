@@ -1,6 +1,6 @@
 import Foundation
 
-// Dumps what the Swift Vibe Blurt engine does, so the TypeScript port can be
+// Dumps what the Swift Similar Vibe engine does, so the TypeScript port can be
 // checked against it rather than assumed to match.
 //
 // Registering a room happens once and is written down, but the *words* come from

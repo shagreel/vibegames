@@ -35,7 +35,7 @@ import {
 import { PACK_ORDER, PACK_WORDS } from '../games/blurt/words.generated';
 
 /**
- * The browser's Vibe Blurt rules against the ones the phone runs.
+ * The browser's Similar Vibe rules against the ones the phone runs.
  *
  * This is the test that matters most in the whole game. A room stores a seed, a
  * round and the packs — never the words — so every device derives the deck

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Digits plus erase, and a notes toggle.
 ///
-/// Sits directly under the grid within thumb reach, and — like the Vibe Words
+/// Sits directly under the grid within thumb reach, and — like the Word Vibe
 /// keyboard — each key's *touch* area is the whole cell with the cap drawn
 /// inset, so a slightly-off tap still lands.
 struct SudokuKeypadView: View {

@@ -49,7 +49,7 @@ export type Mode = 'solo' | 'shared';
 export type Outcome =
   | 'won'
   | 'lost'
-  /** The game reached its own end without anybody winning it — Vibe Trio,
+  /** The game reached its own end without anybody winning it — Vibe Pairings,
    *  where the deck runs out and the score is the result. */
   | 'completed';
 

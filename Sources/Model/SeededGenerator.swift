@@ -17,7 +17,7 @@ struct SeededGenerator: RandomNumberGenerator {
         // `next()` adds the gamma again, seed `n + 1` produced the *same stream
         // as seed `n`, one draw later*. A game that derives a second shuffle
         // from `seed + 1` therefore got almost the same deck back, which is
-        // exactly what Vibe Blurt's "play again" did: measured at 10 of the
+        // exactly what Similar Vibe's "play again" did: measured at 10 of the
         // first 20 words shared, against 1.3 by chance.
         state = UInt64(seed)
     }

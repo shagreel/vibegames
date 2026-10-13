@@ -10,7 +10,7 @@ struct TrioTake: Equatable {
     let cardIDs: [Int]
 }
 
-/// A shared Vibe Trio game.
+/// A shared Vibe Pairings game.
 ///
 ///     trio/{gameId}
 ///       meta/

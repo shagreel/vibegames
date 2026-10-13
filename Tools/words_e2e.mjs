@@ -1,7 +1,7 @@
 /**
- * Plays a game of Vibe Words in a browser, against the live database.
+ * Plays a game of Word Vibe in a browser, against the live database.
  *
- * This exists because Vibe Words is the one game on the web with no end-to-end
+ * This exists because Word Vibe is the one game on the web with no end-to-end
  * check at all: Blurt has `Tools/blurt_e2e.mjs`, but the browser version of Words
  * is only covered by unit tests of its scoring rules. That was survivable while
  * the component was left alone. It stopped being survivable when the component's

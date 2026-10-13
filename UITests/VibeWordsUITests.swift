@@ -1,6 +1,6 @@
 import XCTest
 
-/// End-to-end checks for Vibe Words, driving the real UI and attaching a
+/// End-to-end checks for Word Vibe, driving the real UI and attaching a
 /// screenshot at each step so the run doubles as a visual pass.
 ///
 /// These exercise the solo path, which needs no backend. Shared play needs a
@@ -89,8 +89,8 @@ final class VibeWordsUITests: XCTestCase {
         app.launch(withName: "Tester")
 
         let tile = app.descendants(matching: .any)["game.vibe-words"].firstMatch
-        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Words should be on the hub")
-        XCTAssertFalse(tile.label.contains("SOON"), "Vibe Words should be playable")
+        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Word Vibe should be on the hub")
+        XCTAssertFalse(tile.label.contains("SOON"), "Word Vibe should be playable")
 
         attach(app, named: "19-words-hub")
     }
@@ -163,11 +163,11 @@ final class VibeWordsUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Walks from launch to the Vibe Words lobby, dealing with the name prompt
+    /// Walks from launch to the Word Vibe lobby, dealing with the name prompt
     /// only if this install has not stored a name yet.
     private func openWordsLobby(_ app: XCUIApplication) {
         let tile = app.descendants(matching: .any)["game.vibe-words"].firstMatch
-        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Words tile should exist")
+        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Word Vibe tile should exist")
         tile.tap()
 
         // The lobby is no longer behind a name gate — a name is only asked for

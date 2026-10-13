@@ -27,9 +27,9 @@ const PLAY_URL = 'https://play.vibegames.party';
 /** Names the game a note came from, so the issue arrives with some context. */
 const GAME_TITLES: Record<string, string> = {
   five: 'Vibe Five',
-  words: 'Vibe Words',
-  sudoku: 'Vibe Sudoku',
-  trio: 'Vibe Trio',
+  words: 'Word Vibe',
+  sudoku: 'Number Vibe',
+  trio: 'Vibe Pairings',
 };
 
 /** The short key a screen passes around (`'trio'`) as the name Analytics uses. */

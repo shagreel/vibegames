@@ -88,7 +88,7 @@ class WhereItCameFrom(unittest.TestCase):
         self.assertIn("a browser", drain.body_for("-k", entry(source="web")))
 
     def test_the_game_is_carried_when_there_is_one(self):
-        self.assertIn("in Vibe Trio", drain.body_for("-k", entry(game="Vibe Trio")))
+        self.assertIn("in Vibe Pairings", drain.body_for("-k", entry(game="Vibe Pairings")))
         self.assertNotIn("in ", drain.body_for("-k", entry()).split("Came from")[1].split(".")[0])
 
 

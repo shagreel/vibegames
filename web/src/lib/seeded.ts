@@ -2,7 +2,7 @@
  * The seeded generator and shuffle, shared by every game that has to rebuild a
  * board from a number.
  *
- * Both Vibe Trio and Vibe Sudoku take a seed and must produce exactly what the
+ * Both Vibe Pairings and Number Vibe take a seed and must produce exactly what the
  * iOS app produces from the same one — a shared game sends nothing else. That
  * makes this the one piece of arithmetic in the suite that two platforms have to
  * agree on to the bit, so it lives in one place rather than beside each game.

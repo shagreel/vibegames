@@ -94,11 +94,51 @@ xcodebuild -project VibeGames.xcodeproj -scheme VibeGames \
 xcrun xcresulttool export attachments --path .build/TestResults.xcresult --output-path .build/attachments
 ```
 
-The attachment names are listed in the exported `manifest.json`. Then resize the
-captures you want into `site/assets/screens/` — the simulator shoots at
-1206×2622, and the page expects 414×900:
+The attachment names are listed in the exported `manifest.json`, and each one has
+to be resized into `site/assets/screens/` — the simulator shoots at 1206×2622 and
+the page expects 414×900:
 
-Vibe Blurt needs four players, which one simulator cannot be, so
+```sh
+sips -z 900 414 --setProperty format jpeg --setProperty formatOptions 84 in.png --out out.jpg
+```
+
+**Bump the `?v=` in `index.html` when you regenerate them.** The screenshots keep
+their file names, and Hosting serves them with a week's `max-age`, so a returning
+visitor would otherwise keep the old picture for up to seven days.
+
+**Word Vibe and Number Vibe take no appearance argument**, so those captures
+follow the *simulator's* appearance instead. Set it, and uninstall the app first
+so a preference left behind by an earlier run cannot override it:
+
+```sh
+xcrun simctl ui booted appearance dark
+xcrun simctl uninstall booted party.vibegames.VibeGames
+xcodebuild test -project VibeGames.xcodeproj -scheme VibeGames \
+  -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:VibeGamesUITests/VibeWordsUITests \
+  -only-testing:VibeGamesUITests/VibeSudokuUITests \
+  -resultBundlePath .build/shots-dark.xcresult
+```
+
+Which attachment becomes which file, for the ones the page actually uses:
+
+| Site file | Attachment | From |
+| --- | --- | --- |
+| `hub-light` / `hub-dark` | `40-light-hub` / `44-dark-hub` | `AppearanceUITests` |
+| `vibewords-shared-*` | `24-words-shared-host` | `VibeWordsUITests` |
+| `vibewords-solved-*` | `22-words-scored` | `VibeWordsUITests` |
+| `vibesudoku-grid-*` | `31-sudoku-solo` | `VibeSudokuUITests` |
+| `vibesudoku-shared-*` | `33-sudoku-shared-host` | `VibeSudokuUITests` |
+| `vibetrio-board-*` | `60-trio-board-light` / `62-trio-board-dark` | `VibeTrioUITests` |
+| `vibetrio-leaderboard-*` | `64-trio-leaderboard-light` / `65-…-dark` | `VibeTrioUITests` |
+| `vibeblurt-word`, `-guessing`, `-buzz` | `light-blurt-…` / `dark-blurt-…` | `VibeBlurtScreenshots` |
+| `vibefive-counting`, `-revealed`, `-buzzed` | `03-`, `09-`, `04-` | `VibeFiveUITests` |
+
+The **file names keep the games' original names** — `vibewords-shared-light.jpg`
+is Word Vibe. They are paths rather than anything a visitor reads, and renaming
+them would mean touching every `srcset` in `index.html` for no gain.
+
+Similar Vibe needs four players, which one simulator cannot be, so
 `VibeBlurtScreenshots` assembles the room by writing it straight into the
 database: the app makes the game, the test fills the other three seats, deals the
 teams and sets the turn to whichever screen is being photographed. It also pins
@@ -111,10 +151,6 @@ skips itself when the database is unreachable.
       -resultBundlePath .build/BlurtShots.xcresult
     xcrun xcresulttool export attachments --path .build/BlurtShots.xcresult \
       --output-path .build/blurt-attachments
-
-```sh
-sips -z 900 414 --setProperty format jpeg --setProperty formatOptions 84 in.png --out out.jpg
-```
 
 ## Reviewing changes
 

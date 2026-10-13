@@ -13,7 +13,7 @@ import { database } from '../../firebase';
 import { replay, wouldFormTrioByIds } from './engine';
 
 /**
- * A shared Vibe Trio game.
+ * A shared Vibe Pairings game.
  *
  *     trio/{gameId}
  *       meta/       seed, creator, createdAt, started, restartTime

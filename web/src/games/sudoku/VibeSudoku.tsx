@@ -32,7 +32,7 @@ import { displayGameCode, normaliseGameCode } from '../../lib/gameCode';
 import './VibeSudoku.css';
 
 /**
- * Vibe Sudoku on the web, solo or raced.
+ * Number Vibe on the web, solo or raced.
  *
  * A shared game stores only a seed, so every device builds the identical board
  * from it and the answer is never in the database for a client to read. That is
@@ -44,7 +44,7 @@ type Screen = 'lobby' | 'game';
 
 /** The instructions, in this game's own words. */
 const SUDOKU_INSTRUCTIONS: HowToPlayContent = {
-  name: 'Vibe Sudoku',
+  name: 'Number Vibe',
   intro:
     'Fill the 9x9 grid so every row, every column and every 3x3 box holds 1 to 9. Play solo, or race friends on an identical board.',
   sections: [
@@ -415,7 +415,7 @@ function VibeSudoku() {
           )}
         </div>
         <div className="sudoku__titles">
-          <h1>Vibe Sudoku</h1>
+          <h1>Number Vibe</h1>
           {screen === 'game' && puzzle && (
             <p>{subtitle(gameId, snapshot, filled, elapsed, difficulty)}</p>
           )}

@@ -6,7 +6,7 @@ import { playerId, playerName, setPlayerName } from '../identity';
  *
  * The point of it is that a player types their name once, not once per game, so
  * what matters is that it comes back on the next visit — and that a name saved
- * by Vibe Words before the games shared a key is not lost.
+ * by Word Vibe before the games shared a key is not lost.
  */
 describe('the player name', () => {
   beforeEach(() => localStorage.clear());
@@ -31,7 +31,7 @@ describe('the player name', () => {
     expect(playerName()).toBe('');
   });
 
-  it('adopts the name Vibe Words saved before the games shared one', () => {
+  it('adopts the name Word Vibe saved before the games shared one', () => {
     localStorage.setItem('vibewords.playerName', 'Jo');
     expect(playerName()).toBe('Jo');
     // And writes it where the shared key is read from, so it is adopted once

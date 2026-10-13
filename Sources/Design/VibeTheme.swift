@@ -78,7 +78,7 @@ enum VibeTheme {
     /// clearly outside the urgency ramp so it never reads as time pressure.
     static let arm = Color(red: 0.62, green: 0.52, blue: 1.00)
 
-    // MARK: Vibe Words
+    // MARK: Word Vibe
 
     /// Accent for the word game, deliberately distinct from Vibe Five's warmth.
     static let vibeWords = LinearGradient(
@@ -88,9 +88,9 @@ enum VibeTheme {
         endPoint: .bottomTrailing
     )
 
-    // MARK: Vibe Sudoku
+    // MARK: Number Vibe
 
-    /// Third accent, distinct from Vibe Five's warmth and Vibe Words' teal.
+    /// Third accent, distinct from Vibe Five's warmth and Word Vibe' teal.
     static let vibeSudoku = LinearGradient(
         colors: [Color(red: 0.52, green: 0.29, blue: 0.94),
                  Color(red: 0.86, green: 0.33, blue: 0.76)],
@@ -103,7 +103,7 @@ enum VibeTheme {
     static let sudokuSelection = Color(red: 0.52, green: 0.29, blue: 0.94)
     static let sudokuClash = Color(red: 1.00, green: 0.32, blue: 0.36)
 
-    // MARK: Vibe Trio
+    // MARK: Vibe Pairings
 
     /// Fourth accent, distinct from the other three.
     static let vibeTrio = LinearGradient(
@@ -124,7 +124,7 @@ enum VibeTheme {
     static let trioCardEdge = adaptive(light: Color.black.opacity(0.14),
                                        dark: Color.black.opacity(0.35))
 
-    // MARK: Vibe Blurt
+    // MARK: Similar Vibe
 
     /// Fifth accent. Warm and loud on purpose — this is the game where somebody
     /// is talking over everybody else.

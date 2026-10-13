@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Vibe Blurt — the describing game.
+/// Similar Vibe — the describing game.
 ///
 /// Everyone is on their own phone in one room. Two teams; one person at a time
 /// is handed a word and has to get their team to say it without saying it
@@ -87,7 +87,7 @@ struct VibeBlurtView: View {
     private var lobby: some View {
         ScrollView {
             VStack(spacing: 18) {
-                header(title: "VIBE BLURT",
+                header(title: "SIMILAR VIBE",
                        subtitle: "Describe it. Don't say it.")
 
                 if let warning = model.backendUnavailableMessage {
@@ -170,7 +170,7 @@ struct VibeBlurtView: View {
     private var waitingForStart: some View {
         ScrollView {
             VStack(spacing: 16) {
-                header(title: "VIBE BLURT", subtitle: "Waiting to start")
+                header(title: "SIMILAR VIBE", subtitle: "Waiting to start")
 
                 codeCard
                 roster
@@ -234,7 +234,7 @@ struct VibeBlurtView: View {
                 .accessibilityIdentifier("blurt.gameCode")
                 .accessibilityLabel("Game code \(GameCode.display(model.sharedGameID ?? ""))")
 
-            Text("Everyone else: Vibe Blurt → Join with a code")
+            Text("Everyone else: Similar Vibe → Join with a code")
                 .font(.system(size: 12.5, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -381,7 +381,7 @@ struct VibeBlurtView: View {
     @ViewBuilder
     private func turn(_ play: BlurtPlay) -> some View {
         VStack(spacing: 14) {
-            header(title: "VIBE BLURT", subtitle: "First to \(BlurtRules.target)")
+            header(title: "SIMILAR VIBE", subtitle: "First to \(BlurtRules.target)")
 
             scoreboard(play)
 
@@ -751,7 +751,7 @@ struct VibeBlurtView: View {
 
     private var finished: some View {
         VStack(spacing: 18) {
-            header(title: "VIBE BLURT", subtitle: "That's the game")
+            header(title: "SIMILAR VIBE", subtitle: "That's the game")
 
             Spacer()
 
@@ -870,7 +870,7 @@ struct VibeBlurtView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        "Describe it, don't say it — Vibe Blurt. Open the app and enter code \(GameCode.display(code))"
+        "Describe it, don't say it — Similar Vibe. Open the app and enter code \(GameCode.display(code))"
     }
 
     /// Runs a shared-game action, collecting a name first if there is not one.

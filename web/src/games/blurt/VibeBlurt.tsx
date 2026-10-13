@@ -42,7 +42,7 @@ import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowTo
 import './VibeBlurt.css';
 
 /**
- * Vibe Blurt on the web.
+ * Similar Vibe on the web.
  *
  * Everyone is on their own phone in one room. Two teams; one person at a time is
  * handed a word and has to get their team to say it without saying it themselves.
@@ -74,7 +74,7 @@ function loadPacks(): string[] {
 
 /** The instructions, in this game's own words and with its own live counts. */
 const BLURT_INSTRUCTIONS: HowToPlayContent = {
-  name: 'Vibe Blurt',
+  name: 'Similar Vibe',
   intro:
     'Two teams, a phone each, and a word nobody wants to be holding. Describe it without saying it, and get rid of it before the clock stops.',
   sections: [
@@ -430,7 +430,7 @@ function VibeBlurt() {
             <span className="blurt__code-label">Read this out</span>
             <strong className="blurt__code-value">{displayGameCode(gameId)}</strong>
             <span className="blurt__code-hint">
-              Everyone else: Vibe Blurt → Join with a code
+              Everyone else: Similar Vibe → Join with a code
             </span>
           </div>
 
@@ -666,7 +666,7 @@ function BlurtHeader({
         <BackToGames />
       )}
       <div className="blurt__titles">
-        <strong>Vibe Blurt</strong>
+        <strong>Similar Vibe</strong>
         <span>{gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}</span>
       </div>
       {/* The code, once the game is under way. It used to be out of reach from

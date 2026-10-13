@@ -1,7 +1,7 @@
 import XCTest
 @testable import VibeGames
 
-/// Vibe Blurt's rules.
+/// Similar Vibe's rules.
 ///
 /// The rules are the part worth pinning: the words come from a seed, and the
 /// scoring is the whole game — the team *not* holding the word takes the point.

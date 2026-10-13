@@ -1,6 +1,6 @@
 import XCTest
 
-/// End-to-end checks for Vibe Trio.
+/// End-to-end checks for Vibe Pairings.
 ///
 /// The interesting one reads the cards back off the screen, works out a real
 /// trio using the same rule the game is supposed to implement, and taps it. If
@@ -18,8 +18,8 @@ final class VibeTrioUITests: XCTestCase {
         app.launch(withName: "Tester")
 
         let tile = app.descendants(matching: .any)["game.vibe-trio"].firstMatch
-        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Trio should be on the hub")
-        XCTAssertFalse(tile.label.contains("SOON"), "Vibe Trio should be playable")
+        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Pairings should be on the hub")
+        XCTAssertFalse(tile.label.contains("SOON"), "Vibe Pairings should be playable")
         attach(app, named: "50-trio-hub")
     }
 
@@ -456,7 +456,7 @@ final class VibeTrioUITests: XCTestCase {
 
     private func openLobby(_ app: XCUIApplication) {
         let tile = app.descendants(matching: .any)["game.vibe-trio"].firstMatch
-        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Trio tile should exist")
+        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Pairings tile should exist")
         tile.tap()
 
         // No name gate any more: solo play never needs one, and a shared game

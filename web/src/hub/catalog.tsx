@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 /**
  * The menu at play.vibegames.party.
  *
- * This used to be Vibe Words and nothing else, because Vibe Words was the only
+ * This used to be Word Vibe and nothing else, because Word Vibe was the only
  * game with a web version — going to play. and getting a word grid was the whole
  * of the site. It is a menu now, and each game is a path.
  */
@@ -65,7 +65,7 @@ export const GAMES: GameEntry[] = [
   {
     id: 'words',
     path: '/words',
-    title: 'Vibe Words',
+    title: 'Word Vibe',
     tagline: 'Guess the five-letter word. First to solve wins.',
     accent: ['#21b8a8', '#4585f5'],
     symbol: IconWords,
@@ -74,7 +74,7 @@ export const GAMES: GameEntry[] = [
   {
     id: 'sudoku',
     path: '/sudoku',
-    title: 'Vibe Sudoku',
+    title: 'Number Vibe',
     tagline: 'Fill the grid. Race your friends to it.',
     accent: ['#8549f0', '#db54c2'],
     symbol: IconSudoku,
@@ -83,7 +83,7 @@ export const GAMES: GameEntry[] = [
   {
     id: 'trio',
     path: '/trio',
-    title: 'Vibe Trio',
+    title: 'Vibe Pairings',
     tagline: 'Three cards where every feature matches or differs.',
     accent: ['#f7b929', '#85d647'],
     symbol: IconTrio,
@@ -92,7 +92,7 @@ export const GAMES: GameEntry[] = [
   {
     id: 'blurt',
     path: '/blurt',
-    title: 'Vibe Blurt',
+    title: 'Similar Vibe',
     tagline: "Describe it. Don't say it. Two teams, one word.",
     accent: ['#f54d6b', '#fd8c3d'],
     symbol: IconBlurt,

@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// Drives a game of Vibe Words, solo or shared.
+/// Drives a game of Word Vibe, solo or shared.
 ///
 /// Solo play needs no backend. Shared play uses the same Realtime Database
 /// schema the web client has always used, so the two can sit in one game.

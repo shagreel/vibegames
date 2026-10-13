@@ -9,7 +9,7 @@ final class HomeUITests: XCTestCase {
     }
 
     /// The name used to be asked for inside each game that wanted one, so
-    /// choosing Vibe Trio to play solo put a form in front of you that the game
+    /// choosing Vibe Pairings to play solo put a form in front of you that the game
     /// did not need. It is asked once now, before any game is opened.
     func testFirstRunAsksForANameBeforeAnyGameDoes() throws {
         let app = XCUIApplication()
@@ -62,7 +62,7 @@ final class HomeUITests: XCTestCase {
         // And the game agrees, without asking again.
         app.descendants(matching: .any)["game.vibe-trio"].firstMatch.tap()
         XCTAssertTrue(app.buttons["trio.playSolo"].waitForExistence(timeout: 10),
-                      "Vibe Trio should open straight to its lobby")
+                      "Vibe Pairings should open straight to its lobby")
         XCTAssertFalse(app.textFields["trio.nameField"].exists,
                        "it should not ask for a name a second time")
     }
@@ -168,7 +168,7 @@ final class HomeUITests: XCTestCase {
 
         app.descendants(matching: .any)["game.vibe-trio"].firstMatch.tap()
         XCTAssertTrue(app.buttons["trio.playSolo"].waitForExistence(timeout: 10),
-                      "Vibe Trio should open")
+                      "Vibe Pairings should open")
 
         // The heart is here too, not only on the hub.
         let heart = app.buttons["hub.support"]

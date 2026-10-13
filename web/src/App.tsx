@@ -10,7 +10,7 @@ import { usePath } from './router';
  * Every screen in the suite, one path each.
  *
  * Anything the switch does not recognise falls through to the hub, so an old
- * bookmark — play.vibegames.party used to be Vibe Words and nothing else — lands
+ * bookmark — play.vibegames.party used to be Word Vibe and nothing else — lands
  * somewhere useful rather than on a 404.
  */
 function App() {

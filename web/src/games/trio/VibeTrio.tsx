@@ -27,7 +27,7 @@ import { SupportButton } from '../../hub/Support';
 import './VibeTrio.css';
 
 /**
- * Vibe Trio on the web, solo or as a race on one shared table.
+ * Vibe Pairings on the web, solo or as a race on one shared table.
  *
  * A shared game sends a seed and the list of cards already taken, and nothing
  * else: every device replays those into the identical table, so a trio taken by
@@ -361,7 +361,7 @@ function VibeTrio() {
           )}
         </div>
         <div className="trio__titles">
-          <h1>Vibe Trio</h1>
+          <h1>Vibe Pairings</h1>
           {screen === 'game' && table && (
             <p className="trio__subtitle">{subtitle(table, gameId, snapshot, myTakes, elapsed)}</p>
           )}
@@ -762,7 +762,7 @@ function Leaderboard(props: {
 
 /** The instructions, in this game's own words. */
 const TRIO_INSTRUCTIONS: HowToPlayContent = {
-  name: 'Vibe Trio',
+  name: 'Vibe Pairings',
   intro: 'Twelve charcuterie boards are dealt face up. Your job is to find three of them that make a trio.',
   sections: [
     {

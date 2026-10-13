@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Vibe Words: guess the five-letter word, solo or with everyone in the room.
+/// Word Vibe: guess the five-letter word, solo or with everyone in the room.
 struct VibeWordsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = VibeWordsModel()
@@ -63,7 +63,7 @@ struct VibeWordsView: View {
     private var lobby: some View {
         ScrollView {
             VStack(spacing: 18) {
-                header(title: "VIBE WORDS", subtitle: "Five letters. Six tries. First to solve wins.")
+                header(title: "WORD VIBE", subtitle: "Five letters. Six tries. First to solve wins.")
 
                 if let warning = model.backendUnavailableMessage {
                     banner(warning, symbol: "wifi.slash", tint: VibeTheme.warn)
@@ -224,7 +224,7 @@ struct VibeWordsView: View {
 
     private var game: some View {
         VStack(spacing: 0) {
-            header(title: "VIBE WORDS", subtitle: gameSubtitle)
+            header(title: "WORD VIBE", subtitle: gameSubtitle)
             statusArea
             VibeWordsBoardView(guesses: model.guesses,
                                currentGuess: model.currentGuess,
@@ -365,7 +365,7 @@ struct VibeWordsView: View {
 
     private var shareText: String {
         let code = model.sharedGameID ?? ""
-        return "Join my Vibe Words game — open the app and enter code \(GameCode.display(code))"
+        return "Join my Word Vibe game — open the app and enter code \(GameCode.display(code))"
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

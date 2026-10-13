@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validates the Vibe Blurt pack files.
+"""Validates the Similar Vibe pack files.
 
 The Blurt words are read out loud and guessed at, so they have to be short and
 sayable; and they are read by an American table, so they have to be the words an

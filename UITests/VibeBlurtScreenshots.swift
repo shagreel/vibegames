@@ -1,6 +1,6 @@
 import XCTest
 
-/// Screenshots of Vibe Blurt for the landing page.
+/// Screenshots of Similar Vibe for the landing page.
 ///
 /// Four people cannot be simulated on one phone, so the room is assembled by
 /// writing it straight into the database. The app creates the game itself —

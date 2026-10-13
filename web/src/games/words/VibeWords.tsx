@@ -24,7 +24,7 @@ const MAX_GUESSES = 6;
 
 /** The instructions, in this game's own words and with its own live counts. */
 const WORDS_INSTRUCTIONS: HowToPlayContent = {
-  name: 'Vibe Words',
+  name: 'Word Vibe',
   intro:
     'Guess the five-letter word in six tries. Play solo on this phone, or start a game and race everyone on the same word.',
   sections: [

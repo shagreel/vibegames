@@ -3,7 +3,7 @@
 Dumps what the **Swift** engine does, so the TypeScript port can be checked
 against it rather than assumed to match.
 
-This matters because a Vibe Blurt room stores a seed and a turn number and
+This matters because a Similar Vibe room stores a seed and a turn number and
 nothing else about the words — every device derives the same deck from the seed.
 If the browser shuffled to a different order than the phone, the describer would
 be describing one thing and every other screen would be scoring another, which

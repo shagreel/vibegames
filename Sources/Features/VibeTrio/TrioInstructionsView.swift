@@ -37,7 +37,7 @@ struct TrioInstructionsView: View {
         // sections — but the header, the spacing and the framing are shared, and
         // that is what stops the five pages drifting apart.
         GameInstructionsScaffold(game: .trio,
-                                 name: "Vibe Trio",
+                                 name: "Vibe Pairings",
                                  identifier: "trio.instructions",
                                  intro: "Twelve charcuterie boards are dealt face up. "
                                       + "Your job is to find three of them that make a good pairing.") {

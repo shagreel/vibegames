@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { normalise, navigate } from '../router';
 
 /**
- * The router is what replaced "play.vibegames.party is Vibe Words" — a wrong
+ * The router is what replaced "play.vibegames.party is Word Vibe" — a wrong
  * path here is a menu that lies about where it goes.
  */
 describe('router', () => {

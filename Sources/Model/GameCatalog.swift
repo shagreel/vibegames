@@ -33,7 +33,7 @@ struct GameEntry: Identifiable {
         GameEntry(
             id: "vibe-words",
             route: .vibeWords,
-            title: "Vibe Words",
+            title: "Word Vibe",
             tagline: "Guess the five-letter word. First to solve wins.",
             symbol: "textformat.abc",
             gradient: VibeTheme.vibeWords
@@ -41,7 +41,7 @@ struct GameEntry: Identifiable {
         GameEntry(
             id: "vibe-sudoku",
             route: .vibeSudoku,
-            title: "Vibe Sudoku",
+            title: "Number Vibe",
             tagline: "Fill the grid. Race your friends to it.",
             symbol: "square.grid.3x3.fill",
             gradient: VibeTheme.vibeSudoku
@@ -49,7 +49,7 @@ struct GameEntry: Identifiable {
         GameEntry(
             id: "vibe-trio",
             route: .vibeTrio,
-            title: "Vibe Trio",
+            title: "Vibe Pairings",
             tagline: "Three cards where every feature matches or differs.",
             symbol: "square.on.square.dashed",
             gradient: VibeTheme.vibeTrio
@@ -57,7 +57,7 @@ struct GameEntry: Identifiable {
         GameEntry(
             id: "vibe-blurt",
             route: .vibeBlurt,
-            title: "Vibe Blurt",
+            title: "Similar Vibe",
             tagline: "Describe it. Don't say it. Two teams, one word.",
             symbol: "bubble.left.and.exclamationmark.bubble.right.fill",
             gradient: VibeTheme.vibeBlurt

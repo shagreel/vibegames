@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// Drives a game of Vibe Sudoku, solo or shared.
+/// Drives a game of Number Vibe, solo or shared.
 ///
 /// Solo play generates a puzzle locally. Shared play stores only a seed, so
 /// every device builds the identical board and nobody can read the answer out

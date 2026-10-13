@@ -84,7 +84,7 @@ struct SudokuSnapshot: Equatable {
 }
 
 /// Reads and writes shared Sudoku games under the `sudoku` root, leaving the
-/// `games` root to Vibe Words. Every method is a no-op without a backend.
+/// `games` root to Word Vibe. Every method is a no-op without a backend.
 @MainActor
 final class VibeSudokuService {
 

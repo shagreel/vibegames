@@ -2,7 +2,7 @@ import { SeededGenerator, shuffle } from '../../lib/seeded';
 import { PACK_ORDER, PACK_WORDS } from './words.generated';
 
 /**
- * The rules of Vibe Blurt, in the browser.
+ * The rules of Similar Vibe, in the browser.
  *
  * Every one of these mirrors `BlurtEngine.swift`, and has to: a room stores a
  * seed and a round and nothing else about the words, so the browser and the

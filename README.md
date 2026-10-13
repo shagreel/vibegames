@@ -12,9 +12,9 @@ The shell is a hub with four playable games.
 | Game | Players | Backend |
 | --- | --- | --- |
 | **Vibe Five** — name three things before the buzzer | Pass one phone around | None |
-| **Vibe Words** — guess the five-letter word | Everyone on their own phone | Firebase Realtime Database |
-| **Vibe Sudoku** — fill the grid | Solo, or a race on the same board | Firebase Realtime Database |
-| **Vibe Trio** — find three cards that agree on every feature | Solo, or a race on the same table | Firebase Realtime Database |
+| **Word Vibe** — guess the five-letter word | Everyone on their own phone | Firebase Realtime Database |
+| **Number Vibe** — fill the grid | Solo, or a race on the same board | Firebase Realtime Database |
+| **Vibe Pairings** — find three cards that agree on every feature | Solo, or a race on the same table | Firebase Realtime Database |
 
 ## Vibe Five
 
@@ -77,7 +77,7 @@ covers the feeling — only that the code asked for it. `Sources/Audio/Haptics.s
 holds one continuous half-second buzz for exactly this reason: the older impact
 generators fire for about 15ms, which reads as a click, not an alarm.
 
-## Vibe Words
+## Word Vibe
 
 Guess the five-letter word in six tries. Play solo on one phone, or start a game
 and have everyone guess the same word on their own device — first to solve it
@@ -149,10 +149,10 @@ project's TypeScript list:
 ```sh
 python3 Tools/import_words.py /path/to/web-project/src/wordList.ts
 python3 Tools/check_packs.py       # Vibe Five content
-python3 Tools/check_blurt_words.py # Vibe Blurt words, including the American spellings
+python3 Tools/check_blurt_words.py # Similar Vibe words, including the American spellings
 python3 Tools/check_branding.py    # naming guard
 ```
-## Vibe Sudoku
+## Number Vibe
 
 Fill a 9x9 grid so every row, column and 3x3 box holds 1–9. Play solo at the
 difficulty you choose, or race friends on an identical board.
@@ -161,7 +161,7 @@ difficulty you choose, or race friends on an identical board.
   `(seed, difficulty)` pair, so there are ~4 billion boards and a shared game
   sends a single number instead of 81 digits.
 - **Only the seed is in the database.** The solution is never written, so unlike
-  Vibe Words there is nothing for a client to read out of the backend.
+  Word Vibe there is nothing for a client to read out of the backend.
 - **Difficulty applies to solo and to games you host**: Easy / Medium / Hard.
   Guests race whatever the host picked, so everyone still gets the same board.
 - Notes mode with pencil marks, clash highlighting, and a running timer.
@@ -189,17 +189,17 @@ graded as it goes. Every board is still verified to have exactly one solution.
 
 ## Playing in a browser
 
-**play.vibegames.party** is a menu. It used to be Vibe Words and nothing else,
-because Vibe Words was the only game with a browser version — going there and
+**play.vibegames.party** is a menu. It used to be Word Vibe and nothing else,
+because Word Vibe was the only game with a browser version — going there and
 getting a word grid *was* the site. Each game now has its own path:
 
 | Path | Game | State |
 | --- | --- | --- |
 | `/` | the menu | live |
-| `/words` | Vibe Words | live |
-| `/trio` | Vibe Trio | live, solo and shared |
+| `/words` | Word Vibe | live |
+| `/trio` | Vibe Pairings | live, solo and shared |
 | `/five` | Vibe Five | live — pass the phone |
-| `/sudoku` | Vibe Sudoku | live — solo and raced |
+| `/sudoku` | Number Vibe | live — solo and raced |
 
 Anything the router does not recognise falls through to the menu, so an old
 bookmark to the root still lands somewhere useful rather than on a 404. The
@@ -210,7 +210,7 @@ the query string, which is the part that actually needs preserving.
 A shared game is a query string, the same as it always was:
 `play.vibegames.party/trio?game=cars-feed`.
 
-### Vibe Trio in a browser, and why the shuffle is not a detail
+### Vibe Pairings in a browser, and why the shuffle is not a detail
 
 The browser talks the **same schema as the app** — `trio/{gameId}` with `meta`,
 `players` and `taken` — so a browser and a phone can sit in the same game. That
@@ -251,7 +251,7 @@ low-pass filter that stops the stacked square waves of the buzzer from hissing.
 Its tests check the arithmetic produces real, in-range, non-silent audio, because
 a NaN sample would fail silently as "no sound".
 
-### Vibe Sudoku in a browser, and the hardest thing to port
+### Number Vibe in a browser, and the hardest thing to port
 
 A shared race stores **only a seed** — never the board — so the answer is never
 sitting in the database for a client to read, and both devices generate the
@@ -285,7 +285,7 @@ nobody could see them. And the winner is recorded with a transaction rather than
 a read-then-write, so two people finishing on the same tick cannot overwrite each
 other.
 
-## Vibe Trio
+## Vibe Pairings
 
 Twelve cards are face up, each a charcuterie board. A card varies along four
 features, three options each, so there are 3⁴ = 81 cards:
@@ -392,15 +392,15 @@ done.
 
 The rules used to sit on the lobby as a block of text, which everyone who already
 knows them has to scroll past every time — and each of the five games did it
-differently. Vibe Trio had a page, Vibe Blurt had four paragraphs in the lobby,
-Vibe Words had a single line under the buttons, and Vibe Sudoku and Vibe Five had
+differently. Vibe Pairings had a page, Similar Vibe had four paragraphs in the lobby,
+Word Vibe had a single line under the buttons, and Number Vibe and Vibe Five had
 nothing at all. All five now have one **How to play** control on the main page,
 opening one page.
 
 They are not five similar pages. `GameInstructions.swift` holds the shell — the
 back button, the `HOW TO PLAY` heading with the game's name under it, the intro,
 the section spacing, the bullet list — and each game supplies only its words, as a
-`GameInstructions` value. Vibe Trio is the one whose page is diagrams rather than
+`GameInstructions` value. Vibe Pairings is the one whose page is diagrams rather than
 prose, so it passes its own sections in; everything around them is still the
 shell, which is what stops the five drifting apart again.
 
@@ -408,8 +408,8 @@ Three of the four openers are the same card; Vibe Five's is a quiet line of text
 because it is the one game with no lobby — its main page is a round in progress,
 and a card there would push the game around for something read once.
 
-The counts in the pages are read from the games rather than typed out: Vibe Words
-says how many words it actually has, Vibe Blurt how many it has to describe, Vibe
+The counts in the pages are read from the games rather than typed out: Word Vibe
+says how many words it actually has, Similar Vibe how many it has to describe, Vibe
 Five how many categories. A page that quotes a stale number is worse than one that
 does not quote it at all.
 
@@ -489,7 +489,7 @@ test reads the board back off the screen, parses those labels, works out a real
 trio with the game's own rule, and taps it. If the renderer and the engine ever
 disagree about what a card *is*, that test fails.
 
-## Vibe Blurt
+## Similar Vibe
 
 The fifth game, and the only one that does not work on your own. Everyone joins
 on their own phone; the app splits the room into two teams at random and hands
@@ -572,7 +572,7 @@ constructor pre-scrambled the seed (`seed * gamma + constant`) and `next()` then
 added the gamma again, so seed `n + 1` replayed seed `n`'s stream **one draw
 late**. Two shuffles of the same list were therefore nearly the same shuffle.
 
-It only showed up in Vibe Blurt because it is the only game that derives a second
+It only showed up in Similar Vibe because it is the only game that derives a second
 shuffle from a related seed — Trio and Sudoku use one seed per game, where a
 shifted stream is invisible. The constructor now does what SplitMix64 actually
 says: the seed *is* the state, and `next()` does the add-and-mix. Adjacent seeds
@@ -742,7 +742,7 @@ Tools/test.sh --unit     # unit tests only, about 30 seconds
 
 `Tools/test.sh` is a thin wrapper over xcodebuild, and the default skips the eight
 tests whose only job is to shoot the landing page's screenshots. Those are the
-slowest tests in the suite — the Vibe Trio leaderboard pair plays two complete
+slowest tests in the suite — the Vibe Pairings leaderboard pair plays two complete
 games of two dozen rounds each, and the pair alone is 100 seconds of the run.
 
 The underlying command, if you want it directly:
@@ -814,8 +814,8 @@ worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
 
-Four tests talk to the **real backend** (creating a shared Vibe Words game, a
-shared Sudoku game, a shared Vibe Trio game, and taking a trio and rejoining to
+Four tests talk to the **real backend** (creating a shared Word Vibe game, a
+shared Sudoku game, a shared Vibe Pairings game, and taking a trio and rejoining to
 find it still gone) and skip themselves when Firebase is not configured, so a
 checkout without the config file still gets a green suite.
 
@@ -837,11 +837,11 @@ cd functions && npm test
 ```
 
 One Vibe Five test sits on a revealed category for six seconds — longer than a
-whole round — and asserts that nothing starts by itself. One Vibe Words test
+whole round — and asserts that nothing starts by itself. One Word Vibe test
 guards the keyboard feedback: it cannot know *which* verdict a letter gets,
 because the answer is random, but it asserts that every guessed letter gets one
 — which catches the bug where "not in the word" rendered identically to
-"not tried". The Vibe Trio tests read the cards back off the screen and solve a
+"not tried". The Vibe Pairings tests read the cards back off the screen and solve a
 trio with the game's own rule, which is what keeps the renderer honest; another
 asserts a shared table stays face down until the host starts it.
 
@@ -975,15 +975,15 @@ Tools/make_icon.swift           Renders the app icon and the favicon
 Tools/feedback_to_issues.py     Turns app feedback into issues (scheduled)
 Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
-Tools/check_blurt_words.py      Validates the Vibe Blurt words and their English
+Tools/check_blurt_words.py      Validates the Similar Vibe words and their English
 Tools/check_branding.py         Naming guard
 Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories
 Tools/make_web_game_codes.py    Mirrors the code words into the web app
-Tools/blurt_e2e.mjs             A real four-player game of Vibe Blurt, in browsers
+Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in browsers
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
-Tools/words_e2e.mjs             A real game of Vibe Words, in a browser
+Tools/words_e2e.mjs             A real game of Word Vibe, in a browser
 Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
 Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
 Tools/prune_games.py            Deletes old games (admin — clients cannot)
@@ -1241,7 +1241,7 @@ them. That place is Preferences on the hub, which is also where appearance lives
 — it used to be a light/dark button, and the name had nowhere to live but inside
 each game that wanted one.
 
-Which meant that choosing Vibe Trio to play *solo* put a name form in front of
+Which meant that choosing Vibe Pairings to play *solo* put a name form in front of
 you that the game did not need and you could not get past. Now:
 
 - On a **first run** the name is asked once, at the front door, before any game is

@@ -1,6 +1,6 @@
-# Vibe Words Test Suite
+# Word Vibe Test Suite
 
-This directory contains comprehensive tests for the multiplayer Vibe Words game.
+This directory contains comprehensive tests for the multiplayer Word Vibe game.
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Tests that verify localStorage-based user identification works correctly:
 - ✅ Firebase-safe key generation
 
 ### 2. `gameLogic.test.ts` - Game Logic Tests
-Tests for core Vibe Words game mechanics:
+Tests for core Word Vibe game mechanics:
 - ✅ Word validation (14,855 valid words)
 - ✅ Consistent word selection from game ID
 - ✅ Letter checking (correct position, wrong position, absent)

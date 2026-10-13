@@ -3,8 +3,8 @@ import SwiftUI
 /// A game's "how to play" page, as words.
 ///
 /// The five games showed their instructions in five different ways — a page
-/// behind a card in Vibe Trio, a wall of prose in the lobby in Vibe Blurt, a
-/// single line under the buttons in Vibe Words. They are all one page behind one
+/// behind a card in Vibe Pairings, a wall of prose in the lobby in Similar Vibe, a
+/// single line under the buttons in Word Vibe. They are all one page behind one
 /// card now, and this is the only place that decides what that page looks like.
 struct GameInstructions {
 
@@ -21,7 +21,7 @@ struct GameInstructions {
     }
 
     let game: AppAnalytics.Game
-    /// Shown under the "HOW TO PLAY" heading, e.g. "Vibe Trio".
+    /// Shown under the "HOW TO PLAY" heading, e.g. "Vibe Pairings".
     let name: String
     /// Names both the page and its opener, e.g. `trio.instructions` and
     /// `trio.instructions.open`.
@@ -70,7 +70,7 @@ struct GameInstructions {
 
     static let words = GameInstructions(
         game: .words,
-        name: "Vibe Words",
+        name: "Word Vibe",
         identifier: "words.instructions",
         intro: "Guess the five-letter word in six tries. Play solo on this phone, or start "
              + "a game and race everyone on the same word.",
@@ -93,7 +93,7 @@ struct GameInstructions {
 
     static let sudoku = GameInstructions(
         game: .sudoku,
-        name: "Vibe Sudoku",
+        name: "Number Vibe",
         identifier: "sudoku.instructions",
         intro: "Fill the 9x9 grid so every row, every column and every 3x3 box holds "
              + "1 to 9. Play solo, or race friends on an identical board.",
@@ -114,7 +114,7 @@ struct GameInstructions {
 
     static let blurt = GameInstructions(
         game: .blurt,
-        name: "Vibe Blurt",
+        name: "Similar Vibe",
         identifier: "blurt.instructions",
         intro: "Describe a word without saying it, so your team can guess it before the clock stops.",
         sections: [
@@ -147,7 +147,7 @@ struct GameInstructions {
 ///
 /// One back button, one title block, one spacing scale, so the pages cannot drift
 /// apart as games are added. A game supplies its words; the shape of the page is
-/// not its business — which is why Vibe Trio, whose page is all diagrams, uses
+/// not its business — which is why Vibe Pairings, whose page is all diagrams, uses
 /// the same shell as the four that are text.
 struct GameInstructionsScaffold<Content: View>: View {
     let game: AppAnalytics.Game

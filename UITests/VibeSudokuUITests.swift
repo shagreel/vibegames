@@ -1,6 +1,6 @@
 import XCTest
 
-/// End-to-end checks for Vibe Sudoku.
+/// End-to-end checks for Number Vibe.
 ///
 /// The puzzle generator is covered exhaustively by the unit tests; these drive
 /// the screens, and one of them talks to the real backend.
@@ -17,8 +17,8 @@ final class VibeSudokuUITests: XCTestCase {
         app.launch(withName: "Tester")
 
         let tile = app.descendants(matching: .any)["game.vibe-sudoku"].firstMatch
-        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Sudoku should be on the hub")
-        XCTAssertFalse(tile.label.contains("SOON"), "Vibe Sudoku should be playable")
+        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Number Vibe should be on the hub")
+        XCTAssertFalse(tile.label.contains("SOON"), "Number Vibe should be playable")
         attach(app, named: "30-sudoku-hub")
     }
 
@@ -112,7 +112,7 @@ final class VibeSudokuUITests: XCTestCase {
 
     private func openSudokuLobby(_ app: XCUIApplication) {
         let tile = app.descendants(matching: .any)["game.vibe-sudoku"].firstMatch
-        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Sudoku tile should exist")
+        XCTAssertTrue(tile.waitForExistence(timeout: 15), "Number Vibe tile should exist")
         tile.tap()
 
         XCTAssertTrue(app.buttons["sudoku.playSolo"].waitForExistence(timeout: 5),

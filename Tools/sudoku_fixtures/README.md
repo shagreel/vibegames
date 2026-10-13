@@ -3,7 +3,7 @@
 Dumps what the **Swift** Sudoku engine generates, so the TypeScript port can be
 checked against it rather than assumed to match.
 
-This matters because a shared Vibe Sudoku race sends a seed and a difficulty, and
+This matters because a shared Number Vibe race sends a seed and a difficulty, and
 nothing else — both devices generate the board from those. The generator carves
 clues away one at a time, checking uniqueness after each removal and re-grading
 as it goes, so a single difference anywhere changes which clue is removed next

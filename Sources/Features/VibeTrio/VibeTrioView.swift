@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Vibe Trio: find three cards where every feature is all-same or all-different.
+/// Vibe Pairings: find three cards where every feature is all-same or all-different.
 struct VibeTrioView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = VibeTrioModel()
@@ -56,7 +56,7 @@ struct VibeTrioView: View {
     private var lobby: some View {
         ScrollView {
             VStack(spacing: 18) {
-                header(title: "VIBE TRIO",
+                header(title: "VIBE PAIRINGS",
                        subtitle: "Three cards. Every feature same or different.")
 
                 if let warning = model.backendUnavailableMessage {
@@ -223,7 +223,7 @@ struct VibeTrioView: View {
 
     private var game: some View {
         VStack(spacing: 0) {
-            header(title: "VIBE TRIO", subtitle: gameSubtitle)
+            header(title: "VIBE PAIRINGS", subtitle: gameSubtitle)
             statusArea
             if model.isFinished {
                 leaderboard
@@ -237,7 +237,7 @@ struct VibeTrioView: View {
     private var gameSubtitle: String {
         var parts: [String] = []
         if model.isShared {
-            // The count goes to everyone, as it does in Vibe Words — knowing how
+            // The count goes to everyone, as it does in Word Vibe — knowing how
             // many people are hunting is half the tension.
             parts.append(model.playerCount == 1 ? "1 player" : "\(model.playerCount) players")
         }
@@ -581,7 +581,7 @@ struct VibeTrioView: View {
 
     private var shareText: String {
         let code = model.sharedGameID ?? ""
-        return "Race me at Vibe Trio — open the app and enter code \(GameCode.display(code))"
+        return "Race me at Vibe Pairings — open the app and enter code \(GameCode.display(code))"
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

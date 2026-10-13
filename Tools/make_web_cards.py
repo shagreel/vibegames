@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the web-sized Vibe Trio card faces from the app's masters.
+"""Builds the web-sized Vibe Pairings card faces from the app's masters.
 
 The app ships the 81 card faces at 900x1153, which is 72MB — the right size for
 a 13-inch iPad and far too much for a web page. This writes 512px, 256-colour

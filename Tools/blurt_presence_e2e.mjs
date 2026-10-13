@@ -1,5 +1,5 @@
 /**
- * Plays real games of Vibe Blurt with real browsers to check what happens when
+ * Plays real games of Similar Vibe with real browsers to check what happens when
  * people leave and come back.
  *
  * This exists because none of it is visible in one client. Presence is a

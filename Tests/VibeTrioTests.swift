@@ -1,7 +1,7 @@
 import XCTest
 @testable import VibeGames
 
-/// Vibe Trio is pure combinatorics, so the rules can be checked exhaustively
+/// Vibe Pairings is pure combinatorics, so the rules can be checked exhaustively
 /// rather than by sampling. The card deck is small enough that every triple of
 /// cards can be tested, which is the strongest guarantee available here.
 final class TrioCardTests: XCTestCase {

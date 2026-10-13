@@ -36,10 +36,10 @@ enum AppAnalytics {
         var title: String {
             switch self {
             case .five: return "Vibe Five"
-            case .words: return "Vibe Words"
-            case .sudoku: return "Vibe Sudoku"
-            case .trio: return "Vibe Trio"
-            case .blurt: return "Vibe Blurt"
+            case .words: return "Word Vibe"
+            case .sudoku: return "Number Vibe"
+            case .trio: return "Vibe Pairings"
+            case .blurt: return "Similar Vibe"
             }
         }
     }
@@ -52,7 +52,7 @@ enum AppAnalytics {
     enum Outcome: String {
         case won
         case lost
-        /// The game reached its own end without anybody winning it. Vibe Trio is
+        /// The game reached its own end without anybody winning it. Vibe Pairings is
         /// the case: the deck runs out, and the score is the result.
         case completed
     }
@@ -94,7 +94,7 @@ enum AppAnalytics {
 
     /// - Parameters:
     ///   - pack: Vibe Five's pack, when the round came from a named one.
-    ///   - grade: Vibe Sudoku's difficulty.
+    ///   - grade: Number Vibe's difficulty.
     ///   - round: which round of a pass-the-phone game this is.
     static func gameStart(_ game: Game,
                           mode: Mode,

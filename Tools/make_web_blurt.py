@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the web app's Vibe Blurt packs from the Swift pack files.
+"""Generates the web app's Similar Vibe packs from the Swift pack files.
 
 The words live in `Sources/Features/VibeBlurt/Packs/` as Swift string arrays and
 that stays the single source of truth. It matters more here than for Vibe Five:

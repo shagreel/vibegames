@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Vibe Sudoku: build the grid, solo or racing everyone else.
+/// Number Vibe: build the grid, solo or racing everyone else.
 struct VibeSudokuView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = VibeSudokuModel()
@@ -61,7 +61,7 @@ struct VibeSudokuView: View {
     private var lobby: some View {
         ScrollView {
             VStack(spacing: 18) {
-                header(title: "VIBE SUDOKU",
+                header(title: "NUMBER VIBE",
                        subtitle: "Fill the grid. First to finish wins.")
 
                 if let warning = model.backendUnavailableMessage {
@@ -256,7 +256,7 @@ struct VibeSudokuView: View {
 
     private var game: some View {
         VStack(spacing: 0) {
-            header(title: "VIBE SUDOKU", subtitle: gameSubtitle)
+            header(title: "NUMBER VIBE", subtitle: gameSubtitle)
             statusArea
 
             if let puzzle = model.puzzle {
@@ -411,7 +411,7 @@ struct VibeSudokuView: View {
 
     private var shareText: String {
         let code = model.sharedGameID ?? ""
-        return "Race me at Vibe Sudoku — open the app and enter code \(GameCode.display(code))"
+        return "Race me at Number Vibe — open the app and enter code \(GameCode.display(code))"
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

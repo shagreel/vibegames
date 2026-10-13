@@ -6,7 +6,7 @@ there first and never a delete, so that one phone cannot wipe a game out from
 under everyone else. That leaves the cleanup to an administrator, which is this.
 
 A game is judged by the timestamp it was created with — `meta/createdAt` for
-Vibe Trio, `createdAt` for Vibe Words and Vibe Sudoku. Games with no timestamp
+Vibe Pairings, `createdAt` for Word Vibe and Number Vibe. Games with no timestamp
 at all are listed but kept unless `--no-timestamp` says otherwise, because an
 unreadable shape is more likely to be a schema change than rubbish.
 
@@ -37,7 +37,7 @@ from firebase_database import access_token  # noqa: E402
 
 DATABASE = "https://{project}-default-rtdb.firebaseio.com"
 
-# The games, and the field each keeps its creation time in. Vibe Blurt was
+# The games, and the field each keeps its creation time in. Similar Vibe was
 # missing from this list, which is why its rooms had never been cleared by hand;
 # the scheduled function in `functions/` covers the same four, so if you change
 # one, change the other.

@@ -10,7 +10,7 @@ struct TrioStanding: Identifiable, Equatable {
     var id: String { playerID }
 }
 
-/// Drives a game of Vibe Trio, solo or as a race.
+/// Drives a game of Vibe Pairings, solo or as a race.
 ///
 /// The whole game state is one seed: the deck order, the opening twelve and the
 /// order replacements arrive all derive from it, so a shared game stays in step
