@@ -296,7 +296,14 @@ struct VibeTrioView: View {
                 .frame(width: proxy.size.width, height: proxy.size.height)
                 // Keyed to the cards themselves, so any change to the table —
                 // this device's take or somebody else's — animates.
-                .animation(.spring(response: 0.36, dampingFraction: 0.76),
+                //
+                // Deliberately slow. At a third of a second three cards vanished
+                // and three appeared faster than anybody could follow, which is
+                // the whole point of the change going past unnoticed — a table
+                // that has lost a trio it was watching for. A second is long
+                // enough to see *which* cards went, and it is only spent when
+                // the table actually changes.
+                .animation(.spring(response: 1.0, dampingFraction: 0.82),
                            value: table.visible.map(\.id))
             }
             // Outside the reader, so the size being fitted is the size the cards

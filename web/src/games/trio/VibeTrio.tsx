@@ -34,6 +34,16 @@ import './VibeTrio.css';
  * anybody disappears for everybody, in place, without a board being transmitted.
  */
 
+/**
+ * How long a departing card's ghost stays on the board, in milliseconds.
+ *
+ * Slightly longer than the `trio-card-out` animation in `VibeTrio.css`, so the
+ * element is removed after it has finished rather than mid-fade. A card leaving
+ * and another arriving is the moment a table either sees that its trio has gone
+ * or does not, so the pair take a full second on purpose.
+ */
+const GHOST_MS = 1050;
+
 type Screen = 'lobby' | 'game';
 
 interface Pending {
@@ -604,7 +614,7 @@ function Board(props: {
     ghostTimers.current.push(
       window.setTimeout(() => {
         setLeaving((current) => current.filter((ghost) => !departed.includes(ghost)));
-      }, 340),
+      }, GHOST_MS),
     );
   }, [visible]);
 
