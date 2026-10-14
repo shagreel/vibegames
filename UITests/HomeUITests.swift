@@ -147,15 +147,38 @@ final class HomeUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5), "the heart should open the panel")
         attach(app, named: "72-support-panel")
 
-        // The handle is written out as well as linked, for anyone who would
-        // rather type it than follow a link.
-        let handle = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS %@", "@chill-gelato"))
+        // The app must not point at a way to pay: Apple rejects that, and this
+        // panel is where the link used to be.
+        let aboutPaying = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[c] %@ OR label CONTAINS[c] %@",
+                                  "venmo", "buy us a treat"))
             .firstMatch
-        XCTAssertTrue(handle.waitForExistence(timeout: 5), "the Venmo handle should be on screen")
+        XCTAssertFalse(aboutPaying.exists, "the app should offer no way to pay in it")
+
+        // What it offers instead: a page on the website, opened in the browser.
+        // It is not tapped here — the tap leaves the app for Safari, and a UI run
+        // has no business driving the browser. `SupportTests` pins the address.
+        let ways = app.descendants(matching: .any)["support.waysToHelp"]
+        XCTAssertTrue(ways.waitForExistence(timeout: 5),
+                      "the panel should point at the ways to help")
+        XCTAssertTrue(ways.label.localizedCaseInsensitiveContains("ways to help"),
+                      "and say so, rather than being an unlabelled row")
+
+        // The app itself must offer nothing to buy: the row hands over to the
+        // website, which is the only place the Venmo link is allowed to live.
+        XCTAssertFalse(app.staticTexts["Venmo @chill-gelato"].exists,
+                       "the app should not offer the handle itself")
 
         done.tap()
         XCTAssertTrue(heart.waitForExistence(timeout: 5), "and close back to the hub")
+
+        // The same page, from the bottom of the hub — the way in for somebody who
+        // is not looking for the heart.
+        let fromHub = app.descendants(matching: .any)["hub.waysToHelp"]
+        XCTAssertTrue(fromHub.waitForExistence(timeout: 5),
+                      "the hub should link to it at the bottom")
+        if !fromHub.isHittable { app.swipeUp() }
+        attach(app, named: "73-hub-ways-to-help")
     }
 
     /// The whole point of the heart being on every screen: you can say what is

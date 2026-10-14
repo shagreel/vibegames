@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ways to help — Vibe Games</title>
+<meta name="description" content="The games are free: no adverts, no accounts, nothing to unlock. Here is how to help, and how to say thanks." />
+<meta name="theme-color" content="#0b0a17" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!--
+  The page the app opens for "Ways to help". Apple will not have a payment link
+  inside the app, so the app points here instead — and this carries the same
+  information as the "Made with love" panel in the browser version, because a
+  person who taps it should find the same thing wherever they tapped it from.
+-->
+
+<header class="help__top">
+  <div class="help__wrap">
+    <a class="help__back" href="/">← Vibe Games</a>
+  </div>
+</header>
+
+<main class="help">
+  <div class="help__wrap">
+    <p class="eyebrow">Ways to help</p>
+    <h1>Made with love</h1>
+
+    <p class="lede">
+      I built these five games for my own family. We play them in the evenings —
+      it is how we wind down together and stay close — and I wanted to share that
+      with other families.
+    </p>
+
+    <p class="help__blurb">
+      Every game is free. Nothing to unlock, no adverts, no account. If you would
+      like to say thanks, you could buy my family a treat to help cover what it
+      costs to keep them running.
+    </p>
+
+    <div class="help__rows">
+      <a class="help__row"
+         href="https://venmo.com/u/chill-gelato"
+         target="_blank"
+         rel="noopener noreferrer"
+         data-donation>
+        <span class="help__icon" aria-hidden="true">🎁</span>
+        <span class="help__text">
+          <strong>Buy us a treat</strong>
+          <span>Venmo @chill-gelato</span>
+        </span>
+        <span class="help__arrow" aria-hidden="true">↗</span>
+      </a>
+
+      <button type="button" class="help__row" data-share>
+        <span class="help__icon" aria-hidden="true">💛</span>
+        <span class="help__text">
+          <strong data-share-label>Share it with another family</strong>
+          <span>They can play in a browser tonight, free</span>
+        </span>
+        <span class="help__arrow" aria-hidden="true">↗</span>
+      </button>
+    </div>
+
+    <button type="button" class="help__copy" data-copy-venmo>Copy the Venmo handle</button>
+
+    <p class="fine fine--center">
+      Nothing here is expected. The games are free either way.
+    </p>
+
+    <p class="fine fine--center">
+      Something broken, or an idea? The feedback box is in the app and in the
+      <a class="help__link" href="https://play.vibegames.party">browser version</a>.
+    </p>
+
+    <p class="fine fine--center">
+      <a class="game__play" href="https://play.vibegames.party">
+        Play in your browser
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div>
+      <p class="foot__mark">Vibe Games</p>
+      <p class="fine">Party games for the phone in your pocket.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Counts the visit, and the taps below; see the bottom of main.js. -->
+<script src="analytics.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

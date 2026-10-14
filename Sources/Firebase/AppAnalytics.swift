@@ -140,18 +140,17 @@ enum AppAnalytics {
         log("feedback_sent", game.map { ["game_name": $0.rawValue] } ?? [:])
     }
 
-    /// The heart was tapped. This is the top of the donation funnel, and the
-    /// step that says whether anyone finds it at all.
+    /// The heart was tapped. This says whether anyone finds the panel at all,
+    /// which is where both the feedback box and the ways to help live.
     static func supportOpened(game: Game? = nil) {
         log("support_open", game.map { ["game_name": $0.rawValue] } ?? [:])
     }
 
-    /// The Venmo link was followed. Nothing comes back from Venmo, so this is
-    /// the only signal that a treat was ever on its way.
-    static func donationTapped() {
-        log("donation_tap")
-    }
-
+    // Note: there is no `donation_tap` here any more. The app has no way to pay
+    // in it — Apple rejects a link to one — so the only client that can report a
+    // tap is the browser version, which has its own `trackDonationTap`. A name
+    // that can never be fired is a name worth deleting rather than documenting.
+    //
     // Note: there is no `share` event here. iOS shares through `ShareLink`,
     // which offers no way to observe a tap, and a `simultaneousGesture` on top
     // of it is a guess rather than a measurement. The web client logs `share`,

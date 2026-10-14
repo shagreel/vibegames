@@ -114,12 +114,32 @@ struct HomeView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "hammer.fill")
-            Text("More games on the way.")
+        VStack(spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "hammer.fill")
+                Text("More games on the way.")
+            }
+            .font(.system(size: 13, weight: .medium, design: .rounded))
+            .foregroundStyle(VibeTheme.tertiaryText)
+
+            // The app's own answer to "how can I help". It used to be a Venmo
+            // link in the panel, which Apple will not have, so now it hands over
+            // to the website page that says all of it.
+            Link(destination: Support.waysToHelpURL) {
+                HStack(spacing: 7) {
+                    Image(systemName: "sparkles")
+                    Text("Ways to help")
+                }
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+                .padding(.horizontal, 16)
+                .frame(height: 40)
+                .background { Capsule().fill(VibeTheme.surfaceStrong) }
+                .overlay { Capsule().stroke(VibeTheme.hairline, lineWidth: 1) }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("hub.waysToHelp")
         }
-        .font(.system(size: 13, weight: .medium, design: .rounded))
-        .foregroundStyle(VibeTheme.tertiaryText)
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
     }

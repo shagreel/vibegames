@@ -447,6 +447,80 @@ code {
 }
 .foot__mark { font-weight: 800; font-size: 1.15rem; margin: 0 0 0.2rem; }
 
+/* ── ways to help ─────────────────────────────────────────────────────────
+   Its own page because the app cannot point at a way to pay: the app opens
+   this, and the browser version shows the same words in a panel. Narrow
+   single column so it reads like a letter rather than a landing page. */
+
+.help { --a: var(--five-a); padding: 1.5rem 0 4rem; }
+.help__top { padding-top: 2rem; }
+.help__wrap { width: min(100% - 2.5rem, 44rem); margin-inline: auto; }
+
+.help__back {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.help__back:hover, .help__back:focus-visible { color: var(--ink); }
+
+.help h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); margin-bottom: 1.1rem; }
+
+.help__blurb {
+  margin-top: 1.2rem;
+  color: var(--ink-soft);
+  font-size: clamp(1rem, 2vw, 1.1rem);
+}
+
+.help__rows { display: grid; gap: 0.75rem; margin: 2.2rem 0 1rem; }
+
+.help__row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.05rem 1.2rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.help__row:hover, .help__row:focus-visible {
+  background: var(--surface-2);
+  transform: translateY(-2px);
+}
+
+.help__icon { font-size: 1.4rem; line-height: 1; }
+.help__text { display: flex; flex-direction: column; gap: 0.15rem; }
+.help__text strong { font-size: 1.02rem; }
+.help__text span { font-size: 0.85rem; color: var(--ink-soft); }
+.help__arrow { margin-left: auto; color: var(--ink-faint); }
+
+.help__copy {
+  width: 100%;
+  padding: 0.9rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.help__copy:hover, .help__copy:focus-visible { background: var(--surface-2); }
+
+.help__link { color: var(--ink); font-weight: 700; text-decoration: none; }
+.help__link:hover, .help__link:focus-visible { text-decoration: underline; }
+
+.help .game__play { margin-top: 0; }
+
 /* ── scroll reveals ───────────────────────────────────────────────────── */
 
 .reveal, .reveal-up {
@@ -480,6 +554,9 @@ code {
   .game { padding: 4.5rem 0; }
   .game__shots { min-height: 400px; }
   .phone--peek { display: none; }
+
+  .help__top { padding-top: 1.5rem; }
+  .help { padding-bottom: 3rem; }
 }
 
 /* ── reduced motion ───────────────────────────────────────────────────── */
@@ -493,6 +570,9 @@ code {
   .game__play:focus-visible {
     transform: none;
   }
+
+  .help__row { transition: none; }
+  .help__row:hover, .help__row:focus-visible { transform: none; }
 
   html { scroll-behavior: auto; }
   .hero__glow, .phone--float { animation: none; }

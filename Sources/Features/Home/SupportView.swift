@@ -1,16 +1,22 @@
 import SwiftUI
 
-/// The ways to say thanks. Kept in one place because the hub strip, the heart
-/// button and the panel all point at the same three things.
+/// The ways to say thanks. Kept in one place because the heart button, the panel
+/// and the website all point at the same things.
+///
+/// There is deliberately no payment link here. Apple rejects an app that points at
+/// a way to pay for something it does not sell, and this app sells nothing — the
+/// browser version carries the Venmo link instead, because a website is not an app
+/// and Apple has no say in it. What the app offers instead is `waysToHelpURL`: a
+/// page on the website, opened in the browser, that says the same things the panel
+/// says and then the rest over there.
 enum Support {
-    /// Venmo takes a username, not an email, and the web profile is the only
-    /// link that works from a phone without the app installed.
-    static let venmoHandle = "@chill-gelato"
-    static let venmoURL = URL(string: "https://venmo.com/u/chill-gelato")!
-
-    /// Where the browser versions live. Sharing costs nothing and helps as much
-    /// as anything else here.
+    /// Where the browser versions live. Sharing costs nothing and is the thing
+    /// that actually helps.
     static let playURL = URL(string: "https://play.vibegames.party")!
+
+    /// "Ways to help" on the website — the same words as this panel, plus the
+    /// parts that cannot live in the app. Served from `site/ways-to-help.html`.
+    static let waysToHelpURL = URL(string: "https://vibegames.party/ways-to-help")!
 
     static let heading = "Made with love"
 
@@ -19,9 +25,9 @@ enum Support {
         — it is how we wind down together and stay close — and I wanted to share \
         that with other families.
 
-        Every game is free. Nothing to unlock, no adverts, no account. If you would \
-        like to say thanks, I would love to hear what you think of them, or you \
-        could buy my family a treat to help cover what it costs to keep them running.
+        Every game is free. Nothing to unlock, no adverts, no account, and nothing \
+        to buy. If you would like to say thanks, tell another family about them, or \
+        tell me what you make of them.
         """
 }
 
@@ -66,7 +72,6 @@ struct SupportView: View {
     var game: AppAnalytics.Game?
 
     @Environment(\.dismiss) private var dismiss
-    @State private var copied = false
 
     var body: some View {
         NavigationStack {
@@ -101,51 +106,23 @@ struct SupportView: View {
                         .foregroundStyle(VibeTheme.tertiaryText)
 
                     VStack(spacing: 10) {
-                        // Venmo: the handle is shown as well as linked, because
-                        // it is what someone needs if the link opens the wrong
-                        // app or they would rather type it themselves.
-                        Link(destination: Support.venmoURL) {
-                            row(symbol: "gift.fill",
-                                title: "Buy us a treat",
-                                detail: "Venmo \(Support.venmoHandle)",
-                                tint: VibeTheme.heart)
+                        Link(destination: Support.waysToHelpURL) {
+                            SupportRow(symbol: "sparkles",
+                                       title: "Ways to help",
+                                       detail: "Sharing it, and telling us what to fix",
+                                       tint: VibeTheme.heart)
                         }
-                        .simultaneousGesture(TapGesture().onEnded {
-                            // The one signal that a treat was ever on its way:
-                            // nothing comes back from Venmo.
-                            AppAnalytics.donationTapped()
-                        })
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("support.waysToHelp")
 
                         ShareLink(item: Support.playURL) {
-                            row(symbol: "person.2.fill",
-                                title: "Share it with another family",
-                                detail: "They can play in a browser tonight, free",
-                                tint: VibeTheme.arm)
+                            SupportRow(symbol: "person.2.fill",
+                                       title: "Share it with another family",
+                                       detail: "They can play in a browser tonight, free",
+                                       tint: VibeTheme.arm)
                         }
                     }
                     .padding(.top, 4)
-
-                    Button {
-                        UIPasteboard.general.string = Support.venmoHandle
-                        copied = true
-                        Task {
-                            try? await Task.sleep(nanoseconds: 2_000_000_000)
-                            copied = false
-                        }
-                    } label: {
-                        Label(copied ? "Copied" : "Copy the Venmo handle",
-                              systemImage: copied ? "checkmark" : "doc.on.doc")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(VibeTheme.primaryText)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 46)
-                            .background {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(VibeTheme.surfaceStrong)
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("support.copyVenmo")
 
                     Text("Nothing here is expected. The games are free either way.")
                         .font(.system(size: 12.5, weight: .medium, design: .rounded))
@@ -171,8 +148,19 @@ struct SupportView: View {
             }
         }
     }
+}
 
-    private func row(symbol: String, title: String, detail: String, tint: Color) -> some View {
+/// One line of "here is a thing you could do".
+///
+/// Shared by the two rows in the panel rather than written twice, so they cannot
+/// drift apart.
+private struct SupportRow: View {
+    let symbol: String
+    let title: String
+    let detail: String
+    let tint: Color
+
+    var body: some View {
         HStack(spacing: 14) {
             Image(systemName: symbol)
                 .font(.system(size: 18, weight: .bold))
@@ -206,6 +194,7 @@ struct SupportView: View {
                 }
         }
     }
+}
 
 /// The form.
 ///
@@ -324,5 +313,4 @@ private struct FeedbackForm: View {
         }
         sending = false
     }
-}
 }

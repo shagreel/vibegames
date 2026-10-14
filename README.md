@@ -151,6 +151,7 @@ python3 Tools/import_words.py /path/to/web-project/src/wordList.ts
 python3 Tools/check_packs.py       # Vibe Five content
 python3 Tools/check_blurt_words.py # Similar Vibe words, including the American spellings
 python3 Tools/check_branding.py    # naming guard
+python3 Tools/check_app_no_payments.py  # the app must offer nothing to buy
 ```
 ## Number Vibe
 
@@ -983,6 +984,7 @@ Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
 Tools/check_blurt_words.py      Validates the Similar Vibe words and their English
 Tools/check_branding.py         Naming guard
+Tools/check_app_no_payments.py  Fails if the app gains a way to pay
 Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories
@@ -1184,8 +1186,10 @@ read side by side rather than through a translation table.
 Four smaller events sit around the edges, each because it answers a question that
 would otherwise be a guess: `screen_view` (a game opened but never started is a
 lobby problem, not a game problem), `feedback_sent` (does the form work in the
-wild), `support_open` and `donation_tap` (the top and the bottom of the only
-funnel that keeps this running), and `share`.
+wild), `support_open` (the top of the only funnel that keeps this running), and
+`share`. `donation_tap` is web-only: the app has no way to pay in it, because
+Apple rejects a link to one — and the ways-to-help page the app opens logs that
+tap itself, so the funnel's last step is still measured when it starts in the app.
 
 **There is deliberately no "app launched" event.** Analytics records
 `first_open` and `session_start` on its own, with the retention and engagement

@@ -2,6 +2,7 @@
   "hosting": {
     "site": "vibe-games",
     "public": ".",
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       ".firebaserc",

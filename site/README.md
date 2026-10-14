@@ -6,6 +6,7 @@ build step, no dependencies, nothing to install.
 ```
 site/
   index.html
+  ways-to-help.html   what the app's "Ways to help" link opens
   styles.css
   main.js
   analytics.js   one page view; a no-op until a measurement id is filled in
@@ -14,6 +15,33 @@ site/
     screens/   app screenshots, light + dark
     people/    illustrations standing in for photos
 ```
+
+## The ways-to-help page
+
+`ways-to-help.html` is `/ways-to-help`, and the app opens it — from the sparkles
+row in the support panel and from the button at the bottom of the hub. It says
+what the browser version's own "Made with love" panel says, and then the parts
+that can only live on a website.
+
+It exists because of one rule: **an app must not point at a way to pay**, and
+`support.waysToHelpURL` is the app's only route to the Venmo link. So the page
+has to stay reachable, and it has to say the same things the panel says — if you
+change the wording in one, change it in the other. The two are:
+
+| In the app | Here |
+| --- | --- |
+| `Support.heading` / `Support.blurb` in `Sources/Features/Home/SupportView.swift` | the eyebrow, `h1` and two paragraphs |
+| the "Share it with another family" row | the same row, as a button |
+| — | "Buy us a treat", and the copy-the-handle button |
+
+`Tools/check_app_no_payments.py` is the guard on the app side: it scans
+`Sources/` and fails the build if a Venmo handle, a "Buy us a treat" or a
+donation link reappears in code or copy. Its comments are exempt, which is how
+`SupportView.swift` gets to explain what it is deliberately not doing.
+
+The page is served at `/ways-to-help` rather than `/ways-to-help.html` because
+`firebase.json` sets `cleanUrls`, so the address in the app carries no extension
+for anyone to mistype and none to leak if the page is ever renamed.
 
 ## Previewing it
 
