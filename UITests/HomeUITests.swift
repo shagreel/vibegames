@@ -187,6 +187,32 @@ final class HomeUITests: XCTestCase {
         attach(app, named: "73-hub-ways-to-help")
     }
 
+    /// The one thing about that link that cannot be read off the source: following
+    /// it really does leave the app.
+    ///
+    /// It used to open a screen built in SwiftUI, which is a thing that looks
+    /// right in a screenshot and is the wrong answer to "where does this go" — the
+    /// page has to be the website's, because the website is the only place the
+    /// payment link is allowed to live.
+    func testTheWaysToHelpLinkOpensThePageInTheBrowser() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+
+        let link = app.descendants(matching: .any)["hub.waysToHelp"]
+        XCTAssertTrue(link.waitForExistence(timeout: 15), "the hub should link to it")
+        if !link.isHittable { app.swipeUp() }
+        link.tap()
+
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 30),
+                      "following it should hand over to the browser")
+        // A sheet inside the app would leave the app in front and Safari would
+        // never appear, so that it does is the whole assertion. Asking the app
+        // for its own `state` after this adds nothing: XCUITest keeps reporting
+        // the state it saw at launch.
+        attach(safari, named: "75-ways-to-help-in-the-browser")
+    }
+
     /// The whole point of the heart being on every screen: you can say what is
     /// wrong while you are looking at it, without a GitHub account and without
     /// leaving the game.
