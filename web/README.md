@@ -106,6 +106,16 @@ npm run test:ui
 - [TESTING.md](TESTING.md) - Comprehensive test documentation
 - [src/test/README.md](src/test/README.md) - Test suite overview
 
+### Caching
+
+`firebase.json` sends `no-cache` for everything and a year of `immutable` for
+`assets/**` (last rule wins). Vite's built files are named after their contents,
+so the app shell is the only thing here that can go stale — and a stale shell is
+the one thing that breaks: `index.html` names the hashed bundle it was built
+with, and a deploy deletes the previous one. A returning visitor holding an
+hour-old shell would ask for a file that no longer exists and get a blank page.
+`no-cache` means "revalidate before use", so an unchanged file costs a 304.
+
 ## 🏗️ Built With
 
 - **React 19.2.0** - UI framework

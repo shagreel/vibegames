@@ -159,6 +159,24 @@ try {
   check(named("donation_tap"), "the Venmo tap is counted, under the browser version's name");
   check(named("share"), "and so is the share");
 
+  console.log("\nThe caching");
+  // The markup and the stylesheet have to come from the same deploy. Cached
+  // apart, a visitor can hold one that is an hour older than the other — and a
+  // class named in one and not the other is a page with no styling at all, which
+  // is exactly what shipped once: the page was rebuilt, the sheet kept its URL,
+  // and the two met. `no-cache` means "check before use", so this is cheap.
+  const caching = await page.evaluate(async () => {
+    const sheet = document.querySelector('link[rel="stylesheet"]').href;
+    const [page, css] = await Promise.all([fetch(location.href), fetch(sheet)]);
+    return {
+      page: page.headers.get("cache-control"),
+      sheet: css.headers.get("cache-control"),
+    };
+  });
+  const revalidates = (value) => (value ?? "").includes("no-cache");
+  check(revalidates(caching.page), `the page revalidates (${caching.page})`);
+  check(revalidates(caching.sheet), `and so does the stylesheet (${caching.sheet})`);
+
   check(noise.length === 0, `nothing failed to load (${noise.join("; ") || "clean"})`);
 } finally {
   await browser.close();

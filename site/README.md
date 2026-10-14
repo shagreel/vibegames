@@ -50,7 +50,9 @@ donation link reappears in code or copy. Its comments are exempt, which is how
 
 **`node Tools/ways_to_help_e2e.mjs`** is the check that the form works, since
 nothing else here can be: it opens the page in Chrome, sends a real note, and
-reads it back out of the database. The note is marked `[test]`, which is what
+reads it back out of the database. It also reads the `Cache-Control` of the page
+and of the stylesheet, because the two being cached apart is the failure below
+and nothing else would notice it. The note is marked `[test]`, which is what
 `Tools/feedback_to_issues.py` ignores — a client cannot delete what it wrote, so
 the marker is what keeps a check from becoming an issue. **An unmarked note
 becomes an issue on the repository**, which is how the first hand-written run of
@@ -59,6 +61,26 @@ this check very nearly ended up.
 The page is served at `/ways-to-help` rather than `/ways-to-help.html` because
 `firebase.json` sets `cleanUrls`, so the address in the app carries no extension
 for anyone to mistype and none to leak if the page is ever renamed.
+
+## What is cached, and why the pages are not
+
+`firebase.json` sends `no-cache` for everything, and a week for `assets/**`
+(last rule wins). The screenshots under `assets/` are versioned with `?v=`, so
+they can be held for as long as the browser likes; the markup, the stylesheet and
+the two scripts revalidate every time.
+
+That is not caution, it is a bug that shipped. The ways-to-help page was rebuilt
+with new class names — `.help__way`, `.help__button` — while the stylesheet kept
+its URL and its hour of cache. A visitor whose browser still had the old
+`styles.css` and fetched the new markup got **a page with no styling at all**:
+nothing in the document matched anything in the sheet, so the cards, the buttons
+and the feedback form all came out as browser defaults.
+
+Two files that have to agree cannot be cached apart. `no-cache` means "revalidate
+before use", not "do not store", so an unchanged file costs a 304 and nothing
+else. The images keep their week because nothing about them has to agree with
+anything — and when one is regenerated, its `?v=` is bumped, which is the only
+reason that number exists.
 
 ## Previewing it
 
