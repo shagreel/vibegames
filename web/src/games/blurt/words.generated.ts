@@ -2143,6 +2143,7 @@ export const PACK_WORDS: Record<string, string[]> = {
     "RSVP",
     "Surprise party",
     "Block party",
+    "Game Night",
     "Cookout",
     "Potluck",
     "Graduation cap",

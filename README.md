@@ -596,7 +596,7 @@ Changing the generator changed every seeded board in the suite, so the fixtures 
 `Tools/trio_fixtures`, `Tools/sudoku_fixtures` and `Tools/blurt_fixtures` were all
 re-dumped from Swift and the browser tests re-checked against them.
 
-### 2,272 things to describe, in eight packs
+### 2,273 things to describe, in eight packs
 
 Food and drink, animals and nature, places and travel, household things, jobs and
 people, sport and music, actions, and celebrations and weather. Written for this
@@ -614,6 +614,21 @@ awkward part is that the two languages share thousands of words — `tap`, `vest
 `pudding`, `chips` and `rubber` are all ordinary American words that mean
 something else over there — so those are printed as advisories for a person to
 read rather than failed automatically.
+
+**One word is tied to a picture.** The landing page's Similar Vibe screenshot shows
+whatever word the room's seed deals first, and that seed is pinned in
+`UITests/VibeBlurtScreenshots.swift`; because the deck is a shuffle of the whole
+library, adding or removing a single word moves every deal and the pinned seed has
+to be found again. `Tools/find_blurt_seed.swift` does that — it compiles against
+the real pack files and prints the seeds that deal a given word first — and the
+screenshot test fails rather than quietly photographing a word nobody chose:
+
+```sh
+swiftc -O -o /tmp/vibe-find-seed Tools/find_blurt_seed.swift \
+  Sources/Features/VibeBlurt/{BlurtEngine,BlurtPack}.swift \
+  Sources/Features/VibeBlurt/Packs/*.swift Sources/Model/SeededGenerator.swift
+/tmp/vibe-find-seed "Game Night"
+```
 
 ### Leaving, and coming back
 
@@ -994,6 +1009,7 @@ Tools/feedback_to_issues.py     Turns app feedback into issues (scheduled)
 Tools/import_words.py           Regenerates the word resources
 Tools/check_packs.py            Validates the Vibe Five content
 Tools/check_blurt_words.py      Validates the Similar Vibe words and their English
+Tools/find_blurt_seed.swift     Finds a seed that deals a given word first
 Tools/check_branding.py         Naming guard
 Tools/check_app_no_payments.py  Fails if the app gains a way to pay
 Tools/make_qr.mjs               Generates the landing page QR codes

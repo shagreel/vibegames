@@ -16,12 +16,17 @@ final class VibeBlurtScreenshots: XCTestCase {
 
     private let database = "https://vibe-words-party-default-rtdb.firebaseio.com"
 
-    /// A seed whose first word is "Rainbow", and whose next few are Barn,
-    /// Interpreter and Snowbank. Normally the room's seed is random; pinning it
-    /// here is only so the screenshots show a word worth reading. The word list
-    /// grew from 300 to 2,272, which changed every deal, so this is a seed found
-    /// again rather than the one it used to be.
-    private let seed = 461
+    /// A seed whose deck deals "Game Night" first, and "Countdown" fourth — the
+    /// word the buzz screenshot shows. Normally the room's seed is random; pinning
+    /// it here is only so the screenshots show a word worth reading.
+    ///
+    /// The seed and the word list are tied together: one word added or removed
+    /// reshuffles every deal, so this has to be found again whenever the library
+    /// changes, and it was found again for "Game Night" — the word the landing
+    /// page's screenshot used to show was "Rainbow". `Tools/find_blurt_seed.swift`
+    /// prints the seeds that deal a word first, and `capture(appearance:)` fails
+    /// rather than quietly photographing a different word.
+    private let seed = 22707
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -346,6 +351,12 @@ final class VibeBlurtScreenshots: XCTestCase {
         writeTurn(code: code, team: 1, describer: me, word: 0)
         let word = app.descendants(matching: .any)["blurt.word"]
         XCTAssertTrue(word.waitForExistence(timeout: 20), "the describer should be given a word")
+        // The screenshots are a marketing surface, so the word on them is chosen
+        // rather than whatever came up. Failing here is the point: a word list
+        // change moves every deal, and the alternative is shipping a screenshot
+        // of a word nobody picked. `Tools/find_blurt_seed.swift` finds another.
+        XCTAssertTrue(word.label.contains("Game Night"),
+                      "seed \(seed) no longer deals \"Game Night\" — got: \(word.label)")
         attach(app, named: "\(appearance)-blurt-word")
 
         // 2. The app is on the team holding the word, but somebody else has it:

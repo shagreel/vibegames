@@ -187,9 +187,10 @@ Similar Vibe needs four players, which one simulator cannot be, so
 `VibeBlurtScreenshots` assembles the room by writing it straight into the
 database: the app makes the game, the test fills the other three seats, deals the
 teams and sets the turn to whichever screen is being photographed. It also pins
-the room's seed to one whose first word is "Rainbow", so the screenshots show a
-word worth reading rather than whatever came up. Like the other back-end tests it
-skips itself when the database is unreachable.
+the room's seed to one whose first word is "Game Night", so the screenshots show a
+word worth reading rather than whatever came up — and `Tools/find_blurt_seed.swift`
+is how that seed is found, since adding one word to a pack reshuffles every deal.
+Like the other back-end tests it skips itself when the database is unreachable.
 
     xcodebuild test -project VibeGames.xcodeproj -scheme VibeGames \
       -only-testing:VibeGamesUITests/VibeBlurtScreenshots \

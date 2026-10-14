@@ -52,6 +52,7 @@ enum OccasionsWords {
         "RSVP",
         "Surprise party",
         "Block party",
+        "Game Night",
         "Cookout",
         "Potluck",
         "Graduation cap",
