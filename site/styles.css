@@ -148,7 +148,7 @@ code {
 .lede {
   font-size: clamp(1.05rem, 2.1vw, 1.3rem);
   color: var(--ink-soft);
-  max-width: 34ch;
+  max-width: 900px;
 }
 
 /* ── store / QR ───────────────────────────────────────────────────────── */
