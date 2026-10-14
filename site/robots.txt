@@ -1,0 +1,6 @@
+# Everything on this host is meant to be found. The other host for these games —
+# play.vibegames.party — is the app itself, and has its own.
+User-agent: *
+Allow: /
+
+Sitemap: https://vibegames.party/sitemap.xml

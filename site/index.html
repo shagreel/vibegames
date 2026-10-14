@@ -3,10 +3,136 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Vibe Games — party games for the phone in your pocket</title>
-<meta name="description" content="Vibe Five, Word Vibe, Number Vibe, Vibe Pairings and Similar Vibe. Play solo, or share a code and play with everyone in the room." />
+<title>Vibe Games — five party games for the phone in your pocket</title>
+<meta name="description" content="Vibe Five, Word Vibe, Number Vibe, Vibe Pairings and Similar Vibe. Play solo, or share a code and play with everyone in the room. Free, no accounts, nothing to install." />
 <meta name="theme-color" content="#0b0a17" />
+<link rel="canonical" href="https://vibegames.party/" />
+
+<!--
+  The card a link turns into: in a message, a post, a chat, a search result. The
+  image is drawn by Tools/make_og_image.mjs, so the words on it are the words in
+  this file. `og:url` and `canonical` both say vibegames.party, because the same
+  page is also served from vibe-games.web.app and two addresses for one page is
+  a duplicate as far as a search engine is concerned.
+-->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Vibe Games" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://vibegames.party/" />
+<meta property="og:title" content="Vibe Games — five party games for the phone in your pocket" />
+<meta property="og:description" content="Name three things before the buzzer. Crack a five-letter word. Find the best charcuterie pairings. Free, in a browser or on the phone." />
+<meta property="og:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Vibe Games, with a phone showing the five games" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Vibe Games — five party games for the phone in your pocket" />
+<meta name="twitter:description" content="Name three things before the buzzer. Crack a five-letter word. Free, in a browser or on the phone." />
+<meta name="twitter:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<!-- The one third-party request on this page: Analytics, and only if it loads. -->
+<link rel="preconnect" href="https://www.googletagmanager.com" />
 <link rel="stylesheet" href="/styles.css" />
+
+<!--
+  What the page is, in a form a search engine can read. Only things that are
+  true: five games, playable in a browser, free. There is no SoftwareApplication
+  for the iOS app here on purpose — it is not in the App Store yet, and a store
+  link that does not exist is worse than no store link. Add one with a `sameAs`
+  when it ships.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://vibegames.party/#website",
+      "url": "https://vibegames.party/",
+      "name": "Vibe Games",
+      "description": "Five quick party games for the phone in your pocket, played solo or passed around a room.",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "ItemList",
+      "name": "The games",
+      "itemListOrder": "https://schema.org/ItemListOrderAscending",
+      "numberOfItems": 5,
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@type": "WebApplication",
+            "name": "Vibe Five",
+            "url": "https://play.vibegames.party/five",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any browser",
+            "description": "Name three things. You have five seconds.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@type": "WebApplication",
+            "name": "Word Vibe",
+            "url": "https://play.vibegames.party/words",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any browser",
+            "description": "Six guesses. Everyone gets the same word.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "item": {
+            "@type": "WebApplication",
+            "name": "Number Vibe",
+            "url": "https://play.vibegames.party/sudoku",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any browser",
+            "description": "Fill the grid. Beat the room to it.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "item": {
+            "@type": "WebApplication",
+            "name": "Vibe Pairings",
+            "url": "https://play.vibegames.party/trio",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any browser",
+            "description": "Three cards where every feature matches or differs — take as many as you can.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "item": {
+            "@type": "WebApplication",
+            "name": "Similar Vibe",
+            "url": "https://play.vibegames.party/blurt",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any browser",
+            "description": "Describe it. Don't say it. Then get rid of it.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -51,13 +177,14 @@
 
     <div class="hero__device">
       <div class="phone phone--float">
-        <picture><source srcset="assets/screens/hub-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/hub-light.jpg?v=4" alt="The Vibe Games home screen, listing five games" /></picture>
+        <picture><source srcset="assets/screens/hub-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/hub-light.jpg?v=4" alt="The Vibe Games home screen, listing five games" width="414" height="900" loading="eager" fetchpriority="high" /></picture>
       </div>
     </div>
   </div>
 </header>
 
 <!-- ───────────────────────────── modes ───────────────────────────── -->
+<main id="games">
 <section class="modes" id="play">
   <div class="wrap">
     <h2 class="reveal">Two ways to play</h2>
@@ -100,7 +227,6 @@
 </section>
 
 <!-- ───────────────────────────── games ───────────────────────────── -->
-<div id="games"></div>
 
 <section class="game game--five" id="vibe-five" data-accent="five">
   <div class="game__backdrop" aria-hidden="true"></div>
@@ -127,9 +253,9 @@
 </div>
 
     <div class="game__shots">
-      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibefive-revealed-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-revealed-light.jpg?v=4" alt="A Vibe Five category on screen, waiting for the clock to start" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibefive-counting-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-counting-light.jpg?v=4" alt="The five-second countdown running" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="2"><picture><source srcset="assets/screens/vibefive-buzzed-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-buzzed-light.jpg?v=4" alt="Time is up, shown in red" /></picture></div>
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibefive-revealed-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-revealed-light.jpg?v=4" alt="A Vibe Five category on screen, waiting for the clock to start" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibefive-counting-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-counting-light.jpg?v=4" alt="The five-second countdown running" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="2"><picture><source srcset="assets/screens/vibefive-buzzed-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibefive-buzzed-light.jpg?v=4" alt="Time is up, shown in red" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
     </div>
   </div>
 </section>
@@ -159,8 +285,8 @@
 </div>
 
     <div class="game__shots">
-      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibewords-solved-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibewords-solved-light.jpg?v=4" alt="A Word Vibe board with coloured hints and a tinted keyboard" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibewords-shared-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibewords-shared-light.jpg?v=4" alt="A shared Word Vibe game showing the code to share" /></picture></div>
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibewords-solved-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibewords-solved-light.jpg?v=4" alt="A Word Vibe board with coloured hints and a tinted keyboard" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibewords-shared-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibewords-shared-light.jpg?v=4" alt="A shared Word Vibe game showing the code to share" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
     </div>
   </div>
 </section>
@@ -189,8 +315,8 @@
 </div>
 
     <div class="game__shots">
-      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibesudoku-grid-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibesudoku-grid-light.jpg?v=4" alt="A Sudoku grid mid-solve with the number keypad below" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibesudoku-shared-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibesudoku-shared-light.jpg?v=4" alt="Waiting for everyone to join a shared Number Vibe race" /></picture></div>
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibesudoku-grid-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibesudoku-grid-light.jpg?v=4" alt="A Sudoku grid mid-solve with the number keypad below" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibesudoku-shared-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibesudoku-shared-light.jpg?v=4" alt="Waiting for everyone to join a shared Number Vibe race" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
     </div>
   </div>
 </section>
@@ -223,8 +349,8 @@
     </div>
 
     <div class="game__shots">
-      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibetrio-board-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibetrio-board-light.jpg?v=4" alt="A Vibe Pairings table of twelve charcuterie boards" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibetrio-leaderboard-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibetrio-leaderboard-light.jpg?v=4" alt="The Vibe Pairings end-of-game leaderboard" /></picture></div>
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibetrio-board-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibetrio-board-light.jpg?v=4" alt="A Vibe Pairings table of twelve charcuterie boards" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibetrio-leaderboard-dark.jpg?v=4" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibetrio-leaderboard-light.jpg?v=4" alt="The Vibe Pairings end-of-game leaderboard" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
     </div>
   </div>
 </section>
@@ -258,14 +384,16 @@
     </div>
 
     <div class="game__shots">
-      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibeblurt-word-dark.jpg?v=5" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeblurt-word-light.jpg?v=5" alt="A Similar Vibe describer's screen, showing the word Game Night and a button to pass it on" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibeblurt-buzz-dark.jpg?v=5" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeblurt-buzz-light.jpg?v=5" alt="The other team's screen, showing the word and a large round red BUZZ button" /></picture></div>
-      <div class="phone phone--peek reveal-up" data-delay="2"><picture><source srcset="assets/screens/vibeblurt-guessing-dark.jpg?v=5" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeblurt-guessing-light.jpg?v=5" alt="A team-mate's screen, being told to guess — with no word on it" /></picture></div>
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibeblurt-word-dark.jpg?v=5" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeblurt-word-light.jpg?v=5" alt="A Similar Vibe describer's screen, showing the word Game Night and a button to pass it on" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibeblurt-buzz-dark.jpg?v=5" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeblurt-buzz-light.jpg?v=5" alt="The other team's screen, showing the word and a large round red BUZZ button" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="2"><picture><source srcset="assets/screens/vibeblurt-guessing-dark.jpg?v=5" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeblurt-guessing-light.jpg?v=5" alt="A team-mate's screen, being told to guess — with no word on it" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
     </div>
   </div>
 </section>
 
 <!-- ───────────────────────────── footer ───────────────────────────── -->
+</main>
+
 <footer class="foot">
   <div class="wrap foot__inner">
     <div>

@@ -253,6 +253,51 @@ Then add a `site` key to the hosting config and deploy:
 
 `firebase.json` lives in `web/`, so the landing page path is relative to that.
 
+## Being found
+
+Both pages declare the same things, and `Tools/check_seo.py` fails if any of them
+goes missing. It needs no network: it reads the two heads, the two sitemaps and
+the two robots files and checks them against each other and against the files
+they point at.
+
+| What | Where it comes from |
+| --- | --- |
+| `<title>`, meta description | written in each page's head |
+| `<link rel="canonical">` | `https://vibegames.party/…`, and nothing else |
+| Open Graph + Twitter card | the same words as the title and description, plus the image below |
+| `og:image`, 1200×630 | `Tools/make_og_image.mjs` — rendered from the site's own colours and a real screenshot |
+| Structured data | `WebSite` and an `ItemList` of the five games, all marked up as free `WebApplication`s |
+| `robots.txt`, `sitemap.xml` | one of each per host, in `site/` and `web/public/` |
+| Favicon, touch icon | `swift Tools/make_icon.swift`, the same mark as the app's |
+
+Three things are deliberate rather than incidental:
+
+- **`vibe-games.web.app` is not the canonical host.** It serves the same files,
+  so without the canonical link there would be two addresses for one page, which
+  is a duplicate as far as a search engine is concerned. `og:url` says the same
+  thing, so a shared link and a crawled page agree.
+- **The game's host is one page.** Every route at `play.vibegames.party` serves
+  the same file, so every route claims the root as its canonical. What changes
+  per route is the tab title, in `web/src/titles.ts`.
+- **No App Store link yet.** Structured data does not name the iOS app, because
+  there is no listing to point at; a store URL that 404s is worse than none. When
+  it ships, add a `SoftwareApplication` with a `sameAs` to the listing, and an
+  `apple-itunes-app` meta tag here — which is also what puts a Smart App Banner
+  across the top of the page on a phone.
+
+What this does not do, and a person has to:
+
+1. **Verify the domain in Search Console** — `vibegames.party`, DNS TXT record,
+   then submit `https://vibegames.party/sitemap.xml`. Without that, none of the
+   above is reported on.
+2. **Check a card actually unfurls.** Paste the URL into a message to yourself.
+   Facebook and LinkedIn have debuggers that re-scrape on demand and print what
+   they found; iMessage and Slack cache, so a card that was wrong once stays
+   wrong until the URL changes.
+3. **App Store search is its own game.** The listing's subtitle and keyword field
+   are what people search, not this page. Nothing in this repository can do that
+   part.
+
 ## Accessibility and motion
 
 The page follows `prefers-color-scheme` and honours `prefers-reduced-motion` —

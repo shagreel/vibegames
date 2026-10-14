@@ -152,6 +152,7 @@ python3 Tools/check_packs.py       # Vibe Five content
 python3 Tools/check_blurt_words.py # Similar Vibe words, including the American spellings
 python3 Tools/check_branding.py    # naming guard
 python3 Tools/check_app_no_payments.py  # the app must offer nothing to buy
+python3 Tools/check_seo.py         # the two sites' titles, cards, sitemaps, robots
 ```
 ## Number Vibe
 
@@ -1012,6 +1013,8 @@ Tools/check_blurt_words.py      Validates the Similar Vibe words and their Engli
 Tools/find_blurt_seed.swift     Finds a seed that deals a given word first
 Tools/check_branding.py         Naming guard
 Tools/check_app_no_payments.py  Fails if the app gains a way to pay
+Tools/check_seo.py              Checks both sites' heads, sitemaps and robots files
+Tools/make_og_image.mjs         Renders the link previews the two sites share
 Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories

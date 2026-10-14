@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every page on this host. No `lastmod`, no `priority`, no `changefreq`: search
+  engines ignore the last two, and a date written by hand here is a date that
+  goes stale the next time a page changes — the one thing in a sitemap that is
+  worse than nothing.
+
+  A page missing from this list is a page nobody finds, so
+  `Tools/check_seo.py` fails if one is not here. Add the <url> when you add the
+  page.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://vibegames.party/</loc>
+  </url>
+  <url>
+    <loc>https://vibegames.party/ways-to-help</loc>
+  </url>
+</urlset>

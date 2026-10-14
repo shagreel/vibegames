@@ -3,13 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#121213" />
-    <meta name="description" content="Vibe Games — quick party games you can play in a browser. Vibe Five, Vibe Words, Vibe Sudoku and Vibe Trio." />
-    <title>Vibe Games</title>
+    <title>Vibe Games — play in your browser</title>
+    <meta name="description" content="Five quick party games in a browser: Vibe Five, Word Vibe, Number Vibe, Vibe Pairings and Similar Vibe. Play solo, or share a code and play with everyone in the room." />
+
+    <!--
+      Every route here serves this one file, so every route claims to be this
+      page: `/words` is a screen inside the game, not a page of its own. The
+      marketing page at vibegames.party is what should be found in a search; this
+      is the way in.
+
+      The title is replaced per route by the app itself (see `src/titles.ts`).
+    -->
+    <link rel="canonical" href="https://play.vibegames.party/" />
+
+    <!-- The card a shared link turns into. This is the URL the app shares, so it
+         is the one that most often arrives in a message. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vibe Games" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://play.vibegames.party/" />
+    <meta property="og:title" content="Vibe Games — play in your browser" />
+    <meta property="og:description" content="Five quick party games, free and in a browser. Solo, or share a code and play with everyone in the room." />
+    <meta property="og:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vibe Games, with a phone showing the five games" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vibe Games — play in your browser" />
+    <meta name="twitter:description" content="Five quick party games, free and in a browser." />
+    <meta name="twitter:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      The app is entirely rendered by JavaScript, so this is what is left if it
+      never runs: a crawler that does not execute scripts, an old browser, a
+      script blocker. Link previews do not read this — they read the Open Graph
+      tags above, which is why those are in the file rather than drawn by React.
+    -->
+    <noscript>
+      <h1>Vibe Games</h1>
+      <p>
+        Five quick party games: Vibe Five, Word Vibe, Number Vibe, Vibe Pairings
+        and Similar Vibe. Playing them needs JavaScript —
+        <a href="https://vibegames.party/">vibegames.party</a> has screenshots and
+        says what each one is.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

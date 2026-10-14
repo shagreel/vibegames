@@ -1,0 +1,7 @@
+# The game, at the address it is played. The pages that describe it — the ones
+# worth finding in a search — are on the other host, vibegames.party, which has
+# its own robots.txt.
+User-agent: *
+Allow: /
+
+Sitemap: https://play.vibegames.party/sitemap.xml

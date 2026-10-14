@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One page, because there is one page: every route in this app serves the same
+  file and claims the same canonical URL. `/words` is a screen inside the game,
+  not a page of its own.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://play.vibegames.party/</loc>
+  </url>
+</urlset>

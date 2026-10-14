@@ -116,6 +116,28 @@ with, and a deploy deletes the previous one. A returning visitor holding an
 hour-old shell would ask for a file that no longer exists and get a blank page.
 `no-cache` means "revalidate before use", so an unchanged file costs a 304.
 
+### Search and sharing
+
+The head is in `index.html`, not drawn by React, because the things that read it
+most — a search engine's first pass, and the unfurlers behind iMessage, Slack and
+every social network — do not run scripts. So the title, description, canonical
+and Open Graph tags are in the file, and `/robots.txt`, `/sitemap.xml` and the
+touch icon are in `public/`. `Tools/check_seo.py` checks all of it.
+
+Two things here are the app's rather than the file's:
+
+- **The tab title, per route** (`src/titles.ts`). Every route serves this one
+  file, so without it every tab, bookmark and history entry says the same thing.
+  The routes and the titles are checked against each other by the same script, so
+  a game added without a title fails the check rather than shipping as "Vibe
+  Games".
+- **A `<noscript>`** with a line about what the games are, for anything that
+  arrives without JavaScript.
+
+The canonical on every route is the root, deliberately: `/words` is a screen
+inside the game, not a page of its own, and the pages worth finding are the ones
+at `vibegames.party`.
+
 ## 🏗️ Built With
 
 - **React 19.2.0** - UI framework
