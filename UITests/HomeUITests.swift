@@ -163,6 +163,10 @@ final class HomeUITests: XCTestCase {
                       "the panel should point at the ways to help")
         XCTAssertTrue(ways.label.localizedCaseInsensitiveContains("ways to help"),
                       "and say so, rather than being an unlabelled row")
+        // Present is not the same as reachable: a row under the Done button, or
+        // behind the keyboard, would satisfy everything above and still be a
+        // link nobody can follow.
+        XCTAssertTrue(ways.isHittable, "and be somewhere a thumb can get to")
 
         // The app itself must offer nothing to buy: the row hands over to the
         // website, which is the only place the Venmo link is allowed to live.
@@ -178,6 +182,8 @@ final class HomeUITests: XCTestCase {
         XCTAssertTrue(fromHub.waitForExistence(timeout: 5),
                       "the hub should link to it at the bottom")
         if !fromHub.isHittable { app.swipeUp() }
+        XCTAssertTrue(fromHub.isHittable,
+                      "the hub's link should be reachable, not just in the hierarchy")
         attach(app, named: "73-hub-ways-to-help")
     }
 
