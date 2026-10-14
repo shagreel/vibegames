@@ -605,11 +605,12 @@ function VibeBlurt() {
         )
       ) : (
         <div className="blurt__handover">
-          <span className={`blurt__team-tag blurt__team-tag--${play.team}`}>
-            {teamTitle(play.team)}
-          </span>
-          {/* No "left" branch: the name is the resolved holder, so it is always
-              somebody in the room. The line below says what to do about a
+          {/* No team tag above this, deliberately. It said which side was about
+              to play, in that side's colour, and read as "you are on this team"
+              — the one thing this screen is not saying. Whose turn it is is the
+              name below; which side *you* are on is the line under that.
+              No "left" branch either: the name is the resolved holder, so it is
+              always somebody in the room. The line below says what to do about a
               describer who walked out. */}
           <h2>
             {isDescriber ? "You're up" : holderName ? `${holderName} is up` : 'Nobody is left to describe'}

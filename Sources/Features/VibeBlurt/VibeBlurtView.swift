@@ -689,13 +689,13 @@ struct VibeBlurtView: View {
 
     private func handoverCard(_ play: BlurtPlay) -> some View {
         VStack(spacing: 16) {
-            Text(play.team.title.uppercased())
-                .font(.system(size: 13, weight: .black, design: .rounded))
-                .kerning(2)
-                .foregroundStyle(VibeTheme.blurtTeam(play.team))
-
-            // No "has left" branch: the name here is the resolved holder, so it
-            // is always somebody in the room. The line below says what to do
+            // No team tag above this, deliberately. It said which side was about
+            // to play, in that side's colour, and read as "you are on this team"
+            // — the one thing this screen is not saying. Whose turn it is is the
+            // name below; which side *you* are on is the line under that.
+            //
+            // No "has left" branch either: the name here is the resolved holder,
+            // so it is always somebody in the room. The line below says what to do
             // about a describer who walked out.
             Text(model.isDescriber
                  ? "You're up"

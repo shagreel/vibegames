@@ -166,6 +166,16 @@ for (const player of players) {
 }
 check(starters.length === 1, `exactly one person can start the round (got ${starters.length})`);
 
+// The handover names the person whose turn it is, and says nothing about which
+// team that is. It used to carry a coloured "TEAM ONE" tag, which people read as
+// saying they were on that team — the scoreboard says who is on what, and this
+// screen is not supposed to be about that at all.
+const tagged = [];
+for (const player of players) {
+  if (await player.page.$(".blurt__handover .blurt__team-tag")) tagged.push(player.name);
+}
+check(tagged.length === 0, `the handover names the next person and no team (${tagged.join(", ")})`);
+
 // ── the describer starts the round's clock ──────────────────────────────
 const firstDescriber = { player: starters[0] };
 await firstDescriber.player.page.click(".blurt__handover .blurt__primary");

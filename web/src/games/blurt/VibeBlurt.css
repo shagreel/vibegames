@@ -513,24 +513,6 @@
   opacity: 0.9;
 }
 
-.blurt__team-tag {
-  padding: 0.3rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 800;
-  color: #fff;
-}
-
-.blurt__team-tag--1 {
-  background: var(--blurt-team-one);
-}
-
-.blurt__team-tag--2 {
-  background: var(--blurt-team-two);
-}
-
 /* ── overlay ────────────────────────────────────────────────────────── */
 
 .blurt__overlay {
