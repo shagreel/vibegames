@@ -155,6 +155,10 @@ Analytics property the iOS client uses, with the same event names and values:
 
 Plus `support_open`, `donation_tap` and `feedback_sent` around the support panel.
 
+The last three are also logged by `site/ways-to-help.html` — the page the iOS app
+opens instead of carrying a payment link — so a visit that starts in the app and
+finishes in a browser is still one funnel in the reports.
+
 Two things are deliberate rather than incidental:
 
 - **The first page view is counted once.** gtag's automatic page views are

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ways to help — Vibe Games</title>
-<meta name="description" content="The games are free: no adverts, no accounts, nothing to unlock. Here is how to help, and how to say thanks." />
+<title>Made with love — Vibe Games</title>
+<meta name="description" content="Why the games exist, and the three things that help: telling me what to fix, sharing them, or buying my family a treat." />
 <meta name="theme-color" content="#0b0a17" />
 <link rel="stylesheet" href="styles.css" />
 </head>
@@ -12,9 +12,12 @@
 
 <!--
   The page the app opens for "Ways to help". Apple will not have a payment link
-  inside the app, so the app points here instead — and this carries the same
-  information as the "Made with love" panel in the browser version, because a
-  person who taps it should find the same thing wherever they tapped it from.
+  inside the app, so the app points here instead.
+
+  The words are the browser version's, and they have to stay that way: the same
+  panel, in `web/src/hub/Support.tsx`, says the same things, and a person who
+  follows the link should not arrive somewhere that reads differently. The order
+  is the one that puts the two free ways to help first and the payment last.
 -->
 
 <header class="help__top">
@@ -25,7 +28,6 @@
 
 <main class="help">
   <div class="help__wrap">
-    <p class="eyebrow">Ways to help</p>
     <h1>Made with love</h1>
 
     <p class="lede">
@@ -34,53 +36,71 @@
       with other families.
     </p>
 
-    <p class="help__blurb">
-      Every game is free. Nothing to unlock, no adverts, no account. If you would
-      like to say thanks, you could buy my family a treat to help cover what it
-      costs to keep them running.
+    <h2>How you can help the project</h2>
+
+    <p class="help__intro">
+      The games are free: nothing to unlock, no adverts, no account. Three things
+      help, and only the last one costs anything.
     </p>
 
-    <div class="help__rows">
-      <a class="help__row"
-         href="https://venmo.com/u/chill-gelato"
-         target="_blank"
-         rel="noopener noreferrer"
-         data-donation>
-        <span class="help__icon" aria-hidden="true">🎁</span>
-        <span class="help__text">
-          <strong>Buy us a treat</strong>
-          <span>Venmo @chill-gelato</span>
-        </span>
-        <span class="help__arrow" aria-hidden="true">↗</span>
-      </a>
+    <section class="help__way">
+      <h3><span class="help__step" aria-hidden="true">1</span> Give feedback or suggest a game</h3>
 
-      <button type="button" class="help__row" data-share>
-        <span class="help__icon" aria-hidden="true">💛</span>
-        <span class="help__text">
-          <strong data-share-label>Share it with another family</strong>
-          <span>They can play in a browser tonight, free</span>
-        </span>
-        <span class="help__arrow" aria-hidden="true">↗</span>
-      </button>
-    </div>
+      <div class="feedback" data-feedback>
+        <form data-feedback-form novalidate>
+          <label for="feedback-text">Tell me what you think, or what is not working</label>
+          <textarea id="feedback-text"
+                    name="feedback"
+                    rows="4"
+                    maxlength="2000"
+                    placeholder="Ideas, bugs, a game you would like next — anything at all."
+                    data-feedback-text></textarea>
+          <p class="feedback__problem" data-feedback-problem role="alert" hidden></p>
+          <button type="submit" class="help__button feedback__send" data-feedback-send disabled>Send</button>
+          <p class="feedback__note">
+            No account, no email address, nothing to sign up for — it reaches me as
+            a note.
+          </p>
+        </form>
 
-    <button type="button" class="help__copy" data-copy-venmo>Copy the Venmo handle</button>
+        <p class="feedback__sent" data-feedback-sent role="status" hidden>
+          <strong>Thank you — that has gone straight to me.</strong>
+          <span>I read everything, even when I cannot reply to it.</span>
+        </p>
+      </div>
+    </section>
 
-    <p class="fine fine--center">
-      Nothing here is expected. The games are free either way.
-    </p>
+    <section class="help__way">
+      <h3><span class="help__step" aria-hidden="true">2</span> Share it with others</h3>
+      <p>They can play in a browser tonight, free — no install, nothing to sign up for.</p>
 
-    <p class="fine fine--center">
-      Something broken, or an idea? The feedback box is in the app and in the
-      <a class="help__link" href="https://play.vibegames.party">browser version</a>.
-    </p>
+      <div class="help__actions">
+        <button type="button" class="help__button" data-share>
+          <span data-share-label>Share it with another family</span>
+          <span class="help__arrow" data-share-arrow aria-hidden="true">↗</span>
+        </button>
+      </div>
+    </section>
 
-    <p class="fine fine--center">
-      <a class="game__play" href="https://play.vibegames.party">
-        Play in your browser
-        <span aria-hidden="true">&rarr;</span>
-      </a>
-    </p>
+    <section class="help__way">
+      <h3><span class="help__step" aria-hidden="true">3</span> Buy us a treat</h3>
+      <p>If you would like to say thanks, it helps cover what it costs to keep the games running.</p>
+
+      <div class="help__actions">
+        <a class="help__button"
+           href="https://venmo.com/u/chill-gelato"
+           target="_blank"
+           rel="noopener noreferrer"
+           data-donation>
+          Venmo @chill-gelato
+          <span aria-hidden="true">↗</span>
+        </a>
+
+        <button type="button" class="help__button" data-copy-venmo>Copy the handle</button>
+      </div>
+    </section>
+
+    <p class="help__foot">Nothing here is expected. The games are free either way.</p>
   </div>
 </main>
 

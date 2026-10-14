@@ -449,12 +449,17 @@ code {
 
 /* ── ways to help ─────────────────────────────────────────────────────────
    Its own page because the app cannot point at a way to pay: the app opens
-   this, and the browser version shows the same words in a panel. Narrow
-   single column so it reads like a letter rather than a landing page. */
+   this, and the browser version says the same words in a panel.
 
-.help { --a: var(--five-a); padding: 1.5rem 0 4rem; }
+   One column, one card per way to help, one shape of button. The order is the
+   only thing that should draw the eye, so the step number is the only accent
+   and every control is the same pill — including the one that leaves for
+   Venmo, which has to sit in the list as the third thing rather than shout
+   over the two free ones. */
+
+.help { padding: 1.5rem 0 4rem; }
 .help__top { padding-top: 2rem; }
-.help__wrap { width: min(100% - 2.5rem, 44rem); margin-inline: auto; }
+.help__wrap { width: min(100% - 2.5rem, 40rem); margin-inline: auto; }
 
 .help__back {
   font-size: 0.9rem;
@@ -464,62 +469,159 @@ code {
 }
 .help__back:hover, .help__back:focus-visible { color: var(--ink); }
 
-.help h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); margin-bottom: 1.1rem; }
-
-.help__blurb {
-  margin-top: 1.2rem;
-  color: var(--ink-soft);
-  font-size: clamp(1rem, 2vw, 1.1rem);
+.help h1 {
+  font-size: clamp(2.2rem, 6vw, 3rem);
+  margin: 0 0 1.1rem;
 }
 
-.help__rows { display: grid; gap: 0.75rem; margin: 2.2rem 0 1rem; }
+/* The site's `h2` is a landing-page headline; this one introduces a list. */
+.help h2 {
+  font-size: clamp(1.4rem, 3.4vw, 1.75rem);
+  margin: 3.2rem 0 0.7rem;
+}
 
-.help__row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-  padding: 1.05rem 1.2rem;
+.help__intro { color: var(--ink-soft); margin-bottom: 1.6rem; }
+
+.help__way {
+  padding: 1.4rem 1.5rem 1.5rem;
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
   background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.18s ease, transform 0.18s ease;
 }
-.help__row:hover, .help__row:focus-visible {
+.help__way + .help__way { margin-top: 0.9rem; }
+
+.help__way h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.12rem;
+}
+
+.help__step {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
   background: var(--surface-2);
-  transform: translateY(-2px);
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
-.help__icon { font-size: 1.4rem; line-height: 1; }
-.help__text { display: flex; flex-direction: column; gap: 0.15rem; }
-.help__text strong { font-size: 1.02rem; }
-.help__text span { font-size: 0.85rem; color: var(--ink-soft); }
-.help__arrow { margin-left: auto; color: var(--ink-faint); }
+.help__way p { margin: 0.7rem 0 0; color: var(--ink-soft); }
 
-.help__copy {
-  width: 100%;
-  padding: 0.9rem;
+.help__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+.help__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: transparent;
+  background: var(--surface-2);
   color: var(--ink);
   font: inherit;
   font-size: 0.9rem;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
-  transition: background 0.18s ease;
+  transition: filter 0.18s ease, transform 0.18s ease;
 }
-.help__copy:hover, .help__copy:focus-visible { background: var(--surface-2); }
+.help__button:hover, .help__button:focus-visible {
+  filter: brightness(1.18);
+  transform: translateY(-1px);
+}
+.help__button:disabled {
+  cursor: default;
+  opacity: 0.45;
+  filter: none;
+  transform: none;
+}
+
+.help__arrow { color: var(--ink-faint); font-size: 1.05em; line-height: 1; }
+
+/* ── the feedback box ────────────────────────────────────────────────────
+   The browser version's form, in plain HTML: one box, one button, and a line
+   saying where it goes. The copy is the same on purpose — the two have to read
+   as one thing, because they are the same inbox. */
+
+.feedback { margin-top: 1.1rem; }
+
+.feedback label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.feedback textarea {
+  display: block;
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--canvas-soft);
+  color: var(--ink);
+  font: inherit;
+  /* A whole rem, not less: iOS Safari zooms the page in when a field it can type
+     into is under 16px, and this page is opened on a phone by the app. */
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.feedback textarea::placeholder { color: var(--ink-faint); }
+.feedback textarea:focus-visible {
+  outline: 2px solid var(--five-a);
+  outline-offset: 1px;
+}
+
+.feedback__send {
+  width: 100%;
+  margin-top: 0.7rem;
+  padding-block: 0.8rem;
+}
+
+.feedback__problem {
+  margin: 0.7rem 0 0;
+  color: #ff9a9a;
+  font-size: 0.85rem;
+}
+
+.feedback .feedback__note {
+  margin-top: 0.7rem;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.feedback__sent strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.02rem;
+}
+.feedback__sent span { display: block; margin-top: 0.2rem; font-size: 0.9rem; }
+.help .help__way p.feedback__sent { margin-top: 1.1rem; color: var(--ink-soft); }
+
+.help__foot {
+  margin: 2.4rem 0 0;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+}
 
 .help__link { color: var(--ink); font-weight: 700; text-decoration: none; }
 .help__link:hover, .help__link:focus-visible { text-decoration: underline; }
-
-.help .game__play { margin-top: 0; }
 
 /* ── scroll reveals ───────────────────────────────────────────────────── */
 
@@ -571,8 +673,8 @@ code {
     transform: none;
   }
 
-  .help__row { transition: none; }
-  .help__row:hover, .help__row:focus-visible { transform: none; }
+  .help__button { transition: none; }
+  .help__button:hover, .help__button:focus-visible { transform: none; }
 
   html { scroll-behavior: auto; }
   .hero__glow, .phone--float { animation: none; }

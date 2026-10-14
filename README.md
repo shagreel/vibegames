@@ -836,6 +836,17 @@ cd web && npm run build && npm run preview
 SITE=http://localhost:4173 node Tools/words_e2e.mjs
 ```
 
+A third, `Tools/ways_to_help_e2e.mjs`, does the same for the landing page's
+feedback box: the page is static and has no test framework, so the only way to
+know the form reaches the inbox is to send a note through it and read it back.
+It writes real data, and a client cannot delete what it wrote, so it marks the
+note `[test]` — which is what the drain ignores:
+
+```sh
+node Tools/ways_to_help_e2e.mjs                        # the deployed page
+node Tools/ways_to_help_e2e.mjs http://127.0.0.1:8099/ways-to-help.html
+```
+
 The **daily cleanup** in `functions/` has its own tests, which need no database
 and no credential — they are about which rooms are old enough to delete:
 
@@ -992,6 +1003,7 @@ Tools/make_web_game_codes.py    Mirrors the code words into the web app
 Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in browsers
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/words_e2e.mjs             A real game of Word Vibe, in a browser
+Tools/ways_to_help_e2e.mjs      Sends a real note from the ways-to-help page
 Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
 Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
 Tools/prune_games.py            Deletes old games (admin — clients cannot)
@@ -1189,7 +1201,8 @@ lobby problem, not a game problem), `feedback_sent` (does the form work in the
 wild), `support_open` (the top of the only funnel that keeps this running), and
 `share`. `donation_tap` is web-only: the app has no way to pay in it, because
 Apple rejects a link to one — and the ways-to-help page the app opens logs that
-tap itself, so the funnel's last step is still measured when it starts in the app.
+tap, the share and the note itself, under the same three names, so a funnel that
+starts in the app is still measured once it hands over to the browser.
 
 **There is deliberately no "app launched" event.** Analytics records
 `first_open` and `session_start` on its own, with the retention and engagement

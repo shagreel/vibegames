@@ -9,7 +9,7 @@ site/
   ways-to-help.html   what the app's "Ways to help" link opens
   styles.css
   main.js
-  analytics.js   one page view; a no-op until a measurement id is filled in
+  analytics.js   one page view; the id is filled in, so this is live
   assets/
     qr/        appstore.svg, playstore.svg   (real QR codes, placeholder URLs)
     screens/   app screenshots, light + dark
@@ -19,25 +19,42 @@ site/
 ## The ways-to-help page
 
 `ways-to-help.html` is `/ways-to-help`, and the app opens it — from the sparkles
-row in the support panel and from the button at the bottom of the hub. It says
-what the browser version's own "Made with love" panel says, and then the parts
-that can only live on a website.
+row in the support panel and from the button at the bottom of the hub. It is the
+browser version's "Made with love" panel, in the open, as a list:
+
+```
+Made with love                        the title, and why the games exist
+  How you can help the project
+    1  Give feedback or suggest a game   the form
+    2  Share it with others              the share sheet, or the link
+    3  Buy us a treat                    Venmo, and copying the handle
+```
 
 It exists because of one rule: **an app must not point at a way to pay**, and
 `support.waysToHelpURL` is the app's only route to the Venmo link. So the page
 has to stay reachable, and it has to say the same things the panel says — if you
-change the wording in one, change it in the other. The two are:
+change the wording in one, change it in the other.
 
-| In the app | Here |
-| --- | --- |
-| `Support.heading` / `Support.blurb` in `Sources/Features/Home/SupportView.swift` | the eyebrow, `h1` and two paragraphs |
-| the "Share it with another family" row | the same row, as a button |
-| — | "Buy us a treat", and the copy-the-handle button |
+The words are the browser version's, from `web/src/hub/Support.tsx`, and the
+feedback box is that panel's form written out in plain HTML: the same label, the
+same placeholder, the same "no account, no email address" note, the same
+four-character floor before Send lights up, and the same thank-you. It posts
+`{text, source: "web", createdAt}` to the same write-only node in the Realtime
+Database, with `fetch` rather than the Firebase SDK — this page has no build step
+and no dependencies, and one POST is not worth a hundred kilobytes of client.
 
 `Tools/check_app_no_payments.py` is the guard on the app side: it scans
 `Sources/` and fails the build if a Venmo handle, a "Buy us a treat" or a
 donation link reappears in code or copy. Its comments are exempt, which is how
 `SupportView.swift` gets to explain what it is deliberately not doing.
+
+**`node Tools/ways_to_help_e2e.mjs`** is the check that the form works, since
+nothing else here can be: it opens the page in Chrome, sends a real note, and
+reads it back out of the database. The note is marked `[test]`, which is what
+`Tools/feedback_to_issues.py` ignores — a client cannot delete what it wrote, so
+the marker is what keeps a check from becoming an issue. **An unmarked note
+becomes an issue on the repository**, which is how the first hand-written run of
+this check very nearly ended up.
 
 The page is served at `/ways-to-help` rather than `/ways-to-help.html` because
 `firebase.json` sets `cleanUrls`, so the address in the app carries no extension

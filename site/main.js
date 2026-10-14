@@ -1,7 +1,8 @@
 /* Vibe Games — landing page behaviour.
-   Three jobs: reveal things as they scroll in, drive the per-section backdrop
-   so each game blooms as it reaches the middle of the screen, and — on the one
-   page that has them — run and count the share and copy-handle buttons.
+   Four jobs: reveal things as they scroll in, drive the per-section backdrop so
+   each game blooms as it reaches the middle of the screen, and — on the one page
+   that has them — run the ways to help: the feedback box, the share button and
+   the copy-the-handle button.
    No dependencies. */
 
 (function () {
@@ -113,6 +114,72 @@
         settle(copyButton, "Copied " + VENMO_HANDLE);
       }).catch(function () {
         settle(copyButton, "Copy failed — it is " + VENMO_HANDLE);
+      });
+    });
+  }
+
+  /* ── the feedback box ────────────────────────────────────────────────────
+     The same inbox the browser version writes to: a write-only node in the
+     Realtime Database, with no token here and none anywhere else — a token in a
+     client is a token anyone can read out of it. The rules are what keep it
+     honest (text of 4 to 2000 characters, a source of "web"), and a scheduled
+     drain turns an entry into an issue on the repository.
+
+     `fetch` rather than the Firebase SDK: this page has no build step and no
+     dependencies, and one POST is not worth a hundred kilobytes of client. */
+
+  var FEEDBACK_URL = "https://vibe-words-party-default-rtdb.firebaseio.com/feedback.json";
+  var MIN_FEEDBACK = 4;
+  var MAX_FEEDBACK = 2000;
+
+  var feedback = document.querySelector("[data-feedback]");
+
+  if (feedback) {
+    var form = feedback.querySelector("[data-feedback-form]");
+    var field = feedback.querySelector("[data-feedback-text]");
+    var send = feedback.querySelector("[data-feedback-send]");
+    var problem = feedback.querySelector("[data-feedback-problem]");
+    var sent = feedback.querySelector("[data-feedback-sent]");
+
+    var note = function () { return field.value.trim(); };
+
+    var fail = function (message) {
+      problem.textContent = message;
+      problem.hidden = false;
+      send.disabled = false;
+      send.textContent = "Send";
+    };
+
+    field.addEventListener("input", function () {
+      send.disabled = note().length < MIN_FEEDBACK;
+    });
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      var text = note();
+      if (text.length < MIN_FEEDBACK) return fail("Please write a little more.");
+      if (text.length > MAX_FEEDBACK) {
+        return fail("Please keep it under " + MAX_FEEDBACK + " characters.");
+      }
+
+      send.disabled = true;
+      send.textContent = "Sending…";
+      problem.hidden = true;
+
+      fetch(FEEDBACK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, source: "web", createdAt: Date.now() })
+      }).then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        // Only on the way through: "thank you" for a note that went nowhere is
+        // worse than an error, because the person then believes they were heard.
+        form.hidden = true;
+        sent.hidden = false;
+        track("feedback_sent", {});
+      }).catch(function () {
+        fail("That did not go through. Please try again in a moment.");
       });
     });
   }
