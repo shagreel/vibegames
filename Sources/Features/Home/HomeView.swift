@@ -63,7 +63,7 @@ struct HomeView: View {
                 preferencesButton
             }
 
-            Text("Quick party games. Grab a phone, pass it round.")
+            Text("Quick party games. Pass it round.")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 

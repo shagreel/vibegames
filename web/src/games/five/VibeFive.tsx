@@ -26,10 +26,10 @@ import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import './VibeFive.css';
 
 /**
- * Vibe Five on the web — the pass-the-phone game.
+ * Vibe Five on the web — the pass-the-device game.
  *
  * There is no shared game here and there is not meant to be: the whole thing is
- * one phone handed round a table, which is why it is the only game in the suite
+ * one device handed round a table, which is why it is the only game in the suite
  * with no database behind it.
  *
  * Flow: **START** reveals a category and the clock waits → **START** again sets
@@ -89,7 +89,7 @@ const categoryCount = countIn(ALL_PACK_IDS);
 const FIVE_INSTRUCTIONS: HowToPlayContent = {
   name: 'Vibe Five',
   intro:
-    'A category, five seconds, and one phone passed round the table. Name three things that fit before the buzzer.',
+    'A category, five seconds, and one device passed round the table. Name three things that fit before the buzzer.',
   sections: [
     {
       title: 'The category waits for you',

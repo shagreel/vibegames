@@ -38,7 +38,7 @@ struct VibeFiveSettingsView: View {
                 settingRow(
                     symbol: "speaker.wave.2.fill",
                     title: "Buzzer & ticks",
-                    subtitle: "Plays even when the phone is on silent"
+                    subtitle: "Plays even in silent mode"
                 ) {
                     Toggle("", isOn: Binding(
                         get: { model.soundEnabled },

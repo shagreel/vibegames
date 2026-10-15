@@ -12,7 +12,7 @@ The shell is a hub with four playable games.
 | Game | Players | Backend |
 | --- | --- | --- |
 | **Vibe Five** — name three things before the buzzer | Pass one phone around | None |
-| **Word Vibe** — guess the five-letter word | Everyone on their own phone | Firebase Realtime Database |
+| **Word Vibe** — guess the five-letter word | Everyone on their own device | Firebase Realtime Database |
 | **Number Vibe** — fill the grid | Solo, or a race on the same board | Firebase Realtime Database |
 | **Vibe Pairings** — find three cards that agree on every feature | Solo, or a race on the same table | Firebase Realtime Database |
 
@@ -500,7 +500,7 @@ disagree about what a card *is*, that test fails.
 ## Similar Vibe
 
 The fifth game, and the only one that does not work on your own. Everyone joins
-on their own phone; the app splits the room into two teams at random and hands
+on their own device; the app splits the room into two teams at random and hands
 one person at a time a word to describe without saying it.
 
 Two on each side at least — four people — and the word is a hot potato:

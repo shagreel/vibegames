@@ -108,7 +108,7 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
 
         <h2>Made with love</h2>
         <p className="support-blurb">
-          I built these five games for my own family. We play them in the evenings — it is how we
+          I built these games for my own family. We play them in the evenings — it is how we
           wind down together and stay close — and I wanted to share that with other families.
         </p>
 

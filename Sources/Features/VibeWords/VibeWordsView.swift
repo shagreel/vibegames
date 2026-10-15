@@ -70,9 +70,9 @@ struct VibeWordsView: View {
                 }
 
                 actionCard(
-                    title: "Play on this phone",
+                    title: "Play on this device",
                     subtitle: "A fresh word, no connection needed",
-                    symbol: "iphone",
+                    symbol: "ipad.and.iphone",
                     identifier: "words.playSolo"
                 ) {
                     model.playSolo()
@@ -90,7 +90,7 @@ struct VibeWordsView: View {
 
                 joinCard
 
-                Text("Everyone plays the same word on their own phone. First to guess it wins.")
+                Text("Everyone plays the same word on their own device. First to guess it wins.")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(VibeTheme.tertiaryText)
                     .multilineTextAlignment(.center)

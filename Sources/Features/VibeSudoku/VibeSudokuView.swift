@@ -119,9 +119,9 @@ struct VibeSudokuView: View {
     }
 
     private var soloCard: some View {
-        actionCard(title: "Play on this phone",
+        actionCard(title: "Play on this device",
                    subtitle: "\(model.difficulty.title) puzzle, no connection needed",
-                   symbol: "iphone",
+                   symbol: "ipad.and.iphone",
                    identifier: "sudoku.playSolo") {
             model.playSolo()
         }

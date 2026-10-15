@@ -54,7 +54,7 @@ struct GameInstructions {
                         + "can see how much time they had to spare."),
             Section(title: "Alternative Play",
                     body: "If you don't want to have a single person as a host, you can "
-                        + "also pass the phone from person to person. You can also play "
+                        + "also pass the device from person to person. You can also play "
                         + "solo this way if you want to practice."),
         ],
         bullets: [
@@ -72,7 +72,7 @@ struct GameInstructions {
         game: .words,
         name: "Word Vibe",
         identifier: "words.instructions",
-        intro: "Guess the five-letter word in six tries. Play solo on this phone, or start "
+        intro: "Guess the five-letter word in six tries. Play solo on this device, or start "
              + "a game and race everyone on the same word.",
         sections: [
             Section(title: "Reading the colours",
@@ -87,7 +87,7 @@ struct GameInstructions {
         ],
         bullets: [
             Bullet(lead: "Solo", text: "A fresh word, with no connection needed."),
-            Bullet(lead: "With friends", text: "Everyone guesses the same word on their own phone. "
+            Bullet(lead: "With friends", text: "Everyone guesses the same word on their own device. "
                         + "The first to solve it is announced to the whole room."),
         ])
 

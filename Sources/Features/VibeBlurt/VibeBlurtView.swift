@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Similar Vibe — the describing game.
 ///
-/// Everyone is on their own phone in one room. Two teams; one person at a time
+/// Everyone is on their own device in one room. Two teams; one person at a time
 /// is handed a word and has to get their team to say it without saying it
 /// themselves. Nobody scores for guessing: the point goes to whichever team is
 /// *not* holding the word when the clock stops, which is what makes the whole
@@ -95,7 +95,7 @@ struct VibeBlurtView: View {
                 }
 
                 actionCard(title: "Start a game",
-                           subtitle: "Everyone joins on their own phone",
+                           subtitle: "Everyone joins on their own device",
                            symbol: "person.2.fill",
                            identifier: "blurt.createGame",
                            isEnabled: model.backendUnavailableMessage == nil) {
@@ -715,12 +715,12 @@ struct VibeBlurtView: View {
             }
 
             Text(model.isDescriber
-                 ? "Hold the phone so only you can see it, then start the clock."
+                 ? "Hold the device so only you can see it, then start the clock."
                  : model.canStartThisRound
                    ? "They have left the room, and nothing is running yet. Anyone on their team can take the round."
                    : model.describerName.isEmpty
                      ? "Nobody on that side is in the room, so there is no round to take."
-                     : "Pass the phone to \(model.describerName). Everyone else, watch for the word.")
+                     : "Pass the device to \(model.describerName). Everyone else, watch for the word.")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .multilineTextAlignment(.center)

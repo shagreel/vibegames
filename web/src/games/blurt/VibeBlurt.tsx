@@ -44,7 +44,7 @@ import './VibeBlurt.css';
 /**
  * Similar Vibe on the web.
  *
- * Everyone is on their own phone in one room. Two teams; one person at a time is
+ * Everyone is on their own device in one room. Two teams; one person at a time is
  * handed a word and has to get their team to say it without saying it themselves.
  * Nobody scores for guessing — the point goes to whichever team is *not* holding
  * the word when the clock stops, which is what makes it a race to get rid of it.

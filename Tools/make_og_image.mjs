@@ -4,7 +4,7 @@
  * pasted into a message, a post or a search result.
  *
  * Both hosts point at the same file, because there is only one thing to show
- * someone: five games, a phone, and the name. It is drawn here rather than
+ * someone: the games, a screen, and the name. It is drawn here rather than
  * exported from a design tool so that it can be regenerated when the copy or the
  * colours change, and so the text on it is the text in the repository.
  *
@@ -53,7 +53,7 @@ const CARDS = {
   "vibe-games": {
     eyebrow: "Do you feel the vibe?",
     title: "Vibe Games",
-    lede: "Five quick party games. Grab a phone, pass it round.",
+    lede: "Quick party games, for any device you have to hand.",
     games: GAMES,
     shot: "assets/screens/hub-light.jpg",
   },

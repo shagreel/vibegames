@@ -26,7 +26,7 @@ const MAX_GUESSES = 6;
 const WORDS_INSTRUCTIONS: HowToPlayContent = {
   name: 'Word Vibe',
   intro:
-    'Guess the five-letter word in six tries. Play solo on this phone, or start a game and race everyone on the same word.',
+    'Guess the five-letter word in six tries. Play solo, or start a game and race everyone on the same word.',
   sections: [
     {
       title: 'Reading the colours',
@@ -41,7 +41,7 @@ const WORDS_INSTRUCTIONS: HowToPlayContent = {
     { lead: 'Solo', text: 'A fresh word, with no connection needed.' },
     {
       lead: 'With friends',
-      text: 'You get a code to share — two short words, like cars feed — and everyone guesses the same word on their own phone. The first to solve it is announced to the whole room.',
+      text: 'You get a code to share — two short words, like cars feed — and everyone guesses the same word on their own device. The first to solve it is announced to the whole room.',
     },
     {
       lead: 'The words',

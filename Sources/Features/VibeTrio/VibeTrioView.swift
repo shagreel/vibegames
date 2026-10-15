@@ -63,9 +63,9 @@ struct VibeTrioView: View {
                     banner(warning, symbol: "wifi.slash", tint: VibeTheme.warn)
                 }
 
-                actionCard(title: "Play on this phone",
+                actionCard(title: "Play on this device",
                            subtitle: "Clear the whole deck at your own pace",
-                           symbol: "iphone",
+                           symbol: "ipad.and.iphone",
                            identifier: "trio.playSolo") {
                     model.playSolo()
                 }

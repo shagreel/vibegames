@@ -12,7 +12,7 @@ import { onPathChange } from './router';
  * and the first word is the only one that survives.
  */
 const TITLES: Record<string, string> = {
-  '/': 'Vibe Games — five party games',
+  '/': 'Vibe Games — party games in your pocket',
   '/five': 'Vibe Five — name three things, fast',
   '/words': 'Word Vibe — guess the five-letter word',
   '/sudoku': 'Number Vibe — fill the grid',
