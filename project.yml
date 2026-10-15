@@ -120,6 +120,11 @@ targets:
     platform: iOS
     sources:
       - path: Tests
+      # `SKTestSession(configurationFileNamed:)` loads this out of the test
+      # bundle, which is how the store can be exercised with no App Store
+      # Connect account and no dialogs.
+      - path: VibeGames.storekit
+        buildPhase: resources
     dependencies:
       - target: VibeGames
     settings:
@@ -136,6 +141,11 @@ targets:
     platform: iOS
     sources:
       - path: UITests
+      # So a UI test can drive the tip jar: `SKTestSession` loads this by name out
+      # of the test bundle, and the app under test is served the same file by the
+      # test action's StoreKit configuration.
+      - path: VibeGames.storekit
+        buildPhase: resources
     dependencies:
       - target: VibeGames
     settings:
@@ -155,6 +165,13 @@ schemes:
         VibeGamesUITests: [test]
     run:
       config: Debug
+      # The tip jar, without App Store Connect: running from Xcode serves this
+      # file as a local store, so the product loads and a purchase can be made in
+      # the simulator. It is the *Run* action only — a scheme cannot carry one for
+      # tests as well — so the tests that need a store make their own with
+      # `SKTestSession` (see `Tests/TreatStoreTests.swift`), which is what that is
+      # for. The product id in the file has to match `AppStoreTreat.productID`.
+      storeKitConfiguration: VibeGames.storekit
     test:
       config: Debug
       targets:

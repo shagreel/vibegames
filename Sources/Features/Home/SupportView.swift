@@ -3,23 +3,17 @@ import SwiftUI
 /// The ways to say thanks. Kept in one place because the heart button, the panel
 /// and the website all point at the same things.
 ///
-/// There is deliberately no payment link here, and now no link to the page that
-/// has one either. Apple rejects an app that hands somebody a button for a way to
-/// pay for something it does not sell, and this app sells nothing.
-///
-/// So the website is *named* — `Support.site`, in plain text, in the panel and at
-/// the bottom of the hub — and nothing in the app opens it. A row that said
-/// "Ways to help" and opened the page used to be here; it is gone, and
-/// `Tools/check_app_no_payments.py` fails if a link to that page comes back.
+/// There is one way to pay in this app, and Apple takes it: a consumable tip,
+/// sold by the App Store, in `TreatJar`. What there is *not* is a link to any
+/// other way to pay — no Venmo, no website page that carries one — because
+/// guideline 3.1.1 forbids pointing somebody at a purchasing mechanism other
+/// than in-app purchase, and `Tools/check_app_no_payments.py` fails if one comes
+/// back. The website keeps that route for people playing in a browser, where
+/// Apple has no say in it.
 enum Support {
     /// Where the browser versions live. Sharing costs nothing and is the thing
     /// that actually helps.
     static let playURL = URL(string: "https://play.vibegames.party")!
-
-    /// The website, as something to read rather than something to tap. There is
-    /// no URL for the ways-to-help page anywhere in the app on purpose: it is the
-    /// page that carries the Venmo link.
-    static let site = "vibegames.party"
 
     /// The privacy policy and the support page. App Store Connect wants a URL for
     /// each, and a reviewer wants to find the policy without leaving the app to
@@ -34,9 +28,9 @@ enum Support {
         — it is how we wind down together and stay close — and I wanted to share \
         that with other families.
 
-        Every game is free. Nothing to unlock, no adverts, no account, and nothing \
-        to buy. If you would like to say thanks, tell another family about them, or \
-        tell me what you make of them.
+        Every game is free. Nothing to unlock, no adverts, no account. If you would \
+        like to say thank you, you can buy my family a treat — it is a gift, and it \
+        does not unlock anything, because there is nothing locked.
         """
 }
 
@@ -81,6 +75,7 @@ struct SupportView: View {
     var game: AppAnalytics.Game?
 
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var treats = TreatJar()
 
     var body: some View {
         NavigationStack {
@@ -115,6 +110,8 @@ struct SupportView: View {
                         .foregroundStyle(VibeTheme.tertiaryText)
 
                     VStack(spacing: 12) {
+                        treatRow
+
                         ShareLink(item: Support.playURL) {
                             SupportRow(symbol: "person.2.fill",
                                        title: "Share it with another family",
@@ -122,17 +119,6 @@ struct SupportView: View {
                                        tint: VibeTheme.arm)
                         }
                         .accessibilityIdentifier("support.share")
-
-                        // Named, not linked. The page it names has the ways to
-                        // help that cannot live in an app, and one of those is a
-                        // payment link — so this says where to look and stops
-                        // there. It is text on purpose: a row that looked
-                        // tappable and did nothing would be worse than either.
-                        Text("More ways to help on the website: \(Support.site)")
-                            .font(.system(size: 12.5, weight: .medium, design: .rounded))
-                            .foregroundStyle(VibeTheme.tertiaryText)
-                            .multilineTextAlignment(.center)
-                            .accessibilityIdentifier("support.waysToHelp")
                     }
                     .padding(.top, 4)
 
@@ -160,6 +146,7 @@ struct SupportView: View {
                 .padding(.bottom, 36)
             }
             .vibeCanvas()
+            .task { await treats.load() }
             // The panel is a form on a phone: without this the keyboard covers
             // Send and the only way to it is to guess that you can scroll.
             .scrollDismissesKeyboard(.interactively)
@@ -174,11 +161,54 @@ struct SupportView: View {
             }
         }
     }
+
+    /// The tip, when the store has one to sell.
+    ///
+    /// Hidden while loading and hidden when there is nothing to load: before the
+    /// product exists in App Store Connect, and in any build without a StoreKit
+    /// configuration, the store returns nothing — and a button that cannot do
+    /// anything is worse than no button. A price that is not there yet is not
+    /// worth a placeholder either, because the price is the only thing this row
+    /// has to say.
+    @ViewBuilder
+    private var treatRow: some View {
+        switch treats.state {
+        case .ready(let price):
+            Button {
+                Task { await treats.buy() }
+            } label: {
+                SupportRow(symbol: "gift.fill",
+                           title: "Buy us a treat",
+                           detail: price,
+                           tint: VibeTheme.heart)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("support.treat")
+
+        case .buying:
+            SupportRow(symbol: "gift.fill",
+                       title: "Buy us a treat",
+                       detail: "Waiting for the App Store…",
+                       tint: VibeTheme.heart)
+                .opacity(0.6)
+                .accessibilityIdentifier("support.treatWaiting")
+
+        case .thanked:
+            SupportRow(symbol: "heart.fill",
+                       title: "Thank you",
+                       detail: "That means a lot. I hope your table has a good evening.",
+                       tint: VibeTheme.heart)
+                .accessibilityIdentifier("support.treatThanked")
+
+        case .loading, .unavailable:
+            EmptyView()
+        }
+    }
 }
 
 /// One line of "here is a thing you could do".
 ///
-/// Shared by the two rows in the panel rather than written twice, so they cannot
+/// Shared by the rows in the panel rather than written twice, so they cannot
 /// drift apart.
 private struct SupportRow: View {
     let symbol: String

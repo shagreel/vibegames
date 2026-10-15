@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Fails if the iOS app gains a way to pay.
+"""Fails if the iOS app gains a way to pay that is not Apple's.
 
-Apple rejects an app that points at a way to pay for something it does not sell,
-and this app sells nothing. The website is allowed to carry the Venmo link — a
-website is not an app — so this scans `Sources/` and nothing else.
+The app sells exactly one thing: a tip, as a consumable in-app purchase. Apple
+takes its commission on that and, in exchange, forbids the app from pointing at
+any *other* way to pay for the same thing — guideline 3.1.1 — which is why there
+is no Venmo link in here, no website page that carries one, and why the line
+naming the website came out when the tip went in.
+
+So this scans `Sources/` for the names of other payment routes, and for the path
+of the page that carries one. It does not object to the tip itself: "Buy us a
+treat" is the product, and a rule that forbade it would be forbidding the thing
+the app is supposed to do.
 
 Comments are exempt on purpose. The app's own comments explain *why* there is no
 payment link, and that explanation has to be able to name the thing it is
@@ -20,14 +27,15 @@ SOURCES = ROOT / "Sources"
 # Written out rather than imported from the app, because the point is to catch a
 # new one appearing anywhere, including in a file that knows nothing about this.
 MARKERS = (
-    # The page that carries the Venmo link. The app names the website in plain
-    # text and opens nothing — a marker rather than a rule about links, because a
-    # `Link` to it and a hard-coded URL in a button are the same mistake.
+    # The page on the website that carries the Venmo link. A marker rather than a
+    # rule about links, because a `Link` to it and a hard-coded URL in a button
+    # are the same mistake.
     "ways-to-help",
     "venmo",
     "chill-gelato",
     "chill gelato",
-    "buy us a treat",
+    # Note: "buy us a treat" is *not* here. It is the name of the in-app product,
+    # so a rule against it would be a rule against the tip jar itself.
     "paypal",
     "cash.app",
     "cashapp",
@@ -62,14 +70,13 @@ def main() -> None:
         print(f"Found {len(offenders)} way(s) to pay in the app:\n", file=sys.stderr)
         for offender in offenders:
             print(f"  {offender}", file=sys.stderr)
-        print("\nThe app must sell nothing and point at nothing purchasable, "
-              "including the website page that carries the payment link: it names "
-              "the site in plain text instead. `APP_STORE.md` has the reasoning.",
-              file=sys.stderr)
+        print("\nThe only way to pay in the app is Apple's. A link to any other "
+              "route — including the website page that has one — is what guideline "
+              "3.1.1 is about. `APP_STORE.md` has the reasoning.", file=sys.stderr)
         sys.exit(1)
 
     print(f"App payment check passed — scanned {scanned} Swift files, "
-          "no way to pay in the app.")
+          "no way to pay in the app but Apple's own.")
 
 
 if __name__ == "__main__":

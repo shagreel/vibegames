@@ -141,15 +141,22 @@ enum AppAnalytics {
     }
 
     /// The heart was tapped. This says whether anyone finds the panel at all,
-    /// which is where both the feedback box and the ways to help live.
+    /// which is where both the feedback box and the tip live.
     static func supportOpened(game: Game? = nil) {
         log("support_open", game.map { ["game_name": $0.rawValue] } ?? [:])
     }
 
-    // Note: there is no `donation_tap` here any more. The app has no way to pay
-    // in it — Apple rejects a link to one — so the only client that can report a
-    // tap is the browser version, which has its own `trackDonationTap`. A name
-    // that can never be fired is a name worth deleting rather than documenting.
+    /// A treat was bought. The number of these is the whole story of the tip jar:
+    /// how many people found it, and how many of them gave something, against
+    /// `support_open`. Nothing about who, and nothing about how much — StoreKit
+    /// knows the price and there is no reason for this to.
+    static func treatBought() {
+        log("treat_bought")
+    }
+
+    // Note: there is no `donation_tap` here. That is the *website's* event, for
+    // the Venmo link the app is not allowed to point at; the app's own way to pay
+    // is the tip, and `treat_bought` is its event.
     //
     // Note: there is no `share` event here. iOS shares through `ShareLink`,
     // which offers no way to observe a tap, and a `simultaneousGesture` on top

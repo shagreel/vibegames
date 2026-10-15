@@ -1,0 +1,41 @@
+{
+  "identifier" : "3F1C6A20-0A5E-4C7B-9A6E-2D5B8F0C1A34",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "7B4E2D91",
+      "localizations" : [
+        {
+          "description" : "A thank-you. It unlocks nothing, because nothing is locked.",
+          "displayName" : "Buy us a treat",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "party.vibegames.VibeGames.tip",
+      "referenceName" : "Treat",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

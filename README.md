@@ -152,7 +152,7 @@ python3 Tools/import_words.py /path/to/web-project/src/wordList.ts
 python3 Tools/check_packs.py       # Vibe Five content
 python3 Tools/check_blurt_words.py # Similar Vibe words, including the American spellings
 python3 Tools/check_branding.py    # naming guard
-python3 Tools/check_app_no_payments.py  # the app must offer nothing to buy
+python3 Tools/check_app_no_payments.py  # the only way to pay in the app is Apple's
 python3 Tools/check_seo.py         # the two sites' titles, cards, sitemaps, robots
 python3 Tools/check_app_store.py   # everything Apple needs that lives in the repo
 ```
@@ -1014,7 +1014,7 @@ Tools/check_packs.py            Validates the Vibe Five content
 Tools/check_blurt_words.py      Validates the Similar Vibe words and their English
 Tools/find_blurt_seed.swift     Finds a seed that deals a given word first
 Tools/check_branding.py         Naming guard
-Tools/check_app_no_payments.py  Fails if the app gains a way to pay
+Tools/check_app_no_payments.py  Fails if the app gains a way to pay that is not Apple's
 Tools/check_seo.py              Checks both sites' heads, sitemaps and robots files
 Tools/check_app_store.py        Checks the privacy manifest, URLs, version and screenshots
 Tools/appstore_shots.py         Shoots the App Store screenshots at Apple's sizes
@@ -1223,10 +1223,10 @@ Four smaller events sit around the edges, each because it answers a question tha
 would otherwise be a guess: `screen_view` (a game opened but never started is a
 lobby problem, not a game problem), `feedback_sent` (does the form work in the
 wild), `support_open` (the top of the only funnel that keeps this running), and
-`share`. `donation_tap` is web-only: the app has no way to pay in it, because
-Apple rejects a link to one — and the ways-to-help page the app opens logs that
-tap, the share and the note itself, under the same three names, so a funnel that
-starts in the app is still measured once it hands over to the browser.
+`share`. `donation_tap` is the website's event, for the Venmo link the app is not
+allowed to point at; the app's own way to pay is the tip, and `treat_bought` is
+that event — one number, against `support_open`, for how many people found the
+panel and how many of them gave something.
 
 **There is deliberately no "app launched" event.** Analytics records
 `first_open` and `session_start` on its own, with the retention and engagement

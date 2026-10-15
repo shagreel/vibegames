@@ -122,13 +122,10 @@ struct HomeView: View {
             .font(.system(size: 13, weight: .medium, design: .rounded))
             .foregroundStyle(VibeTheme.tertiaryText)
 
-            // Named, not linked: the page is where the ways to help that cannot
-            // live in an app are, and one of them is a payment link. The button
-            // that opened it used to be here.
-            Text("More ways to help at \(Support.site)")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.tertiaryText)
-                .accessibilityIdentifier("hub.waysToHelp")
+            // The ways-to-help line came out when the tip went in. Pointing at a
+            // page whose ways to help include a Venmo link is exactly the
+            // steering guideline 3.1.1 forbids for something sold in the app, and
+            // the tip is sold in the app now.
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)

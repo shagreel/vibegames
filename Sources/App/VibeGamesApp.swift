@@ -54,6 +54,11 @@ struct VibeGamesApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // Tips that arrive outside a purchase — Ask to Buy approving
+                // later, or one interrupted before it finished — are finished
+                // here, once, rather than waiting for somebody to reopen the
+                // panel they bought from.
+                .task { await AppStoreTreat.finishOutstanding() }
         }
     }
 }

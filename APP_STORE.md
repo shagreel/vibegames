@@ -23,7 +23,8 @@ cannot be played by a reviewer with one device.
 | **Version** | 1.0 (build 1), in `project.yml` |
 | **Devices** | iPhone **and** iPad (`TARGETED_DEVICE_FAMILY: "1,2"`), which is why an iPad screenshot set is required |
 | **Firebase configuration** | The Release archive is checked for `GoogleService-Info.plist` — without it the app builds, launches, plays solo and has no multiplayer at all |
-| **Not present, on purpose** | No accounts, no sign-in, no purchases, no ads, no advertising identifier, no tracking, no third-party content |
+| **The tip** | One consumable in-app purchase, `party.vibegames.VibeGames.tip`, sold by Apple. `VibeGames.storekit` is the local stand-in for testing; the price lives in App Store Connect, never in the code |
+| **Not present, on purpose** | No accounts, no sign-in, no ads, no advertising identifier, no tracking, no third-party content |
 
 `python3 Tools/check_app_store.py` checks all of that, including that the two
 URLs above are linked from the app and that the version on the support page
@@ -221,31 +222,50 @@ not work — it comes straight to me.
 
 ## One decision left, and one thing to know
 
-### The donation link — decided
+### The tip jar
 
-The app **names the website and links nothing**. The row that opened
-`vibegames.party/ways-to-help` is gone from the heart panel, and the button that
-did the same at the bottom of the hub is gone too; both now say, in plain text,
-that there is more on the website and give the address. `Support.site` is the
-only place that string lives.
+**The app sells one thing — a tip — and Apple sells it.** That is the only shape
+this is allowed to take: a link out to Venmo or PayPal for the same thing is what
+guideline 3.1.1 forbids, and the one case that may use the web is a *charitable*
+donation to a verified non-profit, which this is not.
 
-That keeps the app clear of guideline 3.1.1 in the way that matters: there is no
-button, no link and no call to action pointing at a payment mechanism. Somebody
-who wants to find the page can type the address, which is the version of this
-Apple has never had a problem with.
+What that costs and what it needs:
 
-`Tools/check_app_no_payments.py` fails if a link to that page comes back — the
-path `ways-to-help` is a marker, alongside `venmo`, and both are checked in code
-and copy rather than in comments. `HomeUITests` checks the same thing from the
-outside: the panel and the hub say where to look, neither is a link, and tapping
-the text leaves the app exactly where it was.
+- **Apple's commission.** 15% under the Small Business Program if you qualify,
+  30% otherwise. The website keeps the Venmo route for people playing in a
+  browser, where there is no commission — that is what `/ways-to-help` is for now.
+- **The Paid Applications agreement**, plus tax and banking details in App Store
+  Connect. A free app does not need them; selling an in-app purchase does. If that
+  is not done, the product cannot go on sale.
+- **The product has to be created and submitted with the version.** In App Store
+  Connect: Features → In-App Purchases → **+** → Consumable, product id
+  `party.vibegames.VibeGames.tip`, a name and description for the listing, and a
+  price — whatever feels right, since the app shows `displayPrice` and has no
+  number of its own. Then attach it to the version you submit, or the reviewer
+  will not see it.
 
-**One residual path, so you can decide about it.** The two pages the app *does*
-link — `/privacy` and `/support` — have a footer link to the ways-to-help page,
-because that is the site's own navigation. So it is still two taps from inside
-the app: Privacy, then Ways to help. I judge that low risk, since it is a website
-navigating itself rather than the app making an offer, but if you want it
-airtight, dropping that one footer link from both pages closes it — say the word.
+The rules a tip has to keep, and how this one keeps them:
+
+- **It buys nothing.** No feature, no content, no adverts removed, because there
+  are none. `Support.blurb` says so in those words, and
+  `Tests/SupportTests.swift` fails if that sentence goes.
+- **It is consumable**, so it can be given more than once. A non-consumable tip
+  can only ever be given once, which is why the product type is asserted in
+  `Tests/TreatJarTests.swift`.
+- **The app opens nothing else.** The line naming the website came out of the
+  panel and the hub when the tip went in: pointing at a page whose ways to help
+  include a Venmo link is the steering the same guideline is about. `HomeUITests`
+  fails if `venmo`, `paypal`, `cash.app` or the website reappear anywhere.
+
+**What is verified, and what is not.** The model — the price arrived, they
+cancelled, Ask to Buy deferred it, the store failed — is tested without a store
+at all (`Tests/TreatJarTests.swift`), and the local configuration is checked to
+sell the same product id the app asks for. The purchase itself is **not** verified
+here: `Tests/TreatStoreTests.swift` needs a StoreKit sandbox that this machine
+does not have for simulator test builds, so those five tests skip themselves
+rather than pretend. The purchase path is proven in sandbox and TestFlight once
+the product exists — which is what TestFlight is for, and the first thing to do
+when the product is live.
 
 ### Similar Vibe cannot be reviewed on one device
 

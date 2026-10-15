@@ -168,15 +168,15 @@ final class HomeUITests: XCTestCase {
             .firstMatch
         XCTAssertFalse(aboutPaying.exists, "the app should offer no way to pay in it")
 
-        // What it offers instead of a link: the website, named in plain text.
-        let ways = app.staticTexts["support.waysToHelp"]
-        XCTAssertTrue(ways.waitForExistence(timeout: 5),
-                      "the panel should name the website")
-        XCTAssertTrue(ways.label.contains("vibegames.party"),
-                      "and give the address somebody would type — got: \(ways.label)")
-        XCTAssertFalse(app.links["support.waysToHelp"].exists,
-                       "naming it is as far as this goes: no link to the page that "
-                       + "carries the payment link")
+        // The tip row is deliberately not asserted here. A test run has no store
+        // — StoreKit testing needs the app signed with the in-app purchase
+        // entitlement, which simulator test builds are not — and a build before
+        // the product exists in App Store Connect has none either. In both, the
+        // row is hidden rather than shown broken, which is the behaviour
+        // `TreatJarTests` covers. What is checked here is that the panel is a
+        // panel without it: the share row is offered.
+        XCTAssertTrue(app.descendants(matching: .any)["support.share"].firstMatch.exists,
+                      "the panel should offer the one way to help that costs nothing")
 
         // The app itself must offer nothing to buy: the row hands over to the
         // website, which is the only place the Venmo link is allowed to live.
@@ -198,45 +198,50 @@ final class HomeUITests: XCTestCase {
         done.tap()
         XCTAssertTrue(heart.waitForExistence(timeout: 5), "and close back to the hub")
 
-        // The same words at the bottom of the hub, for somebody who is not
-        // looking for the heart — and no button there either.
-        let fromHub = app.staticTexts["hub.waysToHelp"]
-        XCTAssertTrue(fromHub.waitForExistence(timeout: 5),
-                      "the hub should name the website at the bottom")
-        if !fromHub.isHittable { app.swipeUp() }
-        XCTAssertTrue(fromHub.isHittable,
-                      "and be reachable, not just in the hierarchy")
-        XCTAssertFalse(app.buttons["hub.waysToHelp"].exists,
-                       "the button that opened the page should be gone")
-        attach(app, named: "73-hub-ways-to-help")
+        // The hub's footer used to name the website and offer a button to it.
+        // Both went with the tip jar — the same page carries the Venmo link, and
+        // pointing at it from an app that sells the same thing is the guideline.
+        // `testNothingOutsideTheAppStoreIsOffered` is where that is checked.
+        XCTAssertFalse(app.descendants(matching: .any)["hub.waysToHelp"].exists,
+                       "the hub should offer no other way to help")
+        attach(app, named: "73-hub-footer")
     }
 
-    /// The app names the website and opens nothing.
+    /// The app sells one thing, and Apple sells it.
     ///
-    /// This was a test that the ways-to-help link left the app for Safari, and
-    /// it was a good test of a thing that should not have been there: the page it
-    /// opened carries the payment link, and Apple reads the destination rather
-    /// than the row. So the row is gone, and what is left to check is that it
-    /// stays gone — that the panel and the hub say where to look in plain text
-    /// and that neither is a link.
-    func testTheAppNamesTheWebsiteWithoutOpeningIt() throws {
+    /// This was a test that the ways-to-help link handed over to Safari, and it
+    /// was a good test of a thing that had to go: the page it opened carries a
+    /// Venmo link, and once the same tip is sold in the app a link to another
+    /// payment route is exactly what guideline 3.1.1 forbids. So what is left to
+    /// check is that nothing outside the App Store is offered anywhere.
+    func testNothingOutsideTheAppStoreIsOffered() throws {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
 
-        let hub = app.staticTexts["hub.waysToHelp"]
-        XCTAssertTrue(hub.waitForExistence(timeout: 15), "the hub should name it")
-        if !hub.isHittable { app.swipeUp() }
-        XCTAssertTrue(hub.label.contains("vibegames.party"),
-                      "with the address somebody would type — got: \(hub.label)")
-        XCTAssertEqual(app.buttons.matching(identifier: "hub.waysToHelp").count, 0,
-                       "there should be no button here")
+        // "Other ways to help" as a heading is fine; a route to somewhere else
+        // that takes money is not. So the markers are the names of other payment
+        // services and the website that carries one, not the words.
+        let elsewhere = ["venmo", "paypal", "cash.app", "vibegames.party"]
 
-        // Tapping it must do nothing at all, which is the part that matters: an
-        // element that opens Safari would be the link this replaced.
-        hub.tap()
-        XCTAssertEqual(app.state, .runningForeground,
-                       "the app should still be in front after a tap on plain text")
-        attach(app, named: "75-website-named-not-linked")
+        func offersAnotherWayToPay() -> String? {
+            for marker in elsewhere {
+                let found = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label CONTAINS[c] %@", marker))
+                    .firstMatch
+                if found.exists { return marker }
+            }
+            return nil
+        }
+
+        XCTAssertNil(offersAnotherWayToPay(), "the hub should offer no other way to pay")
+
+        app.buttons["hub.support"].tap()
+        let done = app.buttons["support.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "the heart should open the panel")
+
+        XCTAssertNil(offersAnotherWayToPay(),
+                     "and neither should the panel: the tip in it is Apple's, and "
+                     + "pointing at another way to pay is the rejection")
     }
 
     /// The whole point of the heart being on every screen: you can say what is
