@@ -44,6 +44,7 @@ struct PreferencesView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     nameSection
                     appearanceSection
+                    aboutSection
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -108,6 +109,31 @@ struct PreferencesView: View {
             .font(.system(size: 12, weight: .black, design: .rounded))
             .kerning(1.5)
             .foregroundStyle(VibeTheme.tertiaryText)
+    }
+
+    /// Where a settings screen keeps the version, the privacy policy and the way
+    /// to get help — and where they are on screen without scrolling, which the
+    /// bottom of the support panel is not.
+    ///
+    /// The version comes from the bundle rather than a constant here, so it
+    /// cannot disagree with what is installed.
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("ABOUT")
+
+            HStack(spacing: 16) {
+                Link("Privacy", destination: Support.privacyURL)
+                    .accessibilityIdentifier("preferences.privacy")
+                Link("Support", destination: Support.supportURL)
+                    .accessibilityIdentifier("preferences.support")
+            }
+            .font(.system(size: 14, weight: .bold, design: .rounded))
+
+            Text("Vibe Games \(Bundle.main.shortVersion) (\(Bundle.main.buildNumber))")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .accessibilityIdentifier("preferences.version")
+        }
     }
 
     private func commitName() {

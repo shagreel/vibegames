@@ -47,14 +47,21 @@ final class VibeTrioUITests: XCTestCase {
         XCTAssertGreaterThan(before, 3)
 
         let trio = try solveTrio(in: app)
-        let attempts = expectation(
-            for: NSPredicate(format: "label != %@", deckCounter.label),
-            evaluatedWith: deckCounter
-        )
-        for index in trio { app.buttons["trio.card.\(index)"].tap() }
-        wait(for: [attempts], timeout: 8)
 
-        XCTAssertEqual(remaining(in: deckCounter), before - 3,
+        // Wait for the count it should end at, not merely for a change. Waiting
+        // for "different from before" caught the number mid-update once: the
+        // read that followed saw six cards gone rather than three, and the test
+        // failed against a board that was working.
+        let expected = before - 3
+        let settled = expectation(for: NSPredicate { element, _ in
+            guard let element = element as? XCUIElement else { return false }
+            return self.remaining(in: element) == expected
+        }, evaluatedWith: deckCounter)
+
+        for index in trio { app.buttons["trio.card.\(index)"].tap() }
+        wait(for: [settled], timeout: 8)
+
+        XCTAssertEqual(remaining(in: deckCounter), expected,
                        "a trio should pull three cards from the deck")
         attach(app, named: "52-trio-scored")
     }

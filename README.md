@@ -124,7 +124,8 @@ both point at the same Firebase project.
 
 The backend is **provisioned and live** on the `vibe-words-party` project, with
 its rules deployed and `Sources/GoogleService-Info.plist` in place (that file is
-git-ignored — see [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for how to recreate it,
+git-ignored — see [APP_STORE.md                    What to submit, and what only you can do
+FIREBASE_SETUP.md](FIREBASE_SETUP.md) for how to recreate it,
 or run `Tools/firebase_setup.sh`).
 
 > **Not yet done:** the web client still points at its original project, so
@@ -153,6 +154,7 @@ python3 Tools/check_blurt_words.py # Similar Vibe words, including the American 
 python3 Tools/check_branding.py    # naming guard
 python3 Tools/check_app_no_payments.py  # the app must offer nothing to buy
 python3 Tools/check_seo.py         # the two sites' titles, cards, sitemaps, robots
+python3 Tools/check_app_store.py   # everything Apple needs that lives in the repo
 ```
 ## Number Vibe
 
@@ -1014,6 +1016,9 @@ Tools/find_blurt_seed.swift     Finds a seed that deals a given word first
 Tools/check_branding.py         Naming guard
 Tools/check_app_no_payments.py  Fails if the app gains a way to pay
 Tools/check_seo.py              Checks both sites' heads, sitemaps and robots files
+Tools/check_app_store.py        Checks the privacy manifest, URLs, version and screenshots
+Tools/appstore_shots.py         Shoots the App Store screenshots at Apple's sizes
+Tools/archive_app.sh            Archives, exports and checks the build for the store
 Tools/make_og_image.mjs         Renders the link previews the two sites share
 Tools/make_qr.mjs               Generates the landing page QR codes
 Tools/make_web_cards.py         Derives the web-sized card faces

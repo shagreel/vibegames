@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Support — Vibe Games</title>
+<meta name="description" content="How to play with other people, why Similar Vibe needs four players, what works offline, and a box to write in when something is wrong." />
+<meta name="theme-color" content="#0b0a17" />
+<link rel="canonical" href="https://vibegames.party/support" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Vibe Games" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://vibegames.party/support" />
+<meta property="og:title" content="Support — Vibe Games" />
+<meta property="og:description" content="Answers to the questions that come up, and a box to write in when something is wrong." />
+<meta property="og:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Vibe Games, with a screen showing the games" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Support — Vibe Games" />
+<meta name="twitter:description" content="Answers to the questions that come up, and a box to write in." />
+<meta name="twitter:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<!--
+  The support page, and the URL App Store Connect asks for. The form is the same
+  one the app and the ways-to-help page use — same node, same rules, same
+  four-character floor — because there is one inbox and it should not matter
+  which door somebody came through.
+-->
+
+<header class="doc__top">
+  <div class="doc__wrap">
+    <a class="help__back" href="/">← Vibe Games</a>
+  </div>
+</header>
+
+<main class="doc">
+  <div class="doc__wrap">
+    <h1>Support</h1>
+
+    <p class="doc__lede">
+      Something not working, a game that will not start, or an idea for one that
+      should exist? Write below — it reaches me directly. No account, no email
+      address, nothing to sign up for.
+    </p>
+
+    <div class="feedback" data-feedback>
+      <form data-feedback-form novalidate>
+        <label for="feedback-text">Tell me what you think, or what is not working</label>
+        <textarea id="feedback-text"
+                  name="feedback"
+                  rows="4"
+                  maxlength="2000"
+                  placeholder="Ideas, bugs, a game you would like next — anything at all."
+                  data-feedback-text></textarea>
+        <p class="feedback__problem" data-feedback-problem role="alert" hidden></p>
+        <button type="submit" class="help__button feedback__send" data-feedback-send disabled>Send</button>
+        <p class="feedback__note">
+          Notes are published as issues on the project's public repository.
+          Nothing private, please.
+        </p>
+      </form>
+
+      <p class="feedback__sent" data-feedback-sent role="status" hidden>
+        <strong>Thank you — that has gone straight to me.</strong>
+        <span>I read everything, even when I cannot reply to it.</span>
+      </p>
+    </div>
+
+    <h2>Questions that come up</h2>
+
+    <h3>How do I play with other people?</h3>
+    <p>
+      One person starts a game and gets a code — two short words, like
+      <em>cars feed</em>. Everyone else joins with it from the home screen, and
+      you all get the same board or the same word.
+    </p>
+
+    <h3>Why does Similar Vibe need four players?</h3>
+    <p>
+      It is two teams of two. One person describes a word to their team-mate
+      while the other team watches for a giveaway, and there is no honest way to
+      play it with fewer — which is why the lobby says so rather than letting a
+      game start that nobody can finish.
+    </p>
+
+    <h3>Does it work without a connection?</h3>
+    <p>
+      The solo games do, and so does Vibe Five, which is one device passed round
+      a table and needs the network for nothing. The games you play together
+      need a connection while you play them.
+    </p>
+
+    <h3>How do I change my name?</h3>
+    <p>
+      Tap the name on the home screen. It is only a nickname, shown to the people
+      in the game you are in — there is no account behind it.
+    </p>
+
+    <h3>What happens to what I send?</h3>
+    <p>
+      The <a href="/privacy">privacy page</a> says exactly what is collected,
+      where it goes and how long it is kept — including that a note written here
+      becomes a public issue.
+    </p>
+
+    <h3>It says it cannot reach the game service</h3>
+    <p>
+      That is the connection to the game rooms. Check the network and try again,
+      and if it keeps happening, write above: the note arrives with the game you
+      were in, which is usually the thing that explains it.
+    </p>
+
+    <p class="doc__updated">
+      Vibe Games 1.0, for iPhone, iPad and the browser. Last updated
+      14 October 2026.
+    </p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <div>
+      <p class="foot__mark">Vibe Games</p>
+      <p class="fine">Party games in your pocket.</p>
+    </div>
+    <p class="fine">
+      <a class="help__link" href="/privacy">Privacy</a>
+      ·
+      <a class="help__link" href="/ways-to-help">Ways to help</a>
+    </p>
+  </div>
+</footer>
+
+<script src="/analytics.js"></script>
+<script src="/main.js"></script>
+</body>
+</html>

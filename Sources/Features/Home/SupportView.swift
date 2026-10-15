@@ -18,6 +18,12 @@ enum Support {
     /// parts that cannot live in the app. Served from `site/ways-to-help.html`.
     static let waysToHelpURL = URL(string: "https://vibegames.party/ways-to-help")!
 
+    /// The privacy policy and the support page. App Store Connect wants a URL for
+    /// each, and a reviewer wants to find the policy without leaving the app to
+    /// look for it — which is why both are linked from the panel's footer.
+    static let privacyURL = URL(string: "https://vibegames.party/privacy")!
+    static let supportURL = URL(string: "https://vibegames.party/support")!
+
     static let heading = "Made with love"
 
     static let blurb = """
@@ -129,6 +135,20 @@ struct SupportView: View {
                         .foregroundStyle(VibeTheme.tertiaryText)
                         .multilineTextAlignment(.center)
                         .padding(.top, 2)
+
+                    // The two URLs App Store Connect asks for, reachable from
+                    // inside the app. A reviewer looking for the privacy policy
+                    // should not have to guess that it is on the website.
+                    HStack(spacing: 10) {
+                        Link("Privacy", destination: Support.privacyURL)
+                            .accessibilityIdentifier("support.privacyPolicy")
+                        Text("·").foregroundStyle(VibeTheme.tertiaryText)
+                        Link("Support", destination: Support.supportURL)
+                            .accessibilityIdentifier("support.supportPage")
+                    }
+                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(VibeTheme.secondaryText)
+                    .padding(.top, 6)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 36)

@@ -86,6 +86,19 @@ final class HomeUITests: XCTestCase {
         XCTAssertTrue(dark.exists, "the three appearances should be listed")
         dark.tap()
         XCTAssertTrue(dark.isSelected, "choosing dark should select it")
+
+        // Where a settings screen keeps them: the version, and the two URLs the
+        // App Store listing asks for. On screen without scrolling, which the
+        // bottom of the support panel is not.
+        for identifier in ["preferences.privacy", "preferences.support"] {
+            let link = app.descendants(matching: .any)[identifier]
+            XCTAssertTrue(link.exists, "\(identifier) should be in preferences")
+            XCTAssertTrue(link.isHittable, "\(identifier) should be reachable")
+        }
+        let version = app.staticTexts["preferences.version"].firstMatch
+        XCTAssertTrue(version.exists, "preferences should say which build this is")
+        XCTAssertTrue(version.label.contains("Vibe Games"),
+                      "and name the app — got: \(version.label)")
     }
 
     /// The complaint that started this: choosing to play on your own must not
@@ -172,6 +185,18 @@ final class HomeUITests: XCTestCase {
         // website, which is the only place the Venmo link is allowed to live.
         XCTAssertFalse(app.staticTexts["Venmo @chill-gelato"].exists,
                        "the app should not offer the handle itself")
+
+        // App Store Connect wants a URL for the privacy policy and one for
+        // support, and a reviewer should be able to reach the policy without
+        // leaving the app to guess where it is. They sit at the bottom of the
+        // panel, below the fold on a phone — the preferences screen carries the
+        // same two links where they can be seen without scrolling.
+        for identifier in ["support.privacyPolicy", "support.supportPage"] {
+            let link = app.descendants(matching: .any)[identifier]
+            XCTAssertTrue(link.waitForExistence(timeout: 5), "\(identifier) should be in the panel")
+            if !link.isHittable { app.swipeUp() }
+            XCTAssertTrue(link.isHittable, "\(identifier) should be reachable")
+        }
 
         done.tap()
         XCTAssertTrue(heart.waitForExistence(timeout: 5), "and close back to the hub")

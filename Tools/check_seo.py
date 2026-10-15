@@ -236,9 +236,16 @@ def check_page(path: Path, host: str, *, url: str, needs_json_ld: bool,
     return head
 
 
+# Every page on the landing host, found rather than listed: a page that is not
+# checked is a page that can rot, and one that is not in the sitemap is a page
+# nobody finds.
+PAGES = {path.name: path for path in sorted(SITE.glob("*.html"))}
+
 print("The landing page — vibegames.party\n")
-check_page(SITE / "index.html", LANDING_HOST, url="/", needs_json_ld=True)
-check_page(SITE / "ways-to-help.html", LANDING_HOST, url="/ways-to-help", needs_json_ld=False)
+for name, path in PAGES.items():
+    url = "/" if name == "index.html" else "/" + name.removesuffix(".html")
+    check_page(path, LANDING_HOST, url=url, needs_json_ld=(name == "index.html"))
+    print()
 
 print("The game — play.vibegames.party\n")
 check_page(WEB / "index.html", GAME_HOST, url="/", needs_json_ld=False, expect_body=False)
@@ -270,18 +277,21 @@ check_robots(SITE / "robots.txt", LANDING_HOST)
 check_robots(WEB / "public/robots.txt", GAME_HOST)
 
 # A page nobody lists is a page nobody finds, and an empty sitemap is worse.
-pages = {
-    "site/index.html": f"{LANDING_HOST}/",
-    "site/ways-to-help.html": f"{LANDING_HOST}/ways-to-help",
+wanted = {
+    name: (f"{LANDING_HOST}/" if name == "index.html"
+           else f"{LANDING_HOST}/{name.removesuffix('.html')}")
+    for name in PAGES
 }
-for relative, url in pages.items():
+for name, url in wanted.items():
     if url not in landing:
         fail("site/sitemap.xml", f"{url} is a page and is not listed")
 for url in landing:
     if not url.startswith(f"{LANDING_HOST}/"):
         fail("site/sitemap.xml", f"{url} is not on {LANDING_HOST}")
-if len(landing) != len(pages):
-    fail("site/sitemap.xml", f"lists {len(landing)} pages, and there are {len(pages)}")
+    if url not in wanted.values():
+        fail("site/sitemap.xml", f"lists {url}, which is not a page here")
+if len(landing) != len(wanted):
+    fail("site/sitemap.xml", f"lists {len(landing)} pages, and there are {len(wanted)}")
 
 if game != [f"{GAME_HOST}/"]:
     fail("web/public/sitemap.xml", f"should list {GAME_HOST}/ and nothing else, lists {game}")
@@ -304,5 +314,5 @@ if problems:
         print(f"  {problem}", file=sys.stderr)
     sys.exit(1)
 
-print(f"SEO check passed — {len(pages)} landing pages, 1 game page, "
+print(f"SEO check passed — {len(PAGES)} landing pages, 1 game page, "
       "and the tags, sitemaps and robots files agree with each other.")

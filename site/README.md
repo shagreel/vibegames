@@ -7,6 +7,8 @@ build step, no dependencies, nothing to install.
 site/
   index.html
   ways-to-help.html   what the app's "Ways to help" link opens
+  support.html        the support URL the App Store listing asks for
+  privacy.html        the privacy policy URL, and what the app actually does
   styles.css
   main.js
   analytics.js   one page view; the id is filled in, so this is live
@@ -61,6 +63,25 @@ this check very nearly ended up.
 The page is served at `/ways-to-help` rather than `/ways-to-help.html` because
 `firebase.json` sets `cleanUrls`, so the address in the app carries no extension
 for anyone to mistype and none to leak if the page is ever renamed.
+
+## The two pages the App Store needs URLs for
+
+`privacy.html` and `support.html` are `/privacy` and `/support`, and both exist
+because App Store Connect will not accept a listing without a URL for each. They
+are also linked from the app — the bottom of the support panel, and the ABOUT
+section of preferences — because a reviewer looking for the policy should not
+have to guess that it is on the website.
+
+The policy is written to be read rather than survived, and it has to stay true:
+what the app collects is declared in three places that must agree —
+`site/privacy.html`, `Sources/PrivacyInfo.xcprivacy` and the App Privacy section
+of the listing. `Tools/check_app_store.py` checks the first two against each
+other. Its one surprising sentence is deliberate: a note sent through the
+feedback box becomes a public issue on this repository, and saying so plainly is
+better than letting somebody find out.
+
+The support page carries the same feedback box as the app and the ways-to-help
+page — one inbox, three doors.
 
 ## What is cached, and why the pages are not
 
