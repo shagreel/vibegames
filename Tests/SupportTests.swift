@@ -1,12 +1,13 @@
 import XCTest
 @testable import VibeGames
 
-/// The app sells nothing and points at nothing purchasable, so the few things it
-/// does point at are worth pinning down by hand: where the games are played, and
-/// where the page about helping lives.
+/// The app sells nothing, points at nothing purchasable, and — since the row that
+/// opened the ways-to-help page was removed — does not open the page that carries
+/// the payment link either. It names the website in plain text and stops there.
 ///
 /// `Tools/check_app_no_payments.py` scans the whole of `Sources/` for a way to
-/// pay; this covers the two URLs, which no scan can know are the right ones.
+/// pay *and* for a link to that page; this pins the one URL the app does open,
+/// which no scan can know is the right one.
 final class SupportTests: XCTestCase {
 
     func testSharingSendsPeopleToTheBrowserVersion() {
@@ -14,17 +15,11 @@ final class SupportTests: XCTestCase {
                        "the browser version moved, or the link was mistyped")
     }
 
-    /// The page the app opens instead of offering a way to pay. It has to be the
-    /// website — that is the entire reason it exists — and it has to be a page
-    /// that is actually there, so it is spelled out in one place.
-    func testTheWaysToHelpPageIsOnTheWebsite() {
-        let url = Support.waysToHelpURL
-        XCTAssertEqual(url.scheme, "https", "the page must open over a secure connection")
-        XCTAssertEqual(url.host, "vibegames.party",
-                       "the app must not point at the browser version for this: the "
-                       + "website can carry a way to pay and the app cannot")
-        XCTAssertEqual(url.path, "/ways-to-help",
-                       "which is served from site/ways-to-help.html")
+    /// What the app says instead of linking: the website, by name, for somebody
+    /// to go and look at themselves.
+    func testTheWebsiteIsNamedRatherThanOpened() {
+        XCTAssertEqual(Support.site, "vibegames.party",
+                       "the panel and the hub both name this, and nothing links it")
     }
 
     /// The panel is the app's own words about helping, and Apple reads the panel.

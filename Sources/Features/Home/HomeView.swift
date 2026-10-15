@@ -122,23 +122,13 @@ struct HomeView: View {
             .font(.system(size: 13, weight: .medium, design: .rounded))
             .foregroundStyle(VibeTheme.tertiaryText)
 
-            // The app's own answer to "how can I help". It used to be a Venmo
-            // link in the panel, which Apple will not have, so now it hands over
-            // to the website page that says all of it.
-            Link(destination: Support.waysToHelpURL) {
-                HStack(spacing: 7) {
-                    Image(systemName: "sparkles")
-                    Text("Ways to help")
-                }
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(VibeTheme.primaryText)
-                .padding(.horizontal, 16)
-                .frame(height: 40)
-                .background { Capsule().fill(VibeTheme.surfaceStrong) }
-                .overlay { Capsule().stroke(VibeTheme.hairline, lineWidth: 1) }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("hub.waysToHelp")
+            // Named, not linked: the page is where the ways to help that cannot
+            // live in an app are, and one of them is a payment link. The button
+            // that opened it used to be here.
+            Text("More ways to help at \(Support.site)")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .accessibilityIdentifier("hub.waysToHelp")
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)

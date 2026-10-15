@@ -168,18 +168,15 @@ final class HomeUITests: XCTestCase {
             .firstMatch
         XCTAssertFalse(aboutPaying.exists, "the app should offer no way to pay in it")
 
-        // What it offers instead: a page on the website, opened in the browser.
-        // It is not tapped here — the tap leaves the app for Safari, and a UI run
-        // has no business driving the browser. `SupportTests` pins the address.
-        let ways = app.descendants(matching: .any)["support.waysToHelp"]
+        // What it offers instead of a link: the website, named in plain text.
+        let ways = app.staticTexts["support.waysToHelp"]
         XCTAssertTrue(ways.waitForExistence(timeout: 5),
-                      "the panel should point at the ways to help")
-        XCTAssertTrue(ways.label.localizedCaseInsensitiveContains("ways to help"),
-                      "and say so, rather than being an unlabelled row")
-        // Present is not the same as reachable: a row under the Done button, or
-        // behind the keyboard, would satisfy everything above and still be a
-        // link nobody can follow.
-        XCTAssertTrue(ways.isHittable, "and be somewhere a thumb can get to")
+                      "the panel should name the website")
+        XCTAssertTrue(ways.label.contains("vibegames.party"),
+                      "and give the address somebody would type — got: \(ways.label)")
+        XCTAssertFalse(app.links["support.waysToHelp"].exists,
+                       "naming it is as far as this goes: no link to the page that "
+                       + "carries the payment link")
 
         // The app itself must offer nothing to buy: the row hands over to the
         // website, which is the only place the Venmo link is allowed to live.
@@ -201,41 +198,45 @@ final class HomeUITests: XCTestCase {
         done.tap()
         XCTAssertTrue(heart.waitForExistence(timeout: 5), "and close back to the hub")
 
-        // The same page, from the bottom of the hub — the way in for somebody who
-        // is not looking for the heart.
-        let fromHub = app.descendants(matching: .any)["hub.waysToHelp"]
+        // The same words at the bottom of the hub, for somebody who is not
+        // looking for the heart — and no button there either.
+        let fromHub = app.staticTexts["hub.waysToHelp"]
         XCTAssertTrue(fromHub.waitForExistence(timeout: 5),
-                      "the hub should link to it at the bottom")
+                      "the hub should name the website at the bottom")
         if !fromHub.isHittable { app.swipeUp() }
         XCTAssertTrue(fromHub.isHittable,
-                      "the hub's link should be reachable, not just in the hierarchy")
+                      "and be reachable, not just in the hierarchy")
+        XCTAssertFalse(app.buttons["hub.waysToHelp"].exists,
+                       "the button that opened the page should be gone")
         attach(app, named: "73-hub-ways-to-help")
     }
 
-    /// The one thing about that link that cannot be read off the source: following
-    /// it really does leave the app.
+    /// The app names the website and opens nothing.
     ///
-    /// It used to open a screen built in SwiftUI, which is a thing that looks
-    /// right in a screenshot and is the wrong answer to "where does this go" — the
-    /// page has to be the website's, because the website is the only place the
-    /// payment link is allowed to live.
-    func testTheWaysToHelpLinkOpensThePageInTheBrowser() throws {
+    /// This was a test that the ways-to-help link left the app for Safari, and
+    /// it was a good test of a thing that should not have been there: the page it
+    /// opened carries the payment link, and Apple reads the destination rather
+    /// than the row. So the row is gone, and what is left to check is that it
+    /// stays gone — that the panel and the hub say where to look in plain text
+    /// and that neither is a link.
+    func testTheAppNamesTheWebsiteWithoutOpeningIt() throws {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
 
-        let link = app.descendants(matching: .any)["hub.waysToHelp"]
-        XCTAssertTrue(link.waitForExistence(timeout: 15), "the hub should link to it")
-        if !link.isHittable { app.swipeUp() }
-        link.tap()
+        let hub = app.staticTexts["hub.waysToHelp"]
+        XCTAssertTrue(hub.waitForExistence(timeout: 15), "the hub should name it")
+        if !hub.isHittable { app.swipeUp() }
+        XCTAssertTrue(hub.label.contains("vibegames.party"),
+                      "with the address somebody would type — got: \(hub.label)")
+        XCTAssertEqual(app.buttons.matching(identifier: "hub.waysToHelp").count, 0,
+                       "there should be no button here")
 
-        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
-        XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 30),
-                      "following it should hand over to the browser")
-        // A sheet inside the app would leave the app in front and Safari would
-        // never appear, so that it does is the whole assertion. Asking the app
-        // for its own `state` after this adds nothing: XCUITest keeps reporting
-        // the state it saw at launch.
-        attach(safari, named: "75-ways-to-help-in-the-browser")
+        // Tapping it must do nothing at all, which is the part that matters: an
+        // element that opens Safari would be the link this replaced.
+        hub.tap()
+        XCTAssertEqual(app.state, .runningForeground,
+                       "the app should still be in front after a tap on plain text")
+        attach(app, named: "75-website-named-not-linked")
     }
 
     /// The whole point of the heart being on every screen: you can say what is

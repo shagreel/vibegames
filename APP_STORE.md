@@ -3,9 +3,10 @@
 Everything Apple asks for that can live in a repository is here. The rest is App
 Store Connect, and the list below says which is which and in what order.
 
-Two things in here are decisions rather than steps, and both are at the bottom:
-**the donation link**, which is the one guideline risk in the app, and **Similar
-Vibe**, which cannot be played by a reviewer with one device.
+One decision in here was a judgement rather than a step — **the donation link**
+— and it is settled: the app names the website and links nothing. The other
+thing at the bottom is not a decision but a fact to be ready for: **Similar Vibe**
+cannot be played by a reviewer with one device.
 
 ---
 
@@ -194,7 +195,8 @@ four are: it is a game my family plays, and the four solo games demonstrate the
 app's functionality in full.
 
 The two links at the bottom of the heart panel (top right of every screen) are
-the privacy policy and the support page.
+the privacy policy and the support page. The panel also says, in plain text,
+that there is more on the website — there is no link there by design.
 
 Please write to me from the feedback box in that panel with anything that does
 not work — it comes straight to me.
@@ -202,32 +204,35 @@ not work — it comes straight to me.
 
 ---
 
-## Two decisions before you submit
+## One decision left, and one thing to know
 
-### 1. The donation link — the real risk
+### The donation link — decided
 
-The app's heart panel links to `vibegames.party/ways-to-help`, and that page ends
-with **"Buy us a treat"** and a Venmo link. The app itself contains no payment
-link — `Tools/check_app_no_payments.py` enforces that — but Apple reads the
-destination, and this is the shape of guideline 3.1.1 (payments outside in-app
-purchase) and 3.2.1 (donations). The one case Apple explicitly allows is a
-**charitable donation** to an approved non-profit, opened in Safari.
+The app **names the website and links nothing**. The row that opened
+`vibegames.party/ways-to-help` is gone from the heart panel, and the button that
+did the same at the bottom of the hub is gone too; both now say, in plain text,
+that there is more on the website and give the address. `Support.site` is the
+only place that string lives.
 
-Three ways to go:
+That keeps the app clear of guideline 3.1.1 in the way that matters: there is no
+button, no link and no call to action pointing at a payment mechanism. Somebody
+who wants to find the page can type the address, which is the version of this
+Apple has never had a problem with.
 
-- **Take it out of the app** — one row in `SupportView.swift` — and keep the
-  page exactly as it is for the website. Lowest risk, and the first submission is
-  the worst time to argue.
-- **Submit as it is** and appeal if it comes back. The panel's wording ("nothing
-  to buy") is honest and the games are free, so there is an argument; it is still
-  an argument.
-- **Make the donation charitable** (a registered non-profit), which is the only
-  version of this Apple documents as allowed.
+`Tools/check_app_no_payments.py` fails if a link to that page comes back — the
+path `ways-to-help` is a marker, alongside `venmo`, and both are checked in code
+and copy rather than in comments. `HomeUITests` checks the same thing from the
+outside: the panel and the hub say where to look, neither is a link, and tapping
+the text leaves the app exactly where it was.
 
-My recommendation is the first, for this submission. Say which and it is a
-two-line change plus a test update.
+**One residual path, so you can decide about it.** The two pages the app *does*
+link — `/privacy` and `/support` — have a footer link to the ways-to-help page,
+because that is the site's own navigation. So it is still two taps from inside
+the app: Privacy, then Ways to help. I judge that low risk, since it is a website
+navigating itself rather than the app making an offer, but if you want it
+airtight, dropping that one footer link from both pages closes it — say the word.
 
-### 2. Similar Vibe cannot be reviewed on one device
+### Similar Vibe cannot be reviewed on one device
 
 Not a rejection by itself — four of five games are fully playable solo — but a
 reviewer may ask how the fifth works. Options: leave the review notes as above

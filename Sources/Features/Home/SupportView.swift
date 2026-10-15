@@ -3,20 +3,23 @@ import SwiftUI
 /// The ways to say thanks. Kept in one place because the heart button, the panel
 /// and the website all point at the same things.
 ///
-/// There is deliberately no payment link here. Apple rejects an app that points at
-/// a way to pay for something it does not sell, and this app sells nothing — the
-/// browser version carries the Venmo link instead, because a website is not an app
-/// and Apple has no say in it. What the app offers instead is `waysToHelpURL`: a
-/// page on the website, opened in the browser, that says the same things the panel
-/// says and then the rest over there.
+/// There is deliberately no payment link here, and now no link to the page that
+/// has one either. Apple rejects an app that hands somebody a button for a way to
+/// pay for something it does not sell, and this app sells nothing.
+///
+/// So the website is *named* — `Support.site`, in plain text, in the panel and at
+/// the bottom of the hub — and nothing in the app opens it. A row that said
+/// "Ways to help" and opened the page used to be here; it is gone, and
+/// `Tools/check_app_no_payments.py` fails if a link to that page comes back.
 enum Support {
     /// Where the browser versions live. Sharing costs nothing and is the thing
     /// that actually helps.
     static let playURL = URL(string: "https://play.vibegames.party")!
 
-    /// "Ways to help" on the website — the same words as this panel, plus the
-    /// parts that cannot live in the app. Served from `site/ways-to-help.html`.
-    static let waysToHelpURL = URL(string: "https://vibegames.party/ways-to-help")!
+    /// The website, as something to read rather than something to tap. There is
+    /// no URL for the ways-to-help page anywhere in the app on purpose: it is the
+    /// page that carries the Venmo link.
+    static let site = "vibegames.party"
 
     /// The privacy policy and the support page. App Store Connect wants a URL for
     /// each, and a reviewer wants to find the policy without leaving the app to
@@ -111,22 +114,25 @@ struct SupportView: View {
                         .kerning(1.5)
                         .foregroundStyle(VibeTheme.tertiaryText)
 
-                    VStack(spacing: 10) {
-                        Link(destination: Support.waysToHelpURL) {
-                            SupportRow(symbol: "sparkles",
-                                       title: "Ways to help",
-                                       detail: "Sharing it, and telling us what to fix",
-                                       tint: VibeTheme.heart)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("support.waysToHelp")
-
+                    VStack(spacing: 12) {
                         ShareLink(item: Support.playURL) {
                             SupportRow(symbol: "person.2.fill",
                                        title: "Share it with another family",
                                        detail: "They can play in a browser tonight, free",
                                        tint: VibeTheme.arm)
                         }
+                        .accessibilityIdentifier("support.share")
+
+                        // Named, not linked. The page it names has the ways to
+                        // help that cannot live in an app, and one of those is a
+                        // payment link — so this says where to look and stops
+                        // there. It is text on purpose: a row that looked
+                        // tappable and did nothing would be worse than either.
+                        Text("More ways to help on the website: \(Support.site)")
+                            .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(VibeTheme.tertiaryText)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("support.waysToHelp")
                     }
                     .padding(.top, 4)
 

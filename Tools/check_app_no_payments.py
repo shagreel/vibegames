@@ -20,6 +20,10 @@ SOURCES = ROOT / "Sources"
 # Written out rather than imported from the app, because the point is to catch a
 # new one appearing anywhere, including in a file that knows nothing about this.
 MARKERS = (
+    # The page that carries the Venmo link. The app names the website in plain
+    # text and opens nothing — a marker rather than a rule about links, because a
+    # `Link` to it and a hard-coded URL in a button are the same mistake.
+    "ways-to-help",
     "venmo",
     "chill-gelato",
     "chill gelato",
@@ -58,9 +62,10 @@ def main() -> None:
         print(f"Found {len(offenders)} way(s) to pay in the app:\n", file=sys.stderr)
         for offender in offenders:
             print(f"  {offender}", file=sys.stderr)
-        print("\nThe app must sell nothing and point at nothing purchasable. If it "
-              "belongs in the app at all, it belongs on the website, which "
-              "`Support.waysToHelpURL` opens.", file=sys.stderr)
+        print("\nThe app must sell nothing and point at nothing purchasable, "
+              "including the website page that carries the payment link: it names "
+              "the site in plain text instead. `APP_STORE.md` has the reasoning.",
+              file=sys.stderr)
         sys.exit(1)
 
     print(f"App payment check passed — scanned {scanned} Swift files, "
