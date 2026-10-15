@@ -88,6 +88,13 @@ check() { # present, what it is
 
 check "$([ -f "$APP/PrivacyInfo.xcprivacy" ] && echo 1 || echo 0)" "privacy manifest"
 
+# Without this the app builds, launches, plays solo and has no multiplayer at
+# all — every shared game would say the service is unreachable. It is git-ignored
+# and optional on purpose, which is exactly why a build for the store has to say
+# whether it is there.
+check "$([ -f "$APP/GoogleService-Info.plist" ] && echo 1 || echo 0)" \
+  "Firebase configuration (without it the app is solo-only)"
+
 PLIST="$APP/Info.plist"
 value() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null || echo ""; }
 

@@ -22,6 +22,7 @@ cannot be played by a reviewer with one device.
 | **Screenshots** | `python3 Tools/appstore_shots.py "iPhone 17 Pro Max" iphone-6.9` and `… "iPad Pro 13-inch (M5)" ipad-13` |
 | **Version** | 1.0 (build 1), in `project.yml` |
 | **Devices** | iPhone **and** iPad (`TARGETED_DEVICE_FAMILY: "1,2"`), which is why an iPad screenshot set is required |
+| **Firebase configuration** | The Release archive is checked for `GoogleService-Info.plist` — without it the app builds, launches, plays solo and has no multiplayer at all |
 | **Not present, on purpose** | No accounts, no sign-in, no purchases, no ads, no advertising identifier, no tracking, no third-party content |
 
 `python3 Tools/check_app_store.py` checks all of that, including that the two
@@ -43,6 +44,12 @@ In this order. Steps 1–4 are one-time setup; 5–11 are per submission.
 4. **Create the app record**: App Store Connect → My Apps → **+** → New App.
    Platform iOS, name **Vibe Games**, primary language English (U.S.), the bundle
    id above, SKU anything unique (`vibegames-ios`), Full Access.
+
+   **The name is the one field that can be refused.** App names are unique across
+   the store, so if "Vibe Games" is taken the record will not save — have a second
+   choice ready. `Vibe Games: Party Night` and `Vibe Games — Pass and Play` both
+   fit the 30-character limit; the name in the app and on the website does not
+   have to change either way.
 5. **Paste the listing** — the copy is below, with the character limits Apple
    enforces.
 6. **App Privacy** — the answers are below. They have to match
@@ -125,6 +132,14 @@ all — they are good on a train.
 **Privacy policy URL**: `https://vibegames.party/privacy`
 **Copyright**: `© 2026 <your name>` — *put the name you want on the listing here;
 it is the one field in this file I cannot fill in.*
+
+**What's new** (release notes for 1.0):
+
+```
+First release. Five party games for the whole table: describe it without saying
+it, name three things before the buzzer, race the same word, race the same
+puzzle, and take three cards that match. Free, no accounts, no adverts.
+```
 
 **Category**: Games → **Family** primary, Games → **Word** secondary.
 
@@ -242,6 +257,28 @@ entirely, and is a real feature rather than a submission chore — worth doing
 *after* this ships, not before.
 
 ---
+
+## Things that are fine now and will not stay fine
+
+Not blockers. Written down so they are decisions rather than surprises later.
+
+- **App Attest is configured but not entitled.** `FirebaseBootstrapper` asks for
+  `AppAttestProvider` on a device, which needs the
+  `com.apple.developer.devicecheck.appattest-environment` entitlement — and there
+  is no entitlements file. Nothing breaks today because App Check is not
+  *enforced* on the Realtime Database (checked: an unauthenticated write is
+  refused by the rules, not by App Check), so a missing token is advisory. If
+  enforcement is ever switched on, shared games would stop working on real
+  devices until the entitlement is added and the capability is enabled on the app
+  id. Worth doing deliberately, not during a submission.
+- **The iPad layout stretches.** It is usable — the games run, the 13" screenshots
+  show them filling the screen — but the hub's cards run the full width of an
+  iPad rather than sitting in a column, and nothing here has been sized for a
+  pointer. Constraining the content width per screen is a real pass, worth doing
+  after this ships. Split View is fine as it is: the layout is already built for
+  the narrowest iPhone, so a narrow window is just a narrower version of that.
+- **There is no way to delete a feedback note** other than by asking. The privacy
+  page says it can be removed on request, which is true but manual.
 
 ## After it is live
 
