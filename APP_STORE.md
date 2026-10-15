@@ -257,6 +257,11 @@ The rules a tip has to keep, and how this one keeps them:
   include a Venmo link is the steering the same guideline is about. `HomeUITests`
   fails if `venmo`, `paypal`, `cash.app` or the website reappear anywhere.
 
+The one path that was left — app → Privacy → footer → Ways to help — is closed:
+neither of the two pages the app opens links the page that carries the Venmo
+link any more. The landing page keeps its own footer link, for people browsing
+the site.
+
 **What is verified, and what is not.** The model — the price arrived, they
 cancelled, Ask to Buy deferred it, the store failed — is tested without a store
 at all (`Tests/TreatJarTests.swift`), and the local configuration is checked to
