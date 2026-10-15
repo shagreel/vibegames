@@ -287,9 +287,8 @@ Three things are deliberate rather than incidental:
 
 What this does not do, and a person has to:
 
-1. **Verify the domain in Search Console** — `vibegames.party`, DNS TXT record,
-   then submit `https://vibegames.party/sitemap.xml`. Without that, none of the
-   above is reported on.
+1. **Verify the domain in Search Console**, then submit the sitemaps — the steps
+   are below.
 2. **Check a card actually unfurls.** Paste the URL into a message to yourself.
    Facebook and LinkedIn have debuggers that re-scrape on demand and print what
    they found; iMessage and Slack cache, so a card that was wrong once stays
@@ -297,6 +296,37 @@ What this does not do, and a person has to:
 3. **App Store search is its own game.** The listing's subtitle and keyword field
    are what people search, not this page. Nothing in this repository can do that
    part.
+
+### Submitting to Search Console
+
+Once, by hand. Nothing here can do it, and nothing here is reported on until it
+is done — Search Console is the only place that says whether a page is indexed,
+what it was indexed *as*, and what a crawler made of the structured data.
+
+1. <https://search.google.com/search-console> → **Add property** → **Domain** →
+   `vibegames.party`. Domain, not URL prefix: one verification then covers
+   `play.vibegames.party` and both protocols as well, which is two properties
+   fewer to remember.
+2. Google shows a TXT record. Add it where this zone's DNS lives — Cloudflare,
+   the same place `Tools/setup_dns.py` writes Firebase's records: type `TXT`,
+   name `@`, content the `google-site-verification=…` value, TTL auto, and no
+   proxy setting to worry about. It is live in seconds, so click **Verify**
+   straight away.
+3. **Sitemaps** → add `https://vibegames.party/sitemap.xml`, then
+   `https://play.vibegames.party/sitemap.xml`. A domain property takes a full URL
+   rather than a bare path, and one per host: the game's sitemap belongs to the
+   game's host.
+4. **URL Inspection** → `https://vibegames.party/` → **Request indexing**. That is
+   a nudge rather than a guarantee, and it is worth spending on the one page you
+   most want found.
+5. Come back in a few days. **Pages** says what was indexed and why anything was
+   not; <https://search.google.com/test/rich-results> reads the structured data
+   and says whether the games are eligible for a rich result. Neither is a
+   substitute for the other: being indexed and being *shown* are different
+   questions, and a page can be one without the other.
+
+Bing Webmaster Tools will import the property and both sitemaps from Search
+Console once it is verified, if you want the other index without doing it twice.
 
 ## Accessibility and motion
 
