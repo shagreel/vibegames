@@ -16,11 +16,19 @@ export const SIDE = 9;
 export const CELL_COUNT = 81;
 
 /**
- * How many numbers a cell's notes hold: four, shown big, rather than nine tiny
- * ones. A phone-sized cell cannot show nine marks anybody can read, and an
- * unreadable note is worse than no note.
+ * How many numbers a cell's notes hold.
+ *
+ * Four is the default: shown big, two by two, they are readable on a phone.
+ * Nine is the purist's setting — every candidate, each in its own fixed square —
+ * and it is a *setting* rather than a rule because the trade is real: nine marks
+ * in a phone-sized cell are hard to read, and four make a hard puzzle harder.
  */
-export const MAXIMUM_NOTES = 4;
+export const NOTE_LIMITS = [4, 9] as const;
+
+export type NoteLimit = (typeof NOTE_LIMITS)[number];
+
+/** What a player's choice is stored under, so it survives a reload. */
+export const NOTE_LIMIT_KEY = 'vibegames.sudoku.noteLimit';
 export const ALL_VALUES = 0x1ff;
 
 export type Difficulty = 'easy' | 'medium' | 'hard';

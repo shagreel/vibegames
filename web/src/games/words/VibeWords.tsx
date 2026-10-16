@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ref, onValue, set, get, onDisconnect } from 'firebase/database';
 import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
-import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import { GameHeader } from '../../hub/GameHeader';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
@@ -628,20 +628,14 @@ function VibeWords() {
 
   return (
     <div className="vibewords-container">
-      <header className="vibewords-header game-header">
-        <BackToGames />
-        <div className="vibewords-header__corner game-header__corner">
-          <SupportButton game="words" />
-        </div>
-        <div className="vibewords-titles game-header__title">
-          <h1>Word Vibe</h1>
-        </div>
+      <GameHeader prefix="words" title="Word Vibe">
+        <SupportButton game="words" />
         {playerCount > 0 && (
-          <div className="player-count">
+          <span className="player-count">
             👥 {playerCount} {playerCount === 1 ? 'player' : 'players'}
-          </div>
+          </span>
         )}
-      </header>
+      </GameHeader>
 
       <div className="game-content">
         {/* The way in: on your own, a room of your own, or somebody else's. */}

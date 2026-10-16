@@ -196,6 +196,20 @@ describe('installCrashReporting', () => {
     expect(sent[0].text).toContain('Error: Could not reach the game service');
   });
 
+  it('ignores a throw from a script somebody injected into the page', async () => {
+    const handlers = await install();
+
+    const injected = new Error('Cannot read properties of undefined');
+    injected.stack =
+      'TypeError: Cannot read properties of undefined\n    at name (<anonymous>:3:43)';
+    handlers.error({ error: injected, message: injected.message });
+    await flush();
+
+    // A diagnostic script of mine reached the feedback inbox this way: an
+    // injected script's stack says `<anonymous>` and nothing else.
+    expect(sendFeedback).not.toHaveBeenCalled();
+  });
+
   it('still reports something when the event carries no error object', async () => {
     // This is how a browser reports a failure inside a cross-origin script: a
     // message and nothing else. Thin, but the page and browser still help.

@@ -263,6 +263,7 @@ struct VibeSudokuView: View {
                 SudokuBoardView(puzzle: puzzle,
                                 values: model.values,
                                 notes: model.notes,
+                                noteLimit: model.noteLimit,
                                 selectedCell: model.selectedCell,
                                 conflictingCells: model.conflictingCells,
                                 onSelect: model.select)
@@ -274,6 +275,8 @@ struct VibeSudokuView: View {
             }
 
             SudokuKeypadView(isNoteMode: model.isNoteMode,
+                             noteLimit: model.noteLimit,
+                             onToggleNoteLimit: model.toggleNoteLimit,
                              onDigit: model.enter,
                              onErase: model.erase,
                              onToggleNotes: { model.isNoteMode.toggle() })

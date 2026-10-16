@@ -7,6 +7,9 @@ import SwiftUI
 /// inset, so a slightly-off tap still lands.
 struct SudokuKeypadView: View {
     let isNoteMode: Bool
+    /// Four marks or nine: the thing the NOTES key is about to change.
+    let noteLimit: Int
+    let onToggleNoteLimit: () -> Void
     let onDigit: (Int) -> Void
     let onErase: () -> Void
     let onToggleNotes: () -> Void
@@ -35,6 +38,13 @@ struct SudokuKeypadView: View {
                         tint: isNoteMode ? VibeTheme.sudokuSelection : VibeTheme.surfaceStrong,
                         labelColor: isNoteMode ? .white : VibeTheme.primaryText) {
                     onToggleNotes()
+                }
+
+                wideKey(identifier: "sudoku.noteLimit",
+                        title: "LIMIT \(noteLimit)",
+                        symbol: "number",
+                        tint: VibeTheme.surfaceStrong, labelColor: VibeTheme.primaryText) {
+                    onToggleNoteLimit()
                 }
 
                 wideKey(identifier: "sudoku.erase",

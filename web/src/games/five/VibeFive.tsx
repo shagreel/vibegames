@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import { GameHeader } from '../../hub/GameHeader';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { ALL_PACK_IDS, PACKS, countIn, type PackId } from './packs';
 import {
@@ -237,29 +237,26 @@ function VibeFive() {
         <span style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }} />
       </div>
 
-      <header className="five__header game-header">
-        <BackToGames />
-        <div className="five__titles game-header__title">
-          <h1>Vibe Five</h1>
-          <p>{state.roundNumber === 0 ? 'Ready to play' : `Round ${state.roundNumber}`}</p>
-        </div>
-        <div className="five__corner game-header__corner">
-          <SupportButton game="five" />
-          <button
-            type="button"
-            className="five__settings-button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Game settings"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18M3 12h18M3 18h18" />
-              <circle cx="8" cy="6" r="2.4" />
-              <circle cx="16" cy="12" r="2.4" />
-              <circle cx="10" cy="18" r="2.4" />
-            </svg>
-          </button>
-        </div>
-      </header>
+      <GameHeader
+        prefix="five"
+        title="Vibe Five"
+        subtitle={state.roundNumber === 0 ? 'Ready to play' : `Round ${state.roundNumber}`}
+      >
+        <SupportButton game="five" />
+        <button
+          type="button"
+          className="five__settings-button"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Game settings"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+            <circle cx="8" cy="6" r="2.4" />
+            <circle cx="16" cy="12" r="2.4" />
+            <circle cx="10" cy="18" r="2.4" />
+          </svg>
+        </button>
+      </GameHeader>
 
       <CategoryCard state={state} />
 

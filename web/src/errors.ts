@@ -73,12 +73,44 @@ export function reportCrash(details: CrashDetails): void {
   });
 }
 
+/**
+ * Whether a throw is this app's to report.
+ *
+ * Two things arrive here that are not this app's bugs: an error thrown by a
+ * browser extension or a bookmarklet, which names itself with its own origin,
+ * and one thrown by a script somebody injected into the page, whose stack says
+ * `<anonymous>` and nothing else. The second is not hypothetical — a diagnostic
+ * script of mine threw inside a `PerformanceObserver` on a production page and
+ * came back as a crash report from Vibe Five, which took a while to work out.
+ *
+ * Everything else is kept, including the case with nothing to go on. A
+ * cross-origin script reports only "Script error." with no name and no stack,
+ * and dropping those would lose real crashes to catch the impostors.
+ */
+function isOurs(error: Error | undefined, filename: string | undefined): boolean {
+  if (filename) {
+    try {
+      const origin = new URL(filename, window.location.href).origin;
+      if (origin !== window.location.origin) return false;
+    } catch {
+      // A source that cannot be parsed is not evidence against it.
+    }
+  }
+
+  const stack = error?.stack ?? '';
+  if (stack.includes('<anonymous>') && !stack.includes(window.location.origin)) return false;
+
+  return true;
+}
+
 /** Installs the handlers. Called once, from the entry point. */
 export function installCrashReporting(): void {
   window.addEventListener('error', (event) => {
     // A resource that failed to load reports here too, with no error object.
     const target = event.target as HTMLElement | null;
     const fromResource = target && target !== (window as unknown as HTMLElement);
+
+    if (!fromResource && !isOurs(event.error as Error | undefined, event.filename)) return;
 
     reportCrash({
       ...describe(event.error ?? event.message),

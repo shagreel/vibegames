@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import { GameHeader } from '../../hub/GameHeader';
 import { hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
 import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
@@ -661,44 +661,32 @@ function BlurtHeader({
   onShowCode?: (() => void) | null;
 }) {
   return (
-    <header className="blurt__header game-header">
-      {onLeave ? (
-        <button type="button" className="blurt__back" onClick={onLeave} aria-label="Leave game">
-          ‹
+    <GameHeader
+      prefix="blurt"
+      title="Similar Vibe"
+      subtitle={gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}
+      onBack={onLeave ?? undefined}
+      backLabel="Leave game"
+    >
+      <SupportButton game="blurt" />
+      {onShowCode && (
+        <button
+          type="button"
+          className="blurt__code-button"
+          onClick={onShowCode}
+          aria-label="Game code"
+        >
+          {/* A person with a plus, not the sliders it used to be: those mean
+              "settings" in Vibe Five, and the same glyph for two different
+              things is what made these buttons unreadable. */}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+            <path d="M17 8v6M14 11h6" />
+          </svg>
         </button>
-      ) : (
-        <BackToGames />
       )}
-      <div className="blurt__titles game-header__title">
-        <strong>Similar Vibe</strong>
-        <span>{gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}</span>
-      </div>
-      {/* The code, once the game is under way. It used to be out of reach from
-          the board entirely: the big card only lives in the lobby and the join
-          field only exists before a game starts. A late arrival is normal here
-          — they get put on the smaller team and play carries on — so the code
-          has to be readable from the scoreboard. */}
-      <div className="blurt__corner game-header__corner">
-        <SupportButton game="blurt" />
-        {onShowCode && (
-          <button
-            type="button"
-            className="blurt__code-button"
-            onClick={onShowCode}
-            aria-label="Game code"
-          >
-            {/* A person with a plus, not the sliders it used to be: those mean
-                "settings" in Vibe Five, and the same glyph for two different
-                things is what made these buttons unreadable. */}
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="9" cy="8" r="3.2" />
-              <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
-              <path d="M17 8v6M14 11h6" />
-            </svg>
-          </button>
-        )}
-      </div>
-    </header>
+    </GameHeader>
   );
 }
 

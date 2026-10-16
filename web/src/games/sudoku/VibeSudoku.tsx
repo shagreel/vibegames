@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import BackToGames from '../../hub/BackToGames';
 import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
+import { GameHeader } from '../../hub/GameHeader';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import {
   CELL_COUNT,
-  MAXIMUM_NOTES,
+  NOTE_LIMITS,
+  NOTE_LIMIT_KEY,
+  type NoteLimit,
   DIFFICULTIES,
   boxOf,
   columnOf,
@@ -91,6 +93,10 @@ function VibeSudoku() {
   );
   const [selected, setSelected] = useState<number | null>(null);
   const [noteMode, setNoteMode] = useState(false);
+  const [noteLimit, setNoteLimit] = useState<NoteLimit>(() => {
+    const saved = Number(localStorage.getItem(NOTE_LIMIT_KEY));
+    return (NOTE_LIMITS as readonly number[]).includes(saved) ? (saved as NoteLimit) : 4;
+  });
   const [solved, setSolved] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -303,8 +309,8 @@ function VibeSudoku() {
         // show nine marks anybody can read, and an unreadable note is worse than
         // no note. Removing one is always allowed.
         const held = notes[selected];
-        if (!held.has(digit) && held.size >= MAXIMUM_NOTES) {
-          setNotice(`Notes hold ${MAXIMUM_NOTES} numbers.`);
+        if (!held.has(digit) && held.size >= noteLimit) {
+          setNotice(`Notes hold ${noteLimit} numbers.`);
           return;
         }
         setNotes((current) => {
@@ -343,8 +349,18 @@ function VibeSudoku() {
       });
       checkCompletion(next);
     },
-    [canPlay, selected, puzzle, noteMode, values, notes, checkCompletion],
+    [canPlay, selected, puzzle, noteMode, noteLimit, values, notes, checkCompletion],
   );
+
+  /// Change how many marks a cell holds.
+  ///
+  /// Going from nine to four has to deal with cells that already hold more: the
+  /// lowest marks are kept, because those are the ones somebody wrote first.
+  const changeNoteLimit = useCallback((next: NoteLimit) => {
+    setNoteLimit(next);
+    localStorage.setItem(NOTE_LIMIT_KEY, String(next));
+    setNotes((current) => current.map((set) => new Set([...set].sort((a, b) => a - b).slice(0, next))));
+  }, []);
 
   const erase = useCallback(() => {
     if (!canPlay || selected === null || !puzzle) return;
@@ -414,23 +430,22 @@ function VibeSudoku() {
 
   return (
     <div className="sudoku">
-      <header className="sudoku__header game-header">
-        <BackToGames />
-        <div className="sudoku__corner game-header__corner">
-          <SupportButton game="sudoku" />
-          {screen === 'game' && gameId && (
-            <button type="button" className="sudoku__leave" onClick={leave}>
-              Leave
-            </button>
-          )}
-        </div>
-        <div className="sudoku__titles game-header__title">
-          <h1>Number Vibe</h1>
-          {screen === 'game' && puzzle && (
-            <p>{subtitle(gameId, snapshot, filled, elapsed, difficulty)}</p>
-          )}
-        </div>
-      </header>
+      <GameHeader
+        prefix="sudoku"
+        title="Number Vibe"
+        subtitle={
+          screen === 'game' && puzzle
+            ? subtitle(gameId, snapshot, filled, elapsed, difficulty)
+            : undefined
+        }
+      >
+        <SupportButton game="sudoku" />
+        {screen === 'game' && gameId && (
+          <button type="button" className="sudoku__leave" onClick={leave}>
+            Leave
+          </button>
+        )}
+      </GameHeader>
 
       {notice && <div className="sudoku__notice">{notice}</div>}
 
@@ -460,6 +475,7 @@ function VibeSudoku() {
               puzzle={puzzle}
               values={values}
               notes={notes}
+              noteLimit={noteLimit}
               selected={selected}
               conflicting={conflicting}
               faceDown={waitingForHost}
@@ -469,6 +485,8 @@ function VibeSudoku() {
             <Keypad
               disabled={!canPlay}
               noteMode={noteMode}
+              noteLimit={noteLimit}
+              onNoteLimit={changeNoteLimit}
               onDigit={enter}
               onErase={erase}
               onToggleNotes={() => setNoteMode((on) => !on)}
@@ -543,6 +561,7 @@ function Board(props: {
   puzzle: SudokuPuzzle;
   values: number[];
   notes: Set<number>[];
+  noteLimit: NoteLimit;
   selected: number | null;
   conflicting: Set<number>;
   faceDown: boolean;
@@ -552,9 +571,11 @@ function Board(props: {
     <div className="sudoku__board" role="grid" aria-label="Sudoku board">
       {Array.from({ length: CELL_COUNT }, (_, index) => {
         const given = props.puzzle.givens[index] !== 0;
-        // The marks themselves, in order — four big numbers rather than nine
-        // small ones in fixed squares.
+        // With four, the marks themselves in order — four big numbers. With
+        // nine, every digit in its own fixed square, which is how pencil marks
+        // are read on paper.
         const marks = [...(props.notes[index] ?? [])].sort((a, b) => a - b);
+        const slots = props.noteLimit === 9 ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [0, 1, 2, 3];
         const value = props.values[index];
         const isSelected = props.selected === index;
         const inConflict = props.conflicting.has(index);
@@ -586,9 +607,15 @@ function Board(props: {
             ) : value !== 0 ? (
               <span className="sudoku__value">{value}</span>
             ) : (
-              <span className="sudoku__notes" aria-hidden="true">
-                {Array.from({ length: MAXIMUM_NOTES }).map((_, slot) => (
-                  <span key={slot}>{marks[slot] ?? ''}</span>
+              <span className="sudoku__notes" data-limit={props.noteLimit} aria-hidden="true">
+                {slots.map((slot, position) => (
+                  <span key={slot}>
+                    {props.noteLimit === 9
+                      ? props.notes[index]?.has(slot)
+                        ? slot
+                        : ''
+                      : (marks[position] ?? '')}
+                  </span>
                 ))}
               </span>
             )}
@@ -604,9 +631,11 @@ function Board(props: {
 function Keypad(props: {
   disabled: boolean;
   noteMode: boolean;
+  noteLimit: NoteLimit;
   onDigit: (digit: number) => void;
   onErase: () => void;
   onToggleNotes: () => void;
+  onNoteLimit: (limit: NoteLimit) => void;
 }) {
   return (
     <div className="sudoku__keypad">
@@ -641,6 +670,21 @@ function Keypad(props: {
           aria-label="Erase"
         >
           Erase
+        </button>
+        {/* How many marks a cell holds. Next to the notes toggle, because that
+            is the thing it changes, and it says which one is on. */}
+        <button
+          type="button"
+          className="sudoku__tool sudoku__tool--narrow"
+          onClick={() =>
+            props.onNoteLimit(props.noteLimit === 4 ? 9 : 4)
+          }
+          disabled={props.disabled}
+          aria-label={`Notes per square: ${props.noteLimit}. Change to ${
+            props.noteLimit === 4 ? 9 : 4
+          }`}
+        >
+          Notes {props.noteLimit}
         </button>
       </div>
     </div>

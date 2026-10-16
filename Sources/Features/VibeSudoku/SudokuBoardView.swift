@@ -5,6 +5,8 @@ struct SudokuBoardView: View {
     let puzzle: SudokuPuzzle
     let values: [Int]
     let notes: [Set<Int>]
+    /// Four marks, shown big, or nine in their own squares. See the model.
+    let noteLimit: Int
     let selectedCell: Int?
     let conflictingCells: Set<Int>
     let onSelect: (Int) -> Void
@@ -117,24 +119,29 @@ struct SudokuBoardView: View {
         return VibeTheme.tileIdle
     }
 
-    /// The marks in a cell: up to four numbers, two by two.
+    /// The marks in a cell: four numbers two by two, or all nine in their own
+    /// squares.
     ///
-    /// It used to be a 3x3 grid with each digit in its own fixed square, which
-    /// made every digit the same size as the smallest possible one. With four
-    /// marks at most, four bigger numbers in reading order are easier to read at
-    /// a glance — and a glance is all a note gets.
+    /// Which one is a setting. Four big numbers are easier to read at a glance,
+    /// and a glance is all a note gets; nine small ones are every candidate, in
+    /// the position a pencil mark would be.
     private func noteGrid(_ marks: Set<Int>, size: CGFloat) -> some View {
-        let shown = marks.sorted().prefix(VibeSudokuModel.maximumNotes).map(String.init)
+        let side = noteLimit == 9 ? 3 : 2
+        let shown = noteLimit == 9
+            ? (1...9).map { marks.contains($0) ? "\($0)" : " " }
+            : marks.sorted().prefix(4).map(String.init)
 
         return VStack(spacing: 0) {
-            ForEach(0..<2, id: \.self) { row in
+            ForEach(0..<side, id: \.self) { row in
                 HStack(spacing: 0) {
-                    ForEach(0..<2, id: \.self) { column in
-                        let position = row * 2 + column
+                    ForEach(0..<side, id: \.self) { column in
+                        let position = row * side + column
                         Text(position < shown.count ? shown[position] : " ")
-                            .font(.system(size: size * 0.34, weight: .bold, design: .rounded))
+                            .font(.system(size: size * (side == 3 ? 0.24 : 0.34),
+                                          weight: side == 3 ? .semibold : .bold,
+                                          design: .rounded))
                             .foregroundStyle(VibeTheme.tertiaryText)
-                            .frame(width: size / 2, height: size / 2)
+                            .frame(width: size / CGFloat(side), height: size / CGFloat(side))
                     }
                 }
             }

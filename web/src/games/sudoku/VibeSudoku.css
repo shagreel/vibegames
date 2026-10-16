@@ -499,3 +499,11 @@
 .sudoku__corner .sudoku__leave {
   position: static;
 }
+
+/* Nine marks: every digit in its own square, small — the pencil-mark grid as it
+   is read on paper. Four are shown bigger instead; see the rule above. */
+.sudoku__notes[data-limit='9'] {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  font-size: clamp(0.42rem, 1.9vw, 0.62rem);
+}

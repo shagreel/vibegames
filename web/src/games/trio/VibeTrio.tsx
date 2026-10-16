@@ -21,10 +21,10 @@ import {
 } from './service';
 import { displayGameCode, normaliseGameCode } from '../../lib/gameCode';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
-import BackToGames from '../../hub/BackToGames';
 import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
+import { GameHeader } from '../../hub/GameHeader';
 import './VibeTrio.css';
 
 /**
@@ -351,23 +351,22 @@ function VibeTrio() {
 
   return (
     <div className="trio">
-      <header className="trio__header game-header">
-        <BackToGames />
-        <div className="trio__corner game-header__corner">
-          <SupportButton game="trio" />
-          {screen === 'game' && gameId && (
-            <button type="button" className="trio__leave" onClick={leave}>
-              Leave
-            </button>
-          )}
-        </div>
-        <div className="trio__titles game-header__title">
-          <h1>Vibe Pairings</h1>
-          {screen === 'game' && table && (
-            <p className="trio__subtitle">{subtitle(table, gameId, snapshot, myTakes, elapsed)}</p>
-          )}
-        </div>
-      </header>
+      <GameHeader
+        prefix="trio"
+        title="Vibe Pairings"
+        subtitle={
+          screen === 'game' && table
+            ? subtitle(table, gameId, snapshot, myTakes, elapsed)
+            : undefined
+        }
+      >
+        <SupportButton game="trio" />
+        {screen === 'game' && gameId && (
+          <button type="button" className="trio__leave" onClick={leave}>
+            Leave
+          </button>
+        )}
+      </GameHeader>
 
       {notice && <div className="trio__notice">{notice}</div>}
 

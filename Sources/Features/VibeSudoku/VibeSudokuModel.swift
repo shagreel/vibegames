@@ -29,13 +29,17 @@ final class VibeSudokuModel: ObservableObject {
     @Published private(set) var values = [Int](repeating: 0, count: SudokuPuzzle.cellCount)
     @Published private(set) var notes = [Set<Int>](repeating: [], count: SudokuPuzzle.cellCount)
 
-    /// How many numbers a cell's notes hold.
+    /// How many numbers a cell's notes hold: four, or nine.
     ///
-    /// Four, and shown as four big numbers rather than nine small ones. It is a
-    /// deliberate limit rather than a technical one — a cell can have nine
-    /// candidates — because a phone-sized cell cannot show nine marks anyone can
-    /// read, and an unreadable note is worse than no note.
-    static let maximumNotes = 4
+    /// A setting rather than a rule, because the trade is real both ways. Four
+    /// are shown big, two by two, which is what a phone-sized cell can carry;
+    /// nine are every candidate, each in its own square, which is how pencil
+    /// marks are read on paper — and four make a hard puzzle harder. Kept in
+    /// `UserDefaults` so it survives the puzzle, the game and the launch.
+    @Published private(set) var noteLimit = UserDefaults.standard.object(forKey: noteLimitKey) as? Int ?? 4
+
+    static let noteLimitKey = "vibegames.sudoku.noteLimit"
+    static let noteLimits = [4, 9]
 
     /// Set when a note is refused because the cell is full.
     ///
@@ -261,6 +265,17 @@ final class VibeSudokuModel: ObservableObject {
 
     // MARK: - Playing
 
+    /// Four or nine, and everything that follows from changing it.
+    ///
+    /// Going from nine to four has to deal with cells that already hold more:
+    /// the lowest marks are kept, because those are the ones written first.
+    func toggleNoteLimit() {
+        noteLimit = noteLimit == 4 ? 9 : 4
+        UserDefaults.standard.set(noteLimit, forKey: Self.noteLimitKey)
+        notes = notes.map { Set($0.sorted().prefix(noteLimit)) }
+        noteNotice = nil
+    }
+
     func select(_ index: Int) {
         guard index >= 0, index < SudokuPuzzle.cellCount else { return }
         noteNotice = nil
@@ -276,10 +291,10 @@ final class VibeSudokuModel: ObservableObject {
             noteNotice = nil
             if notes[index].contains(digit) {
                 notes[index].remove(digit)
-            } else if notes[index].count < Self.maximumNotes {
+            } else if notes[index].count < noteLimit {
                 notes[index].insert(digit)
             } else {
-                noteNotice = "Notes hold \(Self.maximumNotes) numbers."
+                noteNotice = "Notes hold \(noteLimit) numbers."
                 return
             }
             return
