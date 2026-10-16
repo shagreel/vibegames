@@ -263,4 +263,26 @@ final class VibeWordsModelTests: XCTestCase {
                       || databaseURL.contains("firebaseio.com"),
                       "Unexpected URL: \(databaseURL)")
     }
+
+    /// Reported from the game itself: with a restart counting down, the next word
+    /// is already dealt, so a guess typed now comes back scored — free colours on
+    /// a word the round has not begun. Both clients had it.
+    @MainActor
+    func testTheBoardTakesNoInputWhileARestartIsCountingDown() {
+        func canPlay(roundOver: Bool = false, waitingForHost: Bool = false,
+                     answer: Bool = true, countingDown: Bool) -> Bool {
+            VibeWordsModel.canPlay(isRoundOver: roundOver,
+                                   isWaitingForHost: waitingForHost,
+                                   hasAnswer: answer,
+                                   isCountingDown: countingDown)
+        }
+
+        XCTAssertFalse(canPlay(countingDown: true),
+                       "a countdown is not a time to be guessing")
+        XCTAssertTrue(canPlay(countingDown: false),
+                      "and everything else about the board is unchanged")
+        XCTAssertFalse(canPlay(roundOver: true, countingDown: false))
+        XCTAssertFalse(canPlay(waitingForHost: true, countingDown: false))
+        XCTAssertFalse(canPlay(answer: false, countingDown: false))
+    }
 }

@@ -76,7 +76,30 @@ final class VibeWordsModel: ObservableObject {
 
     var isRoundOver: Bool { won || lost }
 
-    var canPlay: Bool { !isRoundOver && !isWaitingForHost && !answer.isEmpty }
+    /// Whether the board takes input at all.
+    ///
+    /// The rule itself is a pure function below, so the awkward part — that a
+    /// countdown blocks input — can be tested without a database and a clock.
+    var canPlay: Bool {
+        Self.canPlay(isRoundOver: isRoundOver,
+                     isWaitingForHost: isWaitingForHost,
+                     hasAnswer: !answer.isEmpty,
+                     isCountingDown: countdown != nil)
+    }
+
+    /// The four ways the board is not taking input.
+    ///
+    /// `isCountingDown` matters as much as the rest: a restart deals the next
+    /// word *before* the countdown to it has finished, so a guess sent during
+    /// those seconds is scored against a word the round has not started on —
+    /// free colours, and the answer a few guesses later. The web client had the
+    /// same hole; both were reported from the same game.
+    static func canPlay(isRoundOver: Bool,
+                        isWaitingForHost: Bool,
+                        hasAnswer: Bool,
+                        isCountingDown: Bool) -> Bool {
+        !isRoundOver && !isWaitingForHost && hasAnswer && !isCountingDown
+    }
 
     /// True when shared play is impossible because Firebase is not set up.
     var backendUnavailableMessage: String? {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FeedbackError, sendFeedback } from '../games/feedback';
 import {
   GAMES,
@@ -71,7 +72,17 @@ export function SupportButton({ game }: { game?: string }) {
       </button>
       {/* The key goes down, not the title: the panel is the only thing that
           needs to read it out, and the form has to send the key anyway. */}
-      {open && <SupportPanel game={game} onClose={() => setOpen(false)} />}
+      {/*
+        Rendered into `document.body` rather than here.
+
+        `position: fixed` resolves against the nearest ancestor with a transform,
+        not against the window — and game headers move their corners around. On
+        Word Vibe the corner has a `translateY(-20px)` on it, so the panel laid
+        itself out inside a 40x40 box in the top-right and appeared to do
+        nothing at all when the heart was tapped. A portal cannot be caught by
+        any of that, in this screen or the next one somebody animates.
+      */}
+      {open && createPortal(<SupportPanel game={game} onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

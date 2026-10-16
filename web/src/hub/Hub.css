@@ -2,7 +2,6 @@
    a light menu handing over to a dark word grid would be a jolt. */
 
 .hub {
-  --heart: #ff6b85;
   min-height: 100vh;
   background-color: #121213;
   background-image:
@@ -256,6 +255,14 @@
   position: relative;
   width: 100%;
   max-width: 28rem;
+  /* Taller than a phone, and it was not scrollable: the panel is a blurb, a
+     form, the rows, the closing line and two links, which came to 952px in a
+     900px window — so the bottom of it, including the links, could not be
+     reached at all. `dvh` rather than `vh` because a phone's browser chrome
+     moves, and the padding is the overlay's own. */
+  max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;

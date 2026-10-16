@@ -856,7 +856,12 @@ struct VibeBlurtView: View {
                     Button {
                         showingCode = true
                     } label: {
-                        Image(systemName: "slider.horizontal.3")
+                        // A person with a plus, not `slider.horizontal.3`: that
+                        // glyph means "Game settings" in Vibe Five, and the same
+                        // icon for two different buttons in two games is what
+                        // made them unreadable. This reads as "somebody else can
+                        // join", which is what the button is for.
+                        Image(systemName: "person.badge.plus")
                     }
                     .buttonStyle(VibeIconButtonStyle())
                     .accessibilityLabel("Game code")

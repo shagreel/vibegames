@@ -6,7 +6,7 @@ import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
-import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
+import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 // Aliased because this screen has its own `playerName` state. The name is the
 // suite's, not this game's, so it is only ever asked for once.
 import { playerName as savedName, setPlayerName as savePlayerName } from '../../identity';
@@ -340,9 +340,12 @@ function VibeWords() {
 
   // Handle key press
   const handleKeyPress = useCallback((key: string) => {
-    // Disable keyboard if game is over, not started, or name not submitted
-    // Players can keep playing even after someone wins (until Play Again is clicked)
-    if (gameOver || !gameStarted || !nameSubmitted) return;
+    // Disable keyboard if game is over, not started, or name not submitted.
+    // Players can keep playing even after someone wins (until Play Again is
+    // clicked) — but not while a restart is counting down: the next word is
+    // already dealt behind the countdown, so a guess sent now is a free look at
+    // the colours of a word the round has not started on.
+    if (gameOver || !gameStarted || !nameSubmitted || visibleCountdown !== null) return;
 
     if (key === 'ENTER') {
       if (currentGuess.length !== WORD_LENGTH) {
@@ -393,7 +396,8 @@ function VibeWords() {
       setCurrentGuess(currentGuess + key);
       setMessage('');
     }
-  }, [currentGuess, guesses, gameOver, gameStarted, nameSubmitted, answer, gameId, playerName]);
+  }, [currentGuess, guesses, gameOver, gameStarted, nameSubmitted, answer, gameId, playerName,
+      visibleCountdown]);
 
   // Keyboard event listener
   useEffect(() => {
@@ -596,7 +600,9 @@ function VibeWords() {
         <div className="vibewords-header__corner">
           <SupportButton game="words" />
         </div>
-        <h1>VibeWords</h1>
+        <div className="vibewords-titles">
+          <h1>Word Vibe</h1>
+        </div>
         {playerCount > 0 && (
           <div className="player-count">
             👥 {playerCount} {playerCount === 1 ? 'player' : 'players'}
@@ -646,6 +652,16 @@ function VibeWords() {
         {/* Start game button for creator */}
         {nameSubmitted && isCreator && gameExists && !gameStarted && (
           <div className="start-game-container">
+            {/* The code, said out loud. It used to exist only inside the link the
+                copy button puts on the clipboard, so the person who created the
+                game had nothing to read out to the room. */}
+            <div className="words__code">
+              <span className="words__code-label">Read this out</span>
+              <strong className="words__code-value">{displayGameCode(gameId)}</strong>
+              <span className="words__code-hint">
+                Everyone else: Word Vibe → Join with a code
+              </span>
+            </div>
             <p className="start-game-message">
               You created this game! Click start when everyone has joined.
             </p>

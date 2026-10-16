@@ -660,3 +660,41 @@
   display: flex;
   align-items: center;
 }
+
+/* The code, in the lobby, where every other game puts it. It used to exist only
+   inside the link the copy button puts on the clipboard, so whoever created the
+   game had nothing to read out to the room. */
+.words__code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem 1rem;
+  border: 1px solid #3a3a3c;
+  border-radius: 1.5rem;
+  background: #1b1b1e;
+}
+
+.words__code-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8b8b93;
+}
+
+.words__code-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 2.1rem;
+  letter-spacing: 0.3em;
+  /* The letters are read out loud across a room; the padding keeps the last one
+     from looking clipped by its own tracking. */
+  padding-left: 0.3em;
+  user-select: all;
+}
+
+.words__code-hint {
+  font-size: 0.75rem;
+  color: #9a9aa2;
+  text-align: center;
+}

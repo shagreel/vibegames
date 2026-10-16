@@ -678,6 +678,9 @@ function BlurtHeader({
           field only exists before a game starts. A late arrival is normal here
           — they get put on the smaller team and play carries on — so the code
           has to be readable from the scoreboard. */}
+      <SupportButton game="blurt" />
+      {/* Last, like every other game's own control: the heart is the one thing
+          that never moves, so it goes first. */}
       {onShowCode && (
         <button
           type="button"
@@ -685,14 +688,16 @@ function BlurtHeader({
           onClick={onShowCode}
           aria-label="Game code"
         >
+          {/* A person with a plus, not the sliders it used to be: those mean
+              "settings" in Vibe Five, and the same glyph for two different
+              things is what made these buttons unreadable. */}
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h8M18 7h2M4 17h2M12 17h8" />
-            <circle cx="15" cy="7" r="2.2" />
-            <circle cx="9" cy="17" r="2.2" />
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+            <path d="M17 8v6M14 11h6" />
           </svg>
         </button>
       )}
-      <SupportButton game="blurt" />
     </header>
   );
 }

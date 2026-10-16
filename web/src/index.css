@@ -3,6 +3,10 @@
 }
 
 :root {
+  /* The heart button is on every screen, and so is this: it used to live in
+     `Hub.css` on `.hub`, which meant the game screens had no value for it and
+     the heart fell back to black. */
+  --heart: #ff6b85;
   font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
