@@ -20,13 +20,15 @@ struct VibeBlurtSettingsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 26) {
+                    // Name and appearance first, then the room's own setting.
+                    GameSettingsSections()
                     words
                 }
                 .padding(20)
             }
             .vibeCanvas()
-            .navigationTitle("Game settings")
+            .navigationTitle("Game Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -43,7 +45,7 @@ struct VibeBlurtSettingsView: View {
 
     private var words: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("WORDS")
+            SettingsSectionTitle("Words")
 
             ForEach(BlurtPack.allCases) { pack in
                 Button {
@@ -109,10 +111,4 @@ struct VibeBlurtSettingsView: View {
         }
     }
 
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 12, weight: .black, design: .rounded))
-            .kerning(1.5)
-            .foregroundStyle(VibeTheme.tertiaryText)
-    }
 }

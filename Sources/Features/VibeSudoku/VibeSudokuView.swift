@@ -396,16 +396,9 @@ struct VibeSudokuView: View {
             HStack(spacing: 6) {
                 SupportButton(game: .sudoku)
 
-                // Notes per square is a setting, so it lives where the other
-                // games keep theirs rather than on the keypad.
-                Button {
-                    isShowingSettings = true
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
-                }
-                .buttonStyle(VibeIconButtonStyle())
-                .accessibilityLabel("Game settings")
-                .accessibilityIdentifier("sudoku.settings")
+                // The settings button the other games have, in the same place:
+                // notes per square is a setting, and settings live behind it.
+                GameSettingsButton(prefix: "sudoku") { isShowingSettings = true }
 
                 if model.isRoundOver {
                     Button("Play again") {

@@ -50,7 +50,7 @@ final class HomeUITests: XCTestCase {
         attach(app, named: "69-hub-with-name")
         app.buttons["hub.preferences"].tap()
 
-        let field = app.textFields["preferences.nameField"]
+        let field = app.textFields["gameSettings.nameField"]
         XCTAssertTrue(field.waitForExistence(timeout: 5), "Preferences should open")
         replaceText(in: field, with: "Alex")
         app.buttons["preferences.done"].tap()
@@ -293,22 +293,6 @@ final class HomeUITests: XCTestCase {
 
     /// A leftover name from an earlier run means there is no first-run prompt to
     /// dismiss; a clean one means there is. Either way the test carries on.
-    private func dismissNamePromptIfPresent(_ app: XCUIApplication) {
-        let skip = app.buttons["firstRun.nameSkip"]
-        if skip.waitForExistence(timeout: 3) { skip.tap() }
-    }
-
-    private func replaceText(in field: XCUIElement, with text: String) {
-        field.tap()
-        let existing = (field.value as? String) ?? ""
-        // An empty field reports its placeholder as the value.
-        if !existing.isEmpty, existing != "Your name" {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
-                                  count: existing.count + 4))
-        }
-        field.typeText(text)
-    }
-
     private func attach(_ app: XCUIApplication, named name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name

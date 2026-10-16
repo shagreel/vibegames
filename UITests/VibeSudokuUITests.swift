@@ -97,7 +97,9 @@ final class VibeSudokuUITests: XCTestCase {
                        "the limit should not be a keypad key any more")
 
         // Four first, which is idempotent whatever an earlier run left behind.
-        chooseFourMarks(in: app)
+        XCTAssertTrue(setNineMarks(false, in: app).waitForExistence(timeout: 5),
+                      "the sheet should offer the marks choice")
+        app.buttons["sudokuSettings.done"].tap()
 
         let cell = try firstEmptyCell(in: app)
         cell.tap()
@@ -120,12 +122,9 @@ final class VibeSudokuUITests: XCTestCase {
         XCTAssertEqual(cell.label, withFourMarks,
                        "a fifth mark should be refused")
 
-        // With nine chosen, five marks fit.
-        app.buttons["sudoku.settings"].tap()
-        let nine = app.buttons["sudokuSettings.notes.9"]
-        XCTAssertTrue(nine.waitForExistence(timeout: 5),
-                      "the sheet should offer nine notes")
-        nine.tap()
+        // With nine chosen, five marks fit. One switch, not two rows.
+        let marks = setNineMarks(true, in: app)
+        XCTAssertEqual(marks.value as? String, "1", "the switch should be on for nine")
         attach(app, named: "35-sudoku-settings")
         app.buttons["sudokuSettings.done"].tap()
 
@@ -136,7 +135,8 @@ final class VibeSudokuUITests: XCTestCase {
         wait(for: [fiveMarks], timeout: 5)
 
         // Put the setting back, so a later test starts where a new player would.
-        chooseFourMarks(in: app)
+        setNineMarks(false, in: app)
+        app.buttons["sudokuSettings.done"].tap()
     }
 
     // MARK: - Shared play
@@ -178,15 +178,18 @@ final class VibeSudokuUITests: XCTestCase {
         attach(app, named: "30-sudoku-lobby")
     }
 
-    /// Opens the settings sheet and picks four notes, which is the default, so
-    /// this works as a reset as well as a choice.
-    private func chooseFourMarks(in app: XCUIApplication) {
+    /// Opens the settings sheet and sets the marks switch, returning it. The
+    /// sheet is left open: two callers photograph it, and every one of them
+    /// closes it themselves.
+    private func setNineMarks(_ on: Bool, in app: XCUIApplication) -> XCUIElement {
         app.buttons["sudoku.settings"].tap()
-        let four = app.buttons["sudokuSettings.notes.4"]
-        XCTAssertTrue(four.waitForExistence(timeout: 5),
-                      "the sheet should offer four notes")
-        four.tap()
-        app.buttons["sudokuSettings.done"].tap()
+        let marks = app.switches["sudokuSettings.nineMarks"]
+        XCTAssertTrue(marks.waitForExistence(timeout: 5),
+                      "the sheet should offer the marks choice")
+        // A value of "1" is on; tapping a switch that is already there would
+        // turn it off, and every caller wants a particular state.
+        if (marks.value as? String == "1") != on { marks.tap() }
+        return marks
     }
 
     /// Scans a window of cells for one the puzzle left blank.

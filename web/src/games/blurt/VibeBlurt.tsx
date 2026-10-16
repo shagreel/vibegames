@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
+import { GameSettings, SettingsButton, SettingsSection } from '../../hub/GameSettings';
 import { hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
 import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
@@ -132,6 +133,62 @@ function VibeBlurt() {
 
   const [now, setNow] = useState(() => Date.now());
   const [showSettings, setShowSettings] = useState(false);
+
+  /**
+   * The settings sheet, on every screen of the game — the intro, the lobby and
+   * the round in progress. The name and the appearance are the player's own and
+   * are always available; the packs belong to the room and are the host's to
+   * change, before the start, which is what `editable` says.
+   */
+  const packsEditable = isHost && !snapshot.started;
+  const packWordCount = PACK_ORDER.filter((id) => snapshot.packs.includes(id)).reduce(
+    (total, id) => total + PACK_WORDS[id].length,
+    0,
+  );
+  const chosenPack = (id: string) => snapshot.packs.includes(id);
+  const togglePack = (id: string) => {
+    if (!packsEditable) return;
+    const next = new Set(snapshot.packs);
+    if (next.has(id)) {
+      // Leaving nothing ticked would deal an empty deck.
+      if (next.size <= 1) return;
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    changeSettings([...next]);
+  };
+
+  const settingsSheet = showSettings ? (
+    <GameSettings prefix="blurt" onClose={() => setShowSettings(false)}>
+      <SettingsSection
+        title="Turn length"
+        note={`Somewhere between ${SHORTEST_SECONDS} and ${LONGEST_SECONDS} seconds, and not the same twice. Nobody can count it down — the bar changes colour and starts pulsing when it is nearly over.`}
+      />
+      <SettingsSection title="Words">
+        {PACK_ORDER.map((packId) => (
+          <button
+            key={packId}
+            type="button"
+            className={`blurt__option${chosenPack(packId) ? ' is-on' : ''}`}
+            onClick={() => togglePack(packId)}
+            disabled={!packsEditable}
+          >
+            <strong>{PACKS[packId].title}</strong>
+            <span>{PACKS[packId].blurb}</span>
+            <em>{chosenPack(packId) ? '✓' : ''}</em>
+          </button>
+        ))}
+        <p className="blurt__hint">{packWordCount} words in the deck</p>
+        <p className="blurt__hint">
+          {packsEditable
+            ? 'Everyone in the room gets these, so you will all be describing the same things.'
+            : 'Only the host can change these, and only before the game starts.'}
+        </p>
+      </SettingsSection>
+    </GameSettings>
+  ) : null;
+
   const [showCode, setShowCode] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [packs, setPacks] = useState<string[]>(loadPacks);
@@ -389,7 +446,7 @@ function VibeBlurt() {
   if (!gameId) {
     return (
       <div className="blurt">
-        <BlurtHeader onLeave={null} gameId={null} />
+        <BlurtHeader onLeave={null} gameId={null} onShowSettings={() => setShowSettings(true)} />
         <div className="blurt__lobby">
           <button type="button" className="blurt__primary" onClick={create}>
             Start a game
@@ -416,6 +473,7 @@ function VibeBlurt() {
 
           <HowToPlayLink onClick={() => setRulesOpen(true)} />
         </div>
+        {settingsSheet}
         {askingForName && <NamePrompt onSubmit={submitName} />}
       </div>
     );
@@ -424,7 +482,7 @@ function VibeBlurt() {
   if (!snapshot.started || !play) {
     return (
       <div className="blurt">
-        <BlurtHeader onLeave={leave} gameId={gameId} />
+        <BlurtHeader onLeave={leave} gameId={gameId} onShowSettings={() => setShowSettings(true)} />
         <div className="blurt__lobby">
           <div className="blurt__code">
             <span className="blurt__code-label">Read this out</span>
@@ -477,14 +535,7 @@ function VibeBlurt() {
           )}
         </div>
 
-        {showSettings && (
-          <SettingsSheet
-            packs={snapshot.packs}
-            editable={isHost && !snapshot.started}
-            onChange={changeSettings}
-            onClose={() => setShowSettings(false)}
-          />
-        )}
+        {settingsSheet}
         {askingForName && <NamePrompt onSubmit={submitName} />}
       </div>
     );
@@ -492,7 +543,12 @@ function VibeBlurt() {
 
   return (
     <div className="blurt">
-      <BlurtHeader onLeave={leave} gameId={gameId} onShowCode={() => setShowCode(true)} />
+      <BlurtHeader
+        onLeave={leave}
+        gameId={gameId}
+        onShowCode={() => setShowCode(true)}
+        onShowSettings={() => setShowSettings(true)}
+      />
 
       {/* The names matter as much as the scores: with four people passing one
           word around, the first thing anybody asks is which side they are on. */}
@@ -643,6 +699,7 @@ function VibeBlurt() {
         </div>
       )}
 
+      {settingsSheet}
       {showCode && <CodeSheet gameId={gameId} onClose={() => setShowCode(false)} />}
       {askingForName && <NamePrompt onSubmit={submitName} />}
     </div>
@@ -655,10 +712,12 @@ function BlurtHeader({
   onLeave,
   gameId,
   onShowCode,
+  onShowSettings,
 }: {
   onLeave: (() => void) | null;
   gameId: string | null;
   onShowCode?: (() => void) | null;
+  onShowSettings: () => void;
 }) {
   return (
     <GameHeader
@@ -669,6 +728,7 @@ function BlurtHeader({
       backLabel="Leave game"
     >
       <SupportButton game="blurt" />
+      <SettingsButton prefix="blurt" onClick={onShowSettings} />
       {onShowCode && (
         <button
           type="button"
@@ -687,76 +747,6 @@ function BlurtHeader({
         </button>
       )}
     </GameHeader>
-  );
-}
-
-function SettingsSheet({
-  packs,
-  editable,
-  onChange,
-  onClose,
-}: {
-  packs: string[];
-  editable: boolean;
-  onChange: (packs: string[]) => void;
-  onClose: () => void;
-}) {
-  const chosen = new Set(packs);
-  const wordCount = PACK_ORDER.filter((id) => chosen.has(id)).reduce(
-    (total, id) => total + PACK_WORDS[id].length,
-    0,
-  );
-
-  return (
-    <div className="blurt__overlay" role="dialog" aria-label="Game settings">
-      <div className="blurt__sheet">
-        <h2>Game settings</h2>
-
-        <h3>Turn length</h3>
-        <p className="blurt__hint">
-          Somewhere between {SHORTEST_SECONDS} and {LONGEST_SECONDS} seconds, and not the same
-          twice. Nobody knows which, so nobody can count it down — the bar changes colour and
-          starts pulsing when it is nearly over.
-        </p>
-
-        <h3>Words</h3>
-        {PACK_ORDER.map((packId) => (
-          <button
-            key={packId}
-            type="button"
-            className={`blurt__option${chosen.has(packId) ? ' is-on' : ''}`}
-            onClick={() => {
-              if (!editable) return;
-              const next = new Set(chosen);
-              if (next.has(packId)) {
-                // Leaving nothing ticked would deal an empty deck.
-                if (next.size <= 1) return;
-                next.delete(packId);
-              } else {
-                next.add(packId);
-              }
-              onChange([...next]);
-            }}
-            disabled={!editable}
-          >
-            <strong>{PACKS[packId].title}</strong>
-            <span>{PACKS[packId].blurb}</span>
-            <em>{chosen.has(packId) ? '✓' : ''}</em>
-          </button>
-        ))}
-        <p className="blurt__hint">{wordCount} words in the deck</p>
-
-        <p className="blurt__hint">
-          {editable
-            ? 'Everyone in the room gets these, so you will all be describing the same things.'
-            : 'Only the host can change these, and only before the game starts.'}
-        </p>
-
-        <button type="button" className="blurt__primary" onClick={onClose}>
-          Done
-        </button>
-      </div>
-    </div>
   );
 }
 

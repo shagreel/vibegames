@@ -13,16 +13,16 @@
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  background: #121213;
+  background: var(--page);
   background-image: radial-gradient(70% 50% at 50% 0%, rgba(255, 71, 87, 0.16), transparent 70%);
   background-repeat: no-repeat;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 /* The draining bar across the very top. */
 .five__progress {
   height: 5px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--raise-2);
 }
 
 .five__progress span {
@@ -46,9 +46,9 @@
   height: 2.5rem;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--raise);
   cursor: pointer;
 }
 
@@ -56,7 +56,7 @@
   width: 1.2rem;
   height: 1.2rem;
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--ink);
   stroke-width: 1.8;
   stroke-linecap: round;
 }
@@ -72,9 +72,9 @@
   justify-content: center;
   margin: 0 1.25rem;
   padding: 1.5rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  border: 2px solid var(--line-soft);
   border-radius: 2.4rem;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--raise);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -132,7 +132,7 @@
 
 .five__ready span:last-child {
   font-size: 0.92rem;
-  color: #8b9197;
+  color: var(--ink-faint);
   max-width: 20rem;
 }
 
@@ -224,14 +224,14 @@
   font-weight: 900;
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 .five__ring-text span {
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.2em;
-  color: #8b9197;
+  color: var(--ink-faint);
 }
 
 .five__ring[data-tone='danger'] .five__ring-text span,
@@ -292,83 +292,20 @@
   to { opacity: 0; }
 }
 
-/* ── settings ──────────────────────────────────────────────────────────── */
+/* ── settings ────────────────────────────────────────────────────────────
+   The sheet itself is the shared one (`hub/GameSettings.tsx`): the overlay, the
+   panel, the Done button and the two switches are `.game-sheet` styles now.
+   What is left here is the part that is Vibe Five's own — the pack list. */
 
-.five__overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(8, 8, 10, 0.7);
-  z-index: 30;
-}
-
-.five__settings {
-  width: 100%;
-  max-width: 34rem;
-  max-height: 88vh;
-  display: flex;
-  flex-direction: column;
-  border-radius: 1.6rem 1.6rem 0 0;
-  background: #1a1a1d;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-bottom: none;
-  animation: five-sheet 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@keyframes five-sheet {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-.five__settings > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.1rem 1.25rem 0.75rem;
-}
-
-.five__settings h2 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 800;
-}
-
-.five__settings > header button {
-  border: none;
-  border-radius: 999px;
-  padding: 0.5rem 1.1rem;
-  background: linear-gradient(135deg, var(--five-a), var(--five-b));
-  color: #ffffff;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.five__switches {
-  display: flex;
-  gap: 1.5rem;
-  padding: 0 1.25rem 1rem;
-}
-
-.five__switches label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #c8ccd2;
-}
-
+/* Inside the shared sheet, so no panel padding or rule of its own: the sheet
+   spaces its own sections, and a border here would be a second line under the
+   heading. */
 .five__packs-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 0.85rem;
-  color: #8b9197;
+  color: var(--ink-faint);
 }
 
 .five__packs-head button {
@@ -384,8 +321,7 @@
 .five__packs {
   list-style: none;
   margin: 0;
-  padding: 0 0.75rem 1.25rem;
-  overflow-y: auto;
+  padding: 0;
 }
 
 .five__pack {
@@ -404,8 +340,8 @@
 }
 
 .five__pack[data-on='true'] {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--raise);
+  border-color: var(--line-soft);
 }
 
 .five__pack:disabled {
@@ -437,14 +373,14 @@
 
 .five__pack-text span {
   font-size: 0.8rem;
-  color: #8b9197;
+  color: var(--ink-faint);
 }
 
 .five__pack-count {
   margin-left: auto;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #6f757b;
+  color: var(--ink-dim);
   font-variant-numeric: tabular-nums;
 }
 

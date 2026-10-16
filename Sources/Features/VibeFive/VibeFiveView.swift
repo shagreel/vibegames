@@ -173,6 +173,7 @@ struct VibeFiveView: View {
             }
             .buttonStyle(VibeIconButtonStyle())
             .accessibilityLabel("Back to games")
+            .accessibilityIdentifier("vibeFive.back")
 
             VStack(spacing: 3) {
                 Text("VIBE FIVE")
@@ -188,14 +189,7 @@ struct VibeFiveView: View {
             HStack(spacing: 6) {
                 SupportButton(game: .five)
 
-                Button {
-                    isShowingSettings = true
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
-                }
-                .buttonStyle(VibeIconButtonStyle())
-                .accessibilityLabel("Game settings")
-                .accessibilityIdentifier("vibeFive.settings")
+                GameSettingsButton(prefix: "vibeFive") { isShowingSettings = true }
             }
         }
         .padding(.horizontal, 20)

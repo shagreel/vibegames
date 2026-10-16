@@ -8,16 +8,16 @@
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  background: #121213;
-  color: #ffffff;
+  background: var(--page);
+  color: var(--ink);
 }
 
 .trio__leave {
   position: static;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #d5d8dd;
+  background: var(--raise);
+  color: var(--ink-soft);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 600;
@@ -26,15 +26,15 @@
 }
 
 .trio__leave:hover {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--ink);
+  border-color: var(--line-hover);
 }
 
 .trio__subtitle {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #8b9197;
+  color: var(--ink-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -45,7 +45,7 @@
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #ffd479;
+  color: var(--notice);
 }
 
 /* ── lobby ─────────────────────────────────────────────────────────────── */
@@ -63,7 +63,7 @@
 
 .trio__blurb {
   margin: 0 0 0.5rem;
-  color: #9aa0a6;
+  color: var(--ink-muted);
   text-align: center;
 }
 
@@ -77,9 +77,9 @@
   flex-direction: column;
   gap: 0.25rem;
   padding: 1.05rem 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line-soft);
   border-radius: 1.3rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--raise);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -94,12 +94,12 @@
 
 .trio-card-button span {
   font-size: 0.85rem;
-  color: #9aa0a6;
+  color: var(--ink-muted);
 }
 
 .trio-card-button:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.24);
+  border-color: var(--line-hover);
 }
 
 .trio-card-button:first-of-type {
@@ -119,7 +119,7 @@
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #8b9197;
+  color: var(--ink-faint);
 }
 
 .trio__join-row {
@@ -132,10 +132,10 @@
   min-width: 0;
   padding: 0 1rem;
   height: 3.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--line-strong);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  background: var(--raise);
+  color: var(--ink);
   font: inherit;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 1.05rem;
@@ -153,7 +153,7 @@
   border: none;
   border-radius: 1rem;
   background: linear-gradient(135deg, var(--trio-a), var(--trio-b));
-  color: #1b1b1b;
+  color: var(--on-accent);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -166,14 +166,14 @@
 
 .trio__join-error {
   margin: 0;
-  color: #ff8c8c;
+  color: var(--danger);
   font-size: 0.85rem;
 }
 
 .trio__link {
   border: none;
   background: none;
-  color: #9aa0a6;
+  color: var(--ink-muted);
   font: inherit;
   font-size: 0.9rem;
   font-weight: 600;
@@ -182,7 +182,7 @@
 }
 
 .trio__link:hover {
-  color: #ffffff;
+  color: var(--ink);
 }
 
 /* ── waiting room ──────────────────────────────────────────────────────── */
@@ -209,12 +209,12 @@
 .trio__waiting-text {
   margin: 0;
   max-width: 24rem;
-  color: #9aa0a6;
+  color: var(--ink-muted);
 }
 
 .trio__players {
   margin: 0;
-  color: #6f757b;
+  color: var(--ink-dim);
   font-size: 0.85rem;
 }
 
@@ -223,7 +223,7 @@
   border: none;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--trio-a), var(--trio-b));
-  color: #1b1b1b;
+  color: var(--on-accent);
   font: inherit;
   font-size: 1rem;
   font-weight: 800;
@@ -357,15 +357,15 @@
   width: 100%;
   height: 100%;
   border-radius: 0.75rem;
-  background-color: #1d1d20;
+  background-color: var(--surface);
   background-image:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
+    linear-gradient(45deg, var(--raise) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--raise) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--raise) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--raise) 75%);
   background-size: 14px 14px;
   background-position: 0 0, 0 7px, 7px -7px, -7px 0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--raise-2);
 }
 
 @keyframes trio-shake {
@@ -384,10 +384,10 @@
 
 .trio__hint {
   padding: 0.7rem 1.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--line-strong);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.07);
-  color: #ffffff;
+  background: var(--raise-2);
+  color: var(--ink);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -396,7 +396,7 @@
 .trio__hint--off {
   border-color: transparent;
   background: none;
-  color: #6f757b;
+  color: var(--ink-dim);
   cursor: default;
   font-weight: 500;
   font-size: 0.85rem;
@@ -404,7 +404,7 @@
 }
 
 .trio__deck {
-  color: #6f757b;
+  color: var(--ink-dim);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -434,7 +434,7 @@
 
 .trio__result-sub {
   margin: 0;
-  color: #8b9197;
+  color: var(--ink-faint);
   font-size: 0.9rem;
 }
 
@@ -444,7 +444,7 @@
   max-width: 26rem;
   margin: 1rem 0;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--line-soft);
   border-radius: 1.2rem;
   overflow: hidden;
 }
@@ -457,7 +457,7 @@
 }
 
 .trio__standings li + li {
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--line-soft);
 }
 
 .trio__standings li.is-me {
@@ -467,7 +467,7 @@
 .trio__rank {
   width: 1.4rem;
   text-align: right;
-  color: #6f757b;
+  color: var(--ink-dim);
   font-weight: 700;
   font-size: 0.85rem;
 }
@@ -494,12 +494,12 @@
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  background: rgba(18, 18, 19, 0.86);
+  background: var(--cover);
   z-index: 20;
 }
 
 .trio__countdown span {
-  color: #9aa0a6;
+  color: var(--ink-muted);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -519,7 +519,7 @@
   max-width: 34rem;
   margin: 0 auto;
   padding: 1.5rem 1.25rem 3rem;
-  color: #c8ccd2;
+  color: var(--ink-muted);
   line-height: 1.6;
 }
 
@@ -530,17 +530,17 @@
   margin: 1rem 0;
   padding: 1rem;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--raise);
 }
 
 .trio__rules dt {
   font-weight: 800;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 .trio__rules dd {
   margin: 0;
-  color: #9aa0a6;
+  color: var(--ink-muted);
 }
 
 .trio__rules em {
@@ -557,7 +557,7 @@
   display: grid;
   place-items: center;
   padding: 1.5rem;
-  background: rgba(10, 10, 12, 0.8);
+  background: var(--scrim);
   z-index: 30;
 }
 
@@ -568,9 +568,9 @@
   flex-direction: column;
   gap: 0.6rem;
   padding: 1.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line-soft);
   border-radius: 1.5rem;
-  background: #1a1a1d;
+  background: var(--surface);
   text-align: center;
 }
 
@@ -582,17 +582,17 @@
 
 .trio__name-card p {
   margin: 0;
-  color: #9aa0a6;
+  color: var(--ink-muted);
   font-size: 0.9rem;
 }
 
 .trio__name-card input {
   height: 3.2rem;
   padding: 0 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--line-strong);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  background: var(--raise);
+  color: var(--ink);
   font: inherit;
   font-size: 1.05rem;
   font-weight: 600;

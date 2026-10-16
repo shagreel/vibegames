@@ -6,6 +6,7 @@ struct VibeWordsView: View {
     @StateObject private var model = VibeWordsModel()
     @State private var joinCode = ""
     @State private var showingNamePrompt = false
+    @State private var showingSettings = false
     /// Held while a name is collected, so the tap that needed it still happens.
     @State private var pendingAction: (() -> Void)?
     @State private var roundToken = 0
@@ -35,6 +36,11 @@ struct VibeWordsView: View {
             }
         }
         .task { AppAnalytics.screen(.words) }
+        .sheet(isPresented: $showingSettings) {
+            VibeWordsSettingsView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .onDisappear { model.endSession() }
         .onChange(of: model.answer) { _, _ in
             roundToken += 1
@@ -338,6 +344,8 @@ struct VibeWordsView: View {
 
             HStack(spacing: 6) {
                 SupportButton(game: .words)
+
+                GameSettingsButton(prefix: "words") { showingSettings = true }
 
                 if model.isRoundOver {
                     Button("Play again") {

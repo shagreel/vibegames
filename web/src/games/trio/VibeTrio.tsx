@@ -25,6 +25,7 @@ import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
+import { GameSettings, SettingsButton } from '../../hub/GameSettings';
 import './VibeTrio.css';
 
 /**
@@ -74,6 +75,9 @@ function VibeTrio() {
   const [elapsed, setElapsed] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showRules, setShowRules] = useState(false);
+  /** The settings sheet: the player's name, the appearance, and nothing else
+      yet — Vibe Pairings has no choices of its own. */
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const seed = gameId ? snapshot.seed : soloSeed;
 
@@ -361,6 +365,7 @@ function VibeTrio() {
         }
       >
         <SupportButton game="trio" />
+        <SettingsButton prefix="trio" onClick={() => setSettingsOpen(true)} />
         {screen === 'game' && gameId && (
           <button type="button" className="trio__leave" onClick={leave}>
             Leave
@@ -369,6 +374,10 @@ function VibeTrio() {
       </GameHeader>
 
       {notice && <div className="trio__notice">{notice}</div>}
+
+      {settingsOpen && (
+        <GameSettings prefix="trio" onClose={() => setSettingsOpen(false)} />
+      )}
 
       {screen === 'lobby' ? (
         <Lobby

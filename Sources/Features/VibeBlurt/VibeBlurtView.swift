@@ -838,6 +838,8 @@ struct VibeBlurtView: View {
             HStack(spacing: 6) {
                 SupportButton(game: .blurt)
 
+                GameSettingsButton(prefix: "blurt") { showingSettings = true }
+
                 if let code = model.sharedGameID, !model.hasStarted {
                     ShareLink(item: shareText(code)) {
                         Image(systemName: "square.and.arrow.up")

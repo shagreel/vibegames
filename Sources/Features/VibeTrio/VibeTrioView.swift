@@ -6,6 +6,7 @@ struct VibeTrioView: View {
     @StateObject private var model = VibeTrioModel()
     @State private var joinCode = ""
     @State private var showingNamePrompt = false
+    @State private var showingSettings = false
     /// Held while a name is collected, so the tap that needed it still happens.
     @State private var pendingAction: (() -> Void)?
 
@@ -34,6 +35,11 @@ struct VibeTrioView: View {
             }
         }
         .task { AppAnalytics.screen(.trio) }
+        .sheet(isPresented: $showingSettings) {
+            VibeTrioSettingsView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .onDisappear { model.endSession() }
         // Trio ends when the deck is spent, which is nobody's win in particular
         // — the score is the result, so that is what gets reported. Observed
@@ -554,6 +560,8 @@ struct VibeTrioView: View {
 
             HStack(spacing: 6) {
                 SupportButton(game: .trio)
+
+                GameSettingsButton(prefix: "trio") { showingSettings = true }
 
                 if model.isFinished {
                     Button("Play again") {

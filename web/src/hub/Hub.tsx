@@ -1,21 +1,33 @@
+import { useState } from 'react';
 import { navigate } from '../router';
 import { GAMES } from './catalog';
 import { SupportButton } from './Support';
+import { GameSettings, SettingsButton } from './GameSettings';
 import './Hub.css';
 
 function Hub() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
     <div className="hub">
       <div className="hub__inner">
         <header className="hub__header">
           <div className="hub__title-row">
             <h1>Vibe Games</h1>
-            {/* The app puts this beside its settings gear; the menu has no
-                settings, so it sits where the gear would. */}
-            <SupportButton />
+            {/* The menu has settings of its own now: your name and whether the
+                games are light or dark, which are the two things that are not
+                about any one game. */}
+            <span className="hub__actions">
+              <SettingsButton prefix="hub" onClick={() => setSettingsOpen(true)} />
+              <SupportButton />
+            </span>
           </div>
           <p>Quick party games. Grab a phone, pass it round.</p>
         </header>
+
+        {settingsOpen && (
+          <GameSettings prefix="hub" onClose={() => setSettingsOpen(false)} />
+        )}
 
         <ul className="hub__games">
           {GAMES.map((game) => (

@@ -70,3 +70,26 @@ func assertLooksLikeADisplayedCode(_ displayed: String, label: String,
     XCTAssertTrue(displayed.replacingOccurrences(of: " ", with: "").allSatisfy(\.isLetter),
                   "a code is two words, so letters and a space: \(label)", file: file, line: line)
 }
+
+/// Gets the first-run name prompt out of the way.
+///
+/// A test that launches without a name has this sitting over the hub, and every
+/// one of them was writing the same three lines to dismiss it.
+func dismissNamePromptIfPresent(_ app: XCUIApplication) {
+    let skip = app.buttons["firstRun.nameSkip"]
+    if skip.waitForExistence(timeout: 3) { skip.tap() }
+}
+
+/// Types over whatever is in a text field.
+///
+/// An empty field reports its placeholder as its value, so the placeholder is
+/// not a name to delete.
+func replaceText(in field: XCUIElement, with text: String) {
+    field.tap()
+    let existing = (field.value as? String) ?? ""
+    if !existing.isEmpty, existing != "Your name" {
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
+                              count: existing.count + 4))
+    }
+    field.typeText(text)
+}

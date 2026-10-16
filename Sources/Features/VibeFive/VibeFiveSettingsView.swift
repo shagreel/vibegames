@@ -9,6 +9,9 @@ struct VibeFiveSettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
+                    // The player's name and the appearance first: they belong to
+                    // every game, so they are at the top of every game's sheet.
+                    GameSettingsSections()
                     feedbackSection
                     packsSection
                     summary
@@ -16,7 +19,7 @@ struct VibeFiveSettingsView: View {
                 .padding(20)
             }
             .vibeCanvas()
-            .navigationTitle("Game Setup")
+            .navigationTitle("Game Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -32,10 +35,10 @@ struct VibeFiveSettingsView: View {
 
     private var feedbackSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("Feedback")
+            SettingsSectionTitle("Feedback")
 
-            VStack(spacing: 0) {
-                settingRow(
+            SettingsCard {
+                SettingsRow(
                     symbol: "speaker.wave.2.fill",
                     title: "Buzzer & ticks",
                     subtitle: "Plays even in silent mode"
@@ -50,7 +53,7 @@ struct VibeFiveSettingsView: View {
 
                 Divider().overlay(VibeTheme.hairline)
 
-                settingRow(
+                SettingsRow(
                     symbol: "iphone.radiowaves.left.and.right",
                     title: "Haptics",
                     subtitle: "Ticks and a jolt when time runs out"
@@ -63,14 +66,13 @@ struct VibeFiveSettingsView: View {
                     .tint(VibeTheme.go)
                 }
             }
-            .background(card)
         }
     }
 
     private var packsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                sectionTitle("Category packs")
+                SettingsSectionTitle("Category packs")
                 Spacer()
                 Button(model.allPacksEnabled ? "Clear" : "All") {
                     withAnimation(.snappy) { model.toggleAllPacks() }
@@ -79,7 +81,7 @@ struct VibeFiveSettingsView: View {
                 .foregroundStyle(VibeTheme.calm)
             }
 
-            VStack(spacing: 0) {
+            SettingsCard {
                 ForEach(Array(CategoryPack.allCases.enumerated()), id: \.element.id) { index, pack in
                     if index > 0 {
                         Divider().overlay(VibeTheme.hairline)
@@ -87,7 +89,6 @@ struct VibeFiveSettingsView: View {
                     packRow(pack)
                 }
             }
-            .background(card)
 
             Text("At least one pack always stays on.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -106,52 +107,17 @@ struct VibeFiveSettingsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 14)
-        .background(card)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(VibeTheme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(VibeTheme.hairline, lineWidth: 1)
+                }
+        }
     }
 
     // MARK: - Building blocks
-
-    private var card: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .fill(VibeTheme.surface)
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(VibeTheme.hairline, lineWidth: 1)
-            }
-    }
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(.system(size: 12, weight: .black, design: .rounded))
-            .kerning(1.6)
-            .foregroundStyle(VibeTheme.tertiaryText)
-    }
-
-    private func settingRow<Trailing: View>(symbol: String,
-                                            title: String,
-                                            subtitle: String,
-                                            @ViewBuilder trailing: () -> Trailing) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(VibeTheme.calm)
-                .frame(width: 26)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.primaryText)
-                Text(subtitle)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-            }
-
-            Spacer(minLength: 8)
-            trailing()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
-    }
 
     private func packRow(_ pack: CategoryPack) -> some View {
         let isOn = model.enabledPacks.contains(pack)

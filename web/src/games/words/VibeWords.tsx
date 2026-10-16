@@ -4,6 +4,7 @@ import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
+import { GameSettings, SettingsButton } from '../../hub/GameSettings';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
@@ -82,6 +83,9 @@ function VibeWords() {
   const [playerCount, setPlayerCount] = useState(0);
   const [playerAddedToGame, setPlayerAddedToGame] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  /** The settings sheet: the player's name, the appearance, and nothing else
+      yet — Word Vibe has no choices of its own. */
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Track previous answer to detect word changes
   const previousAnswerRef = useRef<string>('');
@@ -352,7 +356,12 @@ function VibeWords() {
     // clicked) — but not while a restart is counting down: the next word is
     // already dealt behind the countdown, so a guess sent now is a free look at
     // the colours of a word the round has not started on.
-    if (gameOver || !gameStarted || !nameSubmitted || visibleCountdown !== null) return;
+    // A name is only needed to be *in* a shared game — solo play asks for none,
+    // because there is nobody to tell it to. Gating on `nameSubmitted` here as
+    // well left a player who went straight to "Play on this device" with a board
+    // and a keyboard that did nothing.
+    const needsName = !solo && !nameSubmitted;
+    if (gameOver || !gameStarted || needsName || visibleCountdown !== null) return;
 
     if (key === 'ENTER') {
       if (currentGuess.length !== WORD_LENGTH) {
@@ -403,7 +412,7 @@ function VibeWords() {
       setCurrentGuess(currentGuess + key);
       setMessage('');
     }
-  }, [currentGuess, guesses, gameOver, gameStarted, nameSubmitted, answer, gameId, playerName,
+  }, [currentGuess, guesses, gameOver, gameStarted, nameSubmitted, solo, answer, gameId, playerName,
       visibleCountdown]);
 
   // Keyboard event listener
@@ -630,12 +639,17 @@ function VibeWords() {
     <div className="vibewords-container">
       <GameHeader prefix="words" title="Word Vibe">
         <SupportButton game="words" />
+        <SettingsButton prefix="words" onClick={() => setSettingsOpen(true)} />
         {playerCount > 0 && (
           <span className="player-count">
             👥 {playerCount} {playerCount === 1 ? 'player' : 'players'}
           </span>
         )}
       </GameHeader>
+
+      {settingsOpen && (
+        <GameSettings prefix="words" onClose={() => setSettingsOpen(false)} />
+      )}
 
       <div className="game-content">
         {/* The way in: on your own, a room of your own, or somebody else's. */}

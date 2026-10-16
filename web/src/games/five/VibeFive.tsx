@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
+import { GameSettings, SettingsButton, SettingsSection, SettingsToggle } from '../../hub/GameSettings';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { ALL_PACK_IDS, PACKS, countIn, type PackId } from './packs';
 import {
@@ -243,19 +244,7 @@ function VibeFive() {
         subtitle={state.roundNumber === 0 ? 'Ready to play' : `Round ${state.roundNumber}`}
       >
         <SupportButton game="five" />
-        <button
-          type="button"
-          className="five__settings-button"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Game settings"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-            <circle cx="8" cy="6" r="2.4" />
-            <circle cx="16" cy="12" r="2.4" />
-            <circle cx="10" cy="18" r="2.4" />
-          </svg>
-        </button>
+        <SettingsButton prefix="five" onClick={() => setSettingsOpen(true)} />
       </GameHeader>
 
       <CategoryCard state={state} />
@@ -285,16 +274,60 @@ function VibeFive() {
       {state.phase === 'buzzed' && <div className="five__flash" aria-hidden="true" />}
 
       {settingsOpen && (
-        <Settings
-          enabled={enabled}
-          soundOn={soundOn}
-          hapticsOn={hapticsOn}
-          onToggleSound={toggleSound}
-          onToggleHaptics={toggleHaptics}
-          onTogglePack={togglePack}
-          onToggleAll={toggleAll}
-          onClose={() => setSettingsOpen(false)}
-        />
+        <GameSettings prefix="five" onClose={() => setSettingsOpen(false)}>
+          <SettingsSection title="Feedback">
+            <SettingsToggle
+              label="Sound"
+              note="Buzzer and ticks, even in silent mode"
+              on={soundOn}
+              onChange={toggleSound}
+            />
+            <SettingsToggle
+              label="Vibration"
+              note="Ticks, and a jolt when time runs out"
+              on={hapticsOn}
+              onChange={toggleHaptics}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Category packs">
+            <div className="five__packs-head">
+              <span>{countIn(enabled).toLocaleString()} categories in play</span>
+              <button type="button" onClick={toggleAll}>
+                {enabled.length === ALL_PACK_IDS.length ? 'Select one' : 'Select all'}
+              </button>
+            </div>
+
+            <ul className="five__packs">
+              {PACKS.map((pack) => {
+                const on = enabled.includes(pack.id);
+                return (
+                  <li key={pack.id}>
+                    <button
+                      type="button"
+                      className="five__pack"
+                      data-on={on}
+                      onClick={() => togglePack(pack.id)}
+                      aria-pressed={on}
+                      /* The last enabled pack cannot be switched off — a game
+                         with no categories has nothing to deal. */
+                      disabled={on && enabled.length <= 1}
+                    >
+                      <span className="five__pack-emoji" aria-hidden="true">
+                        {pack.emoji}
+                      </span>
+                      <span className="five__pack-text">
+                        <strong>{pack.title}</strong>
+                        <span>{pack.blurb}</span>
+                      </span>
+                      <span className="five__pack-count">{countIn([pack.id])}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </SettingsSection>
+        </GameSettings>
       )}
     </div>
   );
@@ -403,82 +436,6 @@ function urgency(progress: number): string {
   if (progress >= 0.6) return 'calm';
   if (progress >= 0.3) return 'warn';
   return 'danger';
-}
-
-// MARK: - Settings
-
-function Settings(props: {
-  enabled: PackId[];
-  soundOn: boolean;
-  hapticsOn: boolean;
-  onToggleSound: () => void;
-  onToggleHaptics: () => void;
-  onTogglePack: (id: PackId) => void;
-  onToggleAll: () => void;
-  onClose: () => void;
-}) {
-  const all = props.enabled.length === ALL_PACK_IDS.length;
-  const active = useMemo(() => countIn(props.enabled), [props.enabled]);
-
-  return (
-    <div className="five__overlay" role="dialog" aria-label="Game settings">
-      <div className="five__settings">
-        <header>
-          <h2>Game setup</h2>
-          <button type="button" onClick={props.onClose} aria-label="Done">
-            Done
-          </button>
-        </header>
-
-        <div className="five__switches">
-          <label>
-            <input type="checkbox" checked={props.soundOn} onChange={props.onToggleSound} />
-            <span>Sound</span>
-          </label>
-          <label>
-            <input type="checkbox" checked={props.hapticsOn} onChange={props.onToggleHaptics} />
-            <span>Vibration</span>
-          </label>
-        </div>
-
-        <div className="five__packs-head">
-          <span>{active.toLocaleString()} categories in play</span>
-          <button type="button" onClick={props.onToggleAll}>
-            {all ? 'Select one' : 'Select all'}
-          </button>
-        </div>
-
-        <ul className="five__packs">
-          {PACKS.map((pack) => {
-            const on = props.enabled.includes(pack.id);
-            return (
-              <li key={pack.id}>
-                <button
-                  type="button"
-                  className="five__pack"
-                  data-on={on}
-                  onClick={() => props.onTogglePack(pack.id)}
-                  aria-pressed={on}
-                  /* The last enabled pack cannot be switched off — a game with
-                     no categories has nothing to deal. */
-                  disabled={on && props.enabled.length <= 1}
-                >
-                  <span className="five__pack-emoji" aria-hidden="true">
-                    {pack.emoji}
-                  </span>
-                  <span className="five__pack-text">
-                    <strong>{pack.title}</strong>
-                    <span>{pack.blurb}</span>
-                  </span>
-                  <span className="five__pack-count">{countIn([pack.id])}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </div>
-  );
 }
 
 export default VibeFive;

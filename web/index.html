@@ -6,6 +6,28 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#121213" />
+    <!--
+      The appearance, before the bundle: a player who chose light should not see
+      a dark flash while the JavaScript arrives. Kept deliberately tiny and
+      duplicated in `src/theme.ts`, which is what keeps it in step after this —
+      the key is the same one the settings sheet writes.
+    -->
+    <script>
+      (function () {
+        try {
+          var choice = localStorage.getItem('vibegames.theme');
+          var light =
+            choice === 'light' ||
+            (choice !== 'dark' &&
+              window.matchMedia('(prefers-color-scheme: light)').matches);
+          var theme = light ? 'light' : 'dark';
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch (error) {
+          /* Private mode, or no localStorage: the default is dark. */
+        }
+      })();
+    </script>
     <title>Vibe Games — play in your browser</title>
     <meta name="description" content="Quick party games in a browser: Vibe Five, Word Vibe, Number Vibe, Vibe Pairings and Similar Vibe. Play solo, or share a code and play with everyone in the room." />
 

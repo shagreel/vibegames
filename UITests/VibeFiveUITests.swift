@@ -171,7 +171,7 @@ final class VibeFiveUITests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 10), "Settings button should exist")
         settings.tap()
 
-        XCTAssertTrue(app.staticTexts["Game Setup"].waitForExistence(timeout: 5),
+        XCTAssertTrue(app.staticTexts["Game Settings"].waitForExistence(timeout: 5),
                       "Settings sheet should open")
 
         let summary = app.descendants(matching: .any)

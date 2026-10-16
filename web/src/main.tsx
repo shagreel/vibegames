@@ -6,10 +6,17 @@ import { installCrashReporting } from './errors'
 import { installAnalytics, trackPageView } from './analytics'
 import { onPathChange } from './router'
 import { installTitles } from './titles'
+import { applyTheme, watchTheme } from './theme'
 
 // Before anything renders: a throw while mounting is exactly the kind of
 // failure nobody can report by hand.
 installCrashReporting()
+
+// Light or dark. `index.html` has already set the attribute so the first paint
+// is right; this is what keeps it right when the device changes its mind, and
+// it is idempotent.
+applyTheme()
+watchTheme()
 
 // Subscribed here rather than in a component on purpose. React runs effects
 // twice in development, and a page view counted twice is worse than one not

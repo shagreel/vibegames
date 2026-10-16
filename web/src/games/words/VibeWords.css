@@ -9,8 +9,8 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #121213;
-  color: #ffffff;
+  background-color: var(--page);
+  color: var(--ink);
   font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -19,7 +19,7 @@
 .player-count {
   margin-top: 0.5rem;
   font-size: 0.875rem;
-  color: #818384;
+  color: var(--ink-muted);
   font-weight: 500;
 }
 
@@ -33,8 +33,8 @@
 }
 
 .message {
-  background-color: #ffffff;
-  color: #121213;
+  background-color: var(--ink);
+  color: var(--page);
   padding: 0.75rem 1.5rem;
   border-radius: 0.25rem;
   font-weight: 600;
@@ -92,7 +92,7 @@
 .cell {
   width: 62px;
   height: 62px;
-  border: 2px solid #3a3a3c;
+  border: 2px solid var(--key-absent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,12 +100,12 @@
   font-weight: bold;
   text-transform: uppercase;
   background-color: transparent;
-  color: #ffffff;
+  color: var(--ink);
   transition: transform 0.1s;
 }
 
 .cell.filled {
-  border-color: #565758;
+  border-color: var(--key-strong);
   animation: pop 0.1s;
 }
 
@@ -116,24 +116,30 @@
 }
 
 .cell.current {
-  border-color: #565758;
+  border-color: var(--key-strong);
 }
 
 .cell.correct {
+  /* White on every graded tile, in both appearances: the fills are saturated
+     enough to carry it, and a letter that changes colour as it is graded looks
+     like a mistake. */
+  color: #ffffff;
   background-color: #6aaa64;
   border-color: #6aaa64;
   animation: flip 0.5s ease-in;
 }
 
 .cell.present {
+  color: #ffffff;
   background-color: #c9b458;
   border-color: #c9b458;
   animation: flip 0.5s ease-in;
 }
 
 .cell.absent {
-  background-color: #3a3a3c;
-  border-color: #3a3a3c;
+  color: #ffffff;
+  background-color: var(--key-absent);
+  border-color: var(--key-absent);
   animation: flip 0.5s ease-in;
 }
 
@@ -171,8 +177,8 @@
   height: 62px;
   border-radius: 4px;
   border: none;
-  background-color: #818384;
-  color: #ffffff;
+  background-color: var(--key);
+  color: var(--key-ink);
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
@@ -186,7 +192,7 @@
 }
 
 .key:hover {
-  background-color: #9a9a9c;
+  background-color: var(--key-strong);
 }
 
 .key:active {
@@ -218,7 +224,7 @@
 }
 
 .key.absent {
-  background-color: #3a3a3c;
+  background-color: var(--key-absent);
 }
 
 .reset-button {
@@ -254,8 +260,8 @@
   padding: 0.75rem 2rem;
   font-size: 1rem;
   font-weight: bold;
-  background-color: #818384;
-  color: #ffffff;
+  background-color: var(--key);
+  color: var(--ink);
   border: none;
   border-radius: 0.25rem;
   cursor: pointer;
@@ -263,7 +269,7 @@
 }
 
 .share-button:hover {
-  background-color: #6a6b6c;
+  background-color: var(--key-strong);
 }
 
 .share-button:active {
@@ -272,8 +278,8 @@
 
 /* Name input styles */
 .name-input-container {
-  background-color: #1a1a1b;
-  border: 2px solid #3a3a3c;
+  background-color: var(--surface);
+  border: 2px solid var(--key-absent);
   border-radius: 0.5rem;
   padding: 1.5rem;
   margin-bottom: 1rem;
@@ -291,10 +297,10 @@
 .name-input {
   padding: 0.75rem 1rem;
   font-size: 1rem;
-  border: 2px solid #3a3a3c;
+  border: 2px solid var(--key-absent);
   border-radius: 0.25rem;
-  background-color: #121213;
-  color: #ffffff;
+  background-color: var(--page);
+  color: var(--ink);
   min-width: 200px;
   flex: 1;
   max-width: 300px;
@@ -302,7 +308,7 @@
 
 .name-input:focus {
   outline: none;
-  border-color: #818384;
+  border-color: var(--key);
 }
 
 .name-submit-button {
@@ -326,7 +332,7 @@
 }
 
 .name-hint {
-  color: #818384;
+  color: var(--ink-muted);
   font-size: 0.875rem;
   margin: 0;
 }
@@ -334,7 +340,7 @@
 /* Winner announcement */
 .winner-announcement {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #121213;
+  color: var(--on-accent);
   padding: 1rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: bold;
@@ -355,7 +361,7 @@
 
 /* Start game container */
 .start-game-container {
-  background-color: #1a1a1b;
+  background-color: var(--surface);
   border: 2px solid #6aaa64;
   border-radius: 0.5rem;
   padding: 1.5rem;
@@ -364,7 +370,7 @@
 }
 
 .start-game-message {
-  color: #ffffff;
+  color: var(--ink);
   font-size: 1rem;
   margin: 0 0 1rem 0;
 }
@@ -401,8 +407,8 @@
 .copy-link-button {
   padding: 1rem;
   font-size: 1.5rem;
-  background: #3a3a3c;
-  color: #ffffff;
+  background: var(--key-absent);
+  color: var(--ink);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -436,7 +442,7 @@
 .copy-icon::after {
   content: '';
   position: absolute;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--ink);
   border-radius: 3px;
   background: transparent;
 }
@@ -453,7 +459,7 @@
   height: 16px;
   top: 0;
   left: 6px;
-  background: #3a3a3c;
+  background: var(--key-absent);
 }
 
 .copy-link-button:hover .copy-icon::after {
@@ -462,7 +468,7 @@
 
 /* Waiting container */
 .waiting-container {
-  background-color: #1a1a1b;
+  background-color: var(--surface);
   border: 2px solid #c9b458;
   border-radius: 0.5rem;
   padding: 1.5rem;
@@ -640,16 +646,16 @@
   gap: 0.35rem;
   margin-bottom: 1rem;
   padding: 1.25rem 1rem;
-  border: 1px solid #3a3a3c;
+  border: 1px solid var(--key-absent);
   border-radius: 1.5rem;
-  background: #1b1b1e;
+  background: var(--surface);
 }
 
 .words__code-label {
   font-size: 0.68rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #8b8b93;
+  color: var(--ink-muted);
 }
 
 .words__code-value {
@@ -664,6 +670,6 @@
 
 .words__code-hint {
   font-size: 0.75rem;
-  color: #9a9aa2;
+  color: var(--ink-muted);
   text-align: center;
 }

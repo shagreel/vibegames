@@ -3,6 +3,12 @@ import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
+import {
+  GameSettings,
+  SettingsButton,
+  SettingsSection,
+  SettingsToggle,
+} from '../../hub/GameSettings';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import {
@@ -441,20 +447,7 @@ function VibeSudoku() {
         }
       >
         <SupportButton game="sudoku" />
-        <button
-          type="button"
-          className="sudoku__settings-button game-settings-button"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Game settings"
-        >
-          {/* The same sliders as Vibe Five's settings: one glyph for one idea. */}
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-            <circle cx="8" cy="6" r="2.4" />
-            <circle cx="16" cy="12" r="2.4" />
-            <circle cx="10" cy="18" r="2.4" />
-          </svg>
-        </button>
+        <SettingsButton prefix="sudoku" onClick={() => setSettingsOpen(true)} />
         {screen === 'game' && gameId && (
           <button type="button" className="sudoku__leave" onClick={leave}>
             Leave
@@ -539,35 +532,18 @@ function VibeSudoku() {
       {askingForName && <NamePrompt onSubmit={submitName} />}
 
       {settingsOpen && (
-        <div className="game-sheet-overlay" data-game="sudoku" role="dialog" aria-label="Game settings">
-          <div className="game-sheet">
-            <h2>Game settings</h2>
-
-            <h3>Notes per square</h3>
-            <p>How many numbers a cell&rsquo;s notes can hold.</p>
-            {NOTE_LIMITS.map((limit) => (
-              <button
-                key={limit}
-                type="button"
-                className="game-sheet__option"
-                data-on={noteLimit === limit}
-                aria-pressed={noteLimit === limit}
-                onClick={() => changeNoteLimit(limit)}
-              >
-                <strong>{limit} notes</strong>
-                <span>
-                  {limit === 4
-                    ? 'Shown big, two by two — the easiest to read on a phone'
-                    : 'Every candidate, each in its own square, like pencil marks on paper'}
-                </span>
-              </button>
-            ))}
-
-            <button type="button" className="game-sheet__done" onClick={() => setSettingsOpen(false)}>
-              Done
-            </button>
-          </div>
-        </div>
+        <GameSettings prefix="sudoku" onClose={() => setSettingsOpen(false)}>
+          <SettingsSection title="Notes per square">
+            {/* A switch rather than two rows: the choice is one thing with two
+                states, and the rows took a third of the sheet. */}
+            <SettingsToggle
+              label="Nine marks per square"
+              note="Off draws four big ones. On draws every candidate, three by three."
+              on={noteLimit === 9}
+              onChange={(on) => changeNoteLimit(on ? 9 : 4)}
+            />
+          </SettingsSection>
+        </GameSettings>
       )}
     </div>
   );
