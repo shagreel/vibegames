@@ -81,6 +81,64 @@ final class VibeSudokuUITests: XCTestCase {
         wait(for: [cleared], timeout: 5)
     }
 
+    /// The marks-per-square choice is a setting, so it lives behind the settings
+    /// button with the other games' settings — not on the keypad, where it used
+    /// to change shape under your thumb while you were solving.
+    func testNotesSettingLivesBehindTheSettingsButton() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openSudokuLobby(app)
+        app.buttons["sudoku.playSolo"].tap()
+
+        let board = app.descendants(matching: .any)["sudoku.board"].firstMatch
+        XCTAssertTrue(board.waitForExistence(timeout: 10))
+
+        XCTAssertFalse(app.buttons["sudoku.noteLimit"].exists,
+                       "the limit should not be a keypad key any more")
+
+        // Four first, which is idempotent whatever an earlier run left behind.
+        chooseFourMarks(in: app)
+
+        let cell = try firstEmptyCell(in: app)
+        cell.tap()
+        app.buttons["sudoku.notes"].tap()
+        for digit in 1...4 {
+            app.buttons["sudoku.digit.\(digit)"].tap()
+        }
+
+        let fourMarks = expectation(for: NSPredicate(format: "label CONTAINS %@", "notes 1 2 3 4"),
+                                    evaluatedWith: cell)
+        wait(for: [fourMarks], timeout: 5)
+        attach(app, named: "34-sudoku-notes-four")
+
+        // A fifth is refused rather than silently dropped, so the cell still
+        // holds four. Comparing the whole label is safe here: nothing else
+        // about the cell changes, and the label also carries the row and
+        // column, which a digit search could trip over.
+        let withFourMarks = cell.label
+        app.buttons["sudoku.digit.5"].tap()
+        XCTAssertEqual(cell.label, withFourMarks,
+                       "a fifth mark should be refused")
+
+        // With nine chosen, five marks fit.
+        app.buttons["sudoku.settings"].tap()
+        let nine = app.buttons["sudokuSettings.notes.9"]
+        XCTAssertTrue(nine.waitForExistence(timeout: 5),
+                      "the sheet should offer nine notes")
+        nine.tap()
+        attach(app, named: "35-sudoku-settings")
+        app.buttons["sudokuSettings.done"].tap()
+
+        app.buttons["sudoku.digit.5"].tap()
+
+        let fiveMarks = expectation(for: NSPredicate(format: "label CONTAINS %@", "notes 1 2 3 4 5"),
+                                    evaluatedWith: cell)
+        wait(for: [fiveMarks], timeout: 5)
+
+        // Put the setting back, so a later test starts where a new player would.
+        chooseFourMarks(in: app)
+    }
+
     // MARK: - Shared play
 
     /// The only Sudoku test that touches the backend. Skips itself when Firebase
@@ -118,6 +176,17 @@ final class VibeSudokuUITests: XCTestCase {
         XCTAssertTrue(app.buttons["sudoku.playSolo"].waitForExistence(timeout: 5),
                       "Lobby should offer solo play")
         attach(app, named: "30-sudoku-lobby")
+    }
+
+    /// Opens the settings sheet and picks four notes, which is the default, so
+    /// this works as a reset as well as a choice.
+    private func chooseFourMarks(in app: XCUIApplication) {
+        app.buttons["sudoku.settings"].tap()
+        let four = app.buttons["sudokuSettings.notes.4"]
+        XCTAssertTrue(four.waitForExistence(timeout: 5),
+                      "the sheet should offer four notes")
+        four.tap()
+        app.buttons["sudokuSettings.done"].tap()
     }
 
     /// Scans a window of cells for one the puzzle left blank.

@@ -261,3 +261,115 @@ body {
   color: #ff8c8c;
   font-size: 0.85rem;
 }
+
+/* ── game settings sheet ──────────────────────────────────────────────────
+   Vibe Five and Similar Vibe each grew their own overlay and sheet; this is the
+   chrome they were both writing, once, so the next game gets it free. What goes
+   inside is the game's own — Sudoku has one choice, Vibe Five has a grid of
+   packs, Similar Vibe has a turn length. */
+.game-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(8, 8, 12, 0.78);
+  z-index: 40;
+}
+
+.game-sheet {
+  width: 100%;
+  max-width: 26rem;
+  /* Taller than a phone is scrollable rather than cut off, for the same reason
+     the support panel is. */
+  max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.4rem;
+  background: #16161a;
+}
+
+.game-sheet h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.game-sheet h3 {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b9197;
+}
+
+.game-sheet p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}
+
+.game-sheet__done {
+  margin-top: 0.4rem;
+  padding: 0.9rem 1.4rem;
+  border: none;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--lobby-a, #4585f5), var(--lobby-b, #21b8a8));
+  color: #1b1b1b;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.game-sheet__option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.game-sheet__option[data-on='true'] {
+  border-color: color-mix(in srgb, var(--lobby-a, #4585f5) 55%, transparent);
+  background: color-mix(in srgb, var(--lobby-a, #4585f5) 16%, transparent);
+}
+
+.game-settings-button {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.game-settings-button svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.game-settings-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.game-sheet__option strong { font-size: 1rem; font-weight: 800; }
+.game-sheet__option span { font-size: 0.82rem; color: #9aa0a6; }

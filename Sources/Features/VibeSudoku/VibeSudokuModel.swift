@@ -269,8 +269,9 @@ final class VibeSudokuModel: ObservableObject {
     ///
     /// Going from nine to four has to deal with cells that already hold more:
     /// the lowest marks are kept, because those are the ones written first.
-    func toggleNoteLimit() {
-        noteLimit = noteLimit == 4 ? 9 : 4
+    func setNoteLimit(_ limit: Int) {
+        guard VibeSudokuModel.noteLimits.contains(limit), limit != noteLimit else { return }
+        noteLimit = limit
         UserDefaults.standard.set(noteLimit, forKey: Self.noteLimitKey)
         notes = notes.map { Set($0.sorted().prefix(noteLimit)) }
         noteNotice = nil

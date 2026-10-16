@@ -198,3 +198,85 @@ final class SudokuSolverTests: XCTestCase {
         XCTAssertFalse(SudokuSolver.isComplete(grid))
     }
 }
+
+/// How many marks a square holds is a setting, and the interesting part is what
+/// happens to marks already written when the setting shrinks.
+@MainActor
+final class VibeSudokuNoteLimitTests: XCTestCase {
+
+    private let key = VibeSudokuModel.noteLimitKey
+    private var savedValue: Any?
+
+    override func setUp() {
+        super.setUp()
+        savedValue = UserDefaults.standard.object(forKey: key)
+        // Nine, so a test can write more marks than four and then shrink.
+        UserDefaults.standard.set(9, forKey: key)
+    }
+
+    override func tearDown() {
+        if let savedValue {
+            UserDefaults.standard.set(savedValue, forKey: key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        super.tearDown()
+    }
+
+    /// Dropping to four keeps the lowest marks: they are the ones written first,
+    /// so losing the newest is the least surprising thing to lose.
+    func testShrinkingToFourKeepsTheLowestMarks() throws {
+        let model = VibeSudokuModel()
+        XCTAssertEqual(model.noteLimit, 9)
+
+        model.playSolo()
+        let index = try emptyCell(in: model)
+        model.select(index)
+        model.isNoteMode = true
+        for digit in 1...6 { model.enter(digit) }
+        XCTAssertEqual(model.notes[index], Set(1...6))
+
+        model.setNoteLimit(4)
+        XCTAssertEqual(model.noteLimit, 4)
+        XCTAssertEqual(model.notes[index], Set(1...4))
+    }
+
+    /// The choice outlives the puzzle, the game and the launch.
+    func testTheLimitIsRemembered() {
+        let model = VibeSudokuModel()
+        model.setNoteLimit(4)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: key), 4)
+
+        let nextLaunch = VibeSudokuModel()
+        XCTAssertEqual(nextLaunch.noteLimit, 4)
+    }
+
+    /// A key that does nothing is worse than one that says why: the fifth mark
+    /// is refused, and the fourth is kept.
+    func testAFifthMarkIsRefusedWithAReason() throws {
+        let model = VibeSudokuModel()
+        model.setNoteLimit(4)
+        model.playSolo()
+
+        let index = try emptyCell(in: model)
+        model.select(index)
+        model.isNoteMode = true
+        for digit in 1...4 { model.enter(digit) }
+        model.enter(5)
+
+        XCTAssertEqual(model.notes[index], Set(1...4))
+        XCTAssertEqual(model.noteNotice, "Notes hold 4 numbers.")
+    }
+
+    /// A value nobody offers is ignored rather than stored.
+    func testAnUnknownLimitIsIgnored() {
+        let model = VibeSudokuModel()
+        model.setNoteLimit(7)
+        XCTAssertEqual(model.noteLimit, 9)
+    }
+
+    private func emptyCell(in model: VibeSudokuModel) throws -> Int {
+        let puzzle = try XCTUnwrap(model.puzzle)
+        return try XCTUnwrap((0..<SudokuPuzzle.cellCount).first { !puzzle.isGiven($0) })
+    }
+}

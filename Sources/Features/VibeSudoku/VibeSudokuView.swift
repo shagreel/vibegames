@@ -6,6 +6,7 @@ struct VibeSudokuView: View {
     @StateObject private var model = VibeSudokuModel()
     @State private var joinCode = ""
     @State private var showingNamePrompt = false
+    @State private var isShowingSettings = false
     /// Held while a name is collected, so the tap that needed it still happens.
     @State private var pendingAction: (() -> Void)?
 
@@ -34,6 +35,13 @@ struct VibeSudokuView: View {
             }
         }
         .task { AppAnalytics.screen(.sudoku) }
+        .sheet(isPresented: $isShowingSettings) {
+            VibeSudokuSettingsView(model: model)
+                // One setting fits the medium sheet; the tall one is there for
+                // small phones and long explanations.
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .onDisappear { model.endSession() }
         // The puzzle's seed *is* the round. A solo game, a shared game starting
         // and a rematch all arrive here as a new seed, so one hook covers them.
@@ -275,8 +283,6 @@ struct VibeSudokuView: View {
             }
 
             SudokuKeypadView(isNoteMode: model.isNoteMode,
-                             noteLimit: model.noteLimit,
-                             onToggleNoteLimit: model.toggleNoteLimit,
                              onDigit: model.enter,
                              onErase: model.erase,
                              onToggleNotes: { model.isNoteMode.toggle() })
@@ -389,6 +395,17 @@ struct VibeSudokuView: View {
 
             HStack(spacing: 6) {
                 SupportButton(game: .sudoku)
+
+                // Notes per square is a setting, so it lives where the other
+                // games keep theirs rather than on the keypad.
+                Button {
+                    isShowingSettings = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .buttonStyle(VibeIconButtonStyle())
+                .accessibilityLabel("Game settings")
+                .accessibilityIdentifier("sudoku.settings")
 
                 if model.isRoundOver {
                     Button("Play again") {

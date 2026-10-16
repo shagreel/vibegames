@@ -124,7 +124,9 @@ struct SudokuBoardView: View {
     ///
     /// Which one is a setting. Four big numbers are easier to read at a glance,
     /// and a glance is all a note gets; nine small ones are every candidate, in
-    /// the position a pencil mark would be.
+    /// the position a pencil mark would be. Four are drawn as large as a
+    /// half-cell holds without the two lines touching — a note a player has to
+    /// squint at is the thing this setting exists to avoid.
     private func noteGrid(_ marks: Set<Int>, size: CGFloat) -> some View {
         let side = noteLimit == 9 ? 3 : 2
         let shown = noteLimit == 9
@@ -137,7 +139,7 @@ struct SudokuBoardView: View {
                     ForEach(0..<side, id: \.self) { column in
                         let position = row * side + column
                         Text(position < shown.count ? shown[position] : " ")
-                            .font(.system(size: size * (side == 3 ? 0.24 : 0.34),
+                            .font(.system(size: size * (side == 3 ? 0.24 : 0.44),
                                           weight: side == 3 ? .semibold : .bold,
                                           design: .rounded))
                             .foregroundStyle(VibeTheme.tertiaryText)

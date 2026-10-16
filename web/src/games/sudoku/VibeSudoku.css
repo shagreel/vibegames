@@ -115,7 +115,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  font-size: clamp(0.58rem, 2.6vw, 0.85rem);
+  font-size: clamp(0.68rem, 3.1vw, 1rem);
   font-weight: 700;
   color: #8b9197;
 }
@@ -203,7 +203,8 @@
   gap: 0.5rem;
 }
 
-.game-lobby[data-game='sudoku'] {
+.game-lobby[data-game='sudoku'],
+.game-sheet-overlay[data-game='sudoku'] {
   --lobby-a: var(--sudoku-a);
   --lobby-b: var(--sudoku-b);
 }

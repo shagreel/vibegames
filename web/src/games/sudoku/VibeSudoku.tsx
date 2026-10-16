@@ -93,6 +93,7 @@ function VibeSudoku() {
   );
   const [selected, setSelected] = useState<number | null>(null);
   const [noteMode, setNoteMode] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [noteLimit, setNoteLimit] = useState<NoteLimit>(() => {
     const saved = Number(localStorage.getItem(NOTE_LIMIT_KEY));
     return (NOTE_LIMITS as readonly number[]).includes(saved) ? (saved as NoteLimit) : 4;
@@ -440,6 +441,20 @@ function VibeSudoku() {
         }
       >
         <SupportButton game="sudoku" />
+        <button
+          type="button"
+          className="sudoku__settings-button game-settings-button"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Game settings"
+        >
+          {/* The same sliders as Vibe Five's settings: one glyph for one idea. */}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+            <circle cx="8" cy="6" r="2.4" />
+            <circle cx="16" cy="12" r="2.4" />
+            <circle cx="10" cy="18" r="2.4" />
+          </svg>
+        </button>
         {screen === 'game' && gameId && (
           <button type="button" className="sudoku__leave" onClick={leave}>
             Leave
@@ -485,8 +500,6 @@ function VibeSudoku() {
             <Keypad
               disabled={!canPlay}
               noteMode={noteMode}
-              noteLimit={noteLimit}
-              onNoteLimit={changeNoteLimit}
               onDigit={enter}
               onErase={erase}
               onToggleNotes={() => setNoteMode((on) => !on)}
@@ -524,6 +537,38 @@ function VibeSudoku() {
       )}
 
       {askingForName && <NamePrompt onSubmit={submitName} />}
+
+      {settingsOpen && (
+        <div className="game-sheet-overlay" data-game="sudoku" role="dialog" aria-label="Game settings">
+          <div className="game-sheet">
+            <h2>Game settings</h2>
+
+            <h3>Notes per square</h3>
+            <p>How many numbers a cell&rsquo;s notes can hold.</p>
+            {NOTE_LIMITS.map((limit) => (
+              <button
+                key={limit}
+                type="button"
+                className="game-sheet__option"
+                data-on={noteLimit === limit}
+                aria-pressed={noteLimit === limit}
+                onClick={() => changeNoteLimit(limit)}
+              >
+                <strong>{limit} notes</strong>
+                <span>
+                  {limit === 4
+                    ? 'Shown big, two by two — the easiest to read on a phone'
+                    : 'Every candidate, each in its own square, like pencil marks on paper'}
+                </span>
+              </button>
+            ))}
+
+            <button type="button" className="game-sheet__done" onClick={() => setSettingsOpen(false)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -631,11 +676,9 @@ function Board(props: {
 function Keypad(props: {
   disabled: boolean;
   noteMode: boolean;
-  noteLimit: NoteLimit;
   onDigit: (digit: number) => void;
   onErase: () => void;
   onToggleNotes: () => void;
-  onNoteLimit: (limit: NoteLimit) => void;
 }) {
   return (
     <div className="sudoku__keypad">
@@ -670,21 +713,6 @@ function Keypad(props: {
           aria-label="Erase"
         >
           Erase
-        </button>
-        {/* How many marks a cell holds. Next to the notes toggle, because that
-            is the thing it changes, and it says which one is on. */}
-        <button
-          type="button"
-          className="sudoku__tool sudoku__tool--narrow"
-          onClick={() =>
-            props.onNoteLimit(props.noteLimit === 4 ? 9 : 4)
-          }
-          disabled={props.disabled}
-          aria-label={`Notes per square: ${props.noteLimit}. Change to ${
-            props.noteLimit === 4 ? 9 : 4
-          }`}
-        >
-          Notes {props.noteLimit}
         </button>
       </div>
     </div>
