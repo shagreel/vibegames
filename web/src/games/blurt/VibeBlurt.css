@@ -17,21 +17,6 @@
 
 /* ── header ─────────────────────────────────────────────────────────── */
 
-.blurt__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.85rem 0.75rem;
-  border-bottom: 1px solid #2a2a2d;
-}
-
-.blurt__header .back-to-games {
-  position: absolute;
-  left: 0.75rem;
-}
-
 .blurt__back {
   position: absolute;
   left: 0.75rem;
@@ -73,24 +58,6 @@
 
 .blurt__code-button:hover {
   border-color: rgba(255, 255, 255, 0.32);
-}
-
-.blurt__titles {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
-}
-
-.blurt__titles strong {
-  font-size: 0.95rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.blurt__titles span {
-  font-size: 0.72rem;
-  color: #9a9aa2;
 }
 
 /* ── lobby ──────────────────────────────────────────────────────────── */

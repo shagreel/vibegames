@@ -237,13 +237,13 @@ function VibeFive() {
         <span style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }} />
       </div>
 
-      <header className="five__header">
+      <header className="five__header game-header">
         <BackToGames />
-        <div className="five__titles">
+        <div className="five__titles game-header__title">
           <h1>Vibe Five</h1>
           <p>{state.roundNumber === 0 ? 'Ready to play' : `Round ${state.roundNumber}`}</p>
         </div>
-        <div className="five__corner">
+        <div className="five__corner game-header__corner">
           <SupportButton game="five" />
           <button
             type="button"

@@ -661,7 +661,7 @@ function BlurtHeader({
   onShowCode?: (() => void) | null;
 }) {
   return (
-    <header className="blurt__header">
+    <header className="blurt__header game-header">
       {onLeave ? (
         <button type="button" className="blurt__back" onClick={onLeave} aria-label="Leave game">
           ‹
@@ -669,7 +669,7 @@ function BlurtHeader({
       ) : (
         <BackToGames />
       )}
-      <div className="blurt__titles">
+      <div className="blurt__titles game-header__title">
         <strong>Similar Vibe</strong>
         <span>{gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}</span>
       </div>
@@ -678,26 +678,26 @@ function BlurtHeader({
           field only exists before a game starts. A late arrival is normal here
           — they get put on the smaller team and play carries on — so the code
           has to be readable from the scoreboard. */}
-      <SupportButton game="blurt" />
-      {/* Last, like every other game's own control: the heart is the one thing
-          that never moves, so it goes first. */}
-      {onShowCode && (
-        <button
-          type="button"
-          className="blurt__code-button"
-          onClick={onShowCode}
-          aria-label="Game code"
-        >
-          {/* A person with a plus, not the sliders it used to be: those mean
-              "settings" in Vibe Five, and the same glyph for two different
-              things is what made these buttons unreadable. */}
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="9" cy="8" r="3.2" />
-            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
-            <path d="M17 8v6M14 11h6" />
-          </svg>
-        </button>
-      )}
+      <div className="blurt__corner game-header__corner">
+        <SupportButton game="blurt" />
+        {onShowCode && (
+          <button
+            type="button"
+            className="blurt__code-button"
+            onClick={onShowCode}
+            aria-label="Game code"
+          >
+            {/* A person with a plus, not the sliders it used to be: those mean
+                "settings" in Vibe Five, and the same glyph for two different
+                things is what made these buttons unreadable. */}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="9" cy="8" r="3.2" />
+              <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+              <path d="M17 8v6M14 11h6" />
+            </svg>
+          </button>
+        )}
+      </div>
     </header>
   );
 }

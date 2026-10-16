@@ -13,19 +13,6 @@
   color: #ffffff;
 }
 
-.sudoku__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.85rem 0.75rem;
-}
-
-.sudoku__header .back-to-games {
-  position: absolute;
-  left: 0.75rem;
-}
-
 .sudoku__leave {
   position: static;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -37,29 +24,6 @@
   font-weight: 600;
   padding: 0.45rem 0.9rem;
   cursor: pointer;
-}
-
-.sudoku__titles {
-  text-align: center;
-  min-width: 0;
-}
-
-.sudoku__titles h1 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.sudoku__titles p {
-  margin: 0.2rem 0 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #8b9197;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sudoku__notice {
@@ -143,14 +107,15 @@
   line-height: 1;
 }
 
-/* Notes: a 3x3 mini-grid inside the cell. */
+/* Notes: up to four numbers, two by two, in the cell. Nine tiny fixed slots
+   were unreadable on a phone; four bigger ones are not. */
 .sudoku__notes {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  font-size: clamp(0.42rem, 1.9vw, 0.62rem);
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  font-size: clamp(0.58rem, 2.6vw, 0.85rem);
   font-weight: 700;
   color: #8b9197;
 }
@@ -236,6 +201,11 @@
 .sudoku__difficulties {
   display: grid;
   gap: 0.5rem;
+}
+
+.game-lobby[data-game='sudoku'] {
+  --lobby-a: var(--sudoku-a);
+  --lobby-b: var(--sudoku-b);
 }
 
 .sudoku__difficulty {
@@ -525,13 +495,6 @@
 }
 
 /* The heart shares the corner with whatever else the screen needs there. */
-.sudoku__corner {
-  position: absolute;
-  right: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
 
 .sudoku__corner .sudoku__leave {
   position: static;

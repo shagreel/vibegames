@@ -22,7 +22,8 @@ import {
 import { displayGameCode, normaliseGameCode } from '../../lib/gameCode';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import BackToGames from '../../hub/BackToGames';
-import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
+import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
+import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import './VibeTrio.css';
 
@@ -350,9 +351,9 @@ function VibeTrio() {
 
   return (
     <div className="trio">
-      <header className="trio__header">
+      <header className="trio__header game-header">
         <BackToGames />
-        <div className="trio__corner">
+        <div className="trio__corner game-header__corner">
           <SupportButton game="trio" />
           {screen === 'game' && gameId && (
             <button type="button" className="trio__leave" onClick={leave}>
@@ -360,7 +361,7 @@ function VibeTrio() {
             </button>
           )}
         </div>
-        <div className="trio__titles">
+        <div className="trio__titles game-header__title">
           <h1>Vibe Pairings</h1>
           {screen === 'game' && table && (
             <p className="trio__subtitle">{subtitle(table, gameId, snapshot, myTakes, elapsed)}</p>
@@ -455,46 +456,27 @@ function Lobby(props: {
   onRules: () => void;
 }) {
   return (
-    <div className="trio__lobby">
-      <p className="trio__blurb">Three cards. Every feature the same on all three, or different on all three.</p>
-
-      <button type="button" className="trio-card-button" onClick={props.onSolo}>
-        <strong>Play on this device</strong>
-        <span>Clear the whole deck at your own pace</span>
-      </button>
-
-      <button type="button" className="trio-card-button" onClick={props.onCreate}>
-        <strong>Race your friends</strong>
-        <span>One table of cards. Take a good pairing before anyone else does.</span>
-      </button>
-
-      <form
-        className="trio__join"
-        onSubmit={(event) => {
-          event.preventDefault();
-          props.onJoin(props.joinCode);
-        }}
-      >
-        <label htmlFor="trio-join">Join with a code</label>
-        <div className="trio__join-row">
-          <input
-            id="trio-join"
-            value={props.joinCode}
-            onChange={(event) => props.onJoinCode(event.target.value)}
-            placeholder="cars feed"
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-          <button type="submit" disabled={!props.joinCode.trim()}>
-            Join
-          </button>
-        </div>
-        {props.joinError && <p className="trio__join-error">{props.joinError}</p>}
-      </form>
-
-      <HowToPlayLink onClick={props.onRules} />
-    </div>
+    <SharedLobby
+      prefix="trio"
+      blurb="Three cards. Every feature the same on all three, or different on all three."
+      joinCode={props.joinCode}
+      joinError={props.joinError}
+      onJoinCode={props.onJoinCode}
+      onJoin={props.onJoin}
+      onRules={props.onRules}
+    >
+      <LobbyCard
+        title="Play on this device"
+        blurb="Clear the whole deck at your own pace"
+        onClick={props.onSolo}
+      />
+      <LobbyCard
+        title="Race your friends"
+        blurb="One table of cards. Take a good pairing before anyone else does."
+        onClick={props.onCreate}
+        alt
+      />
+    </SharedLobby>
   );
 }
 

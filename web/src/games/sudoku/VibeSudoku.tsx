@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BackToGames from '../../hub/BackToGames';
-import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
+import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
+import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import {
   CELL_COUNT,
+  MAXIMUM_NOTES,
   DIFFICULTIES,
   boxOf,
   columnOf,
@@ -297,6 +299,14 @@ function VibeSudoku() {
       if (puzzle.givens[selected] !== 0) return;
 
       if (noteMode) {
+        // Four at most, and shown as four big numbers: a phone-sized cell cannot
+        // show nine marks anybody can read, and an unreadable note is worse than
+        // no note. Removing one is always allowed.
+        const held = notes[selected];
+        if (!held.has(digit) && held.size >= MAXIMUM_NOTES) {
+          setNotice(`Notes hold ${MAXIMUM_NOTES} numbers.`);
+          return;
+        }
         setNotes((current) => {
           const next = [...current];
           const set = new Set(next[selected]);
@@ -333,7 +343,7 @@ function VibeSudoku() {
       });
       checkCompletion(next);
     },
-    [canPlay, selected, puzzle, noteMode, values, checkCompletion],
+    [canPlay, selected, puzzle, noteMode, values, notes, checkCompletion],
   );
 
   const erase = useCallback(() => {
@@ -404,9 +414,9 @@ function VibeSudoku() {
 
   return (
     <div className="sudoku">
-      <header className="sudoku__header">
+      <header className="sudoku__header game-header">
         <BackToGames />
-        <div className="sudoku__corner">
+        <div className="sudoku__corner game-header__corner">
           <SupportButton game="sudoku" />
           {screen === 'game' && gameId && (
             <button type="button" className="sudoku__leave" onClick={leave}>
@@ -414,7 +424,7 @@ function VibeSudoku() {
             </button>
           )}
         </div>
-        <div className="sudoku__titles">
+        <div className="sudoku__titles game-header__title">
           <h1>Number Vibe</h1>
           {screen === 'game' && puzzle && (
             <p>{subtitle(gameId, snapshot, filled, elapsed, difficulty)}</p>
@@ -542,6 +552,9 @@ function Board(props: {
     <div className="sudoku__board" role="grid" aria-label="Sudoku board">
       {Array.from({ length: CELL_COUNT }, (_, index) => {
         const given = props.puzzle.givens[index] !== 0;
+        // The marks themselves, in order — four big numbers rather than nine
+        // small ones in fixed squares.
+        const marks = [...(props.notes[index] ?? [])].sort((a, b) => a - b);
         const value = props.values[index];
         const isSelected = props.selected === index;
         const inConflict = props.conflicting.has(index);
@@ -574,8 +587,8 @@ function Board(props: {
               <span className="sudoku__value">{value}</span>
             ) : (
               <span className="sudoku__notes" aria-hidden="true">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-                  <span key={digit}>{props.notes[index]?.has(digit) ? digit : ''}</span>
+                {Array.from({ length: MAXIMUM_NOTES }).map((_, slot) => (
+                  <span key={slot}>{marks[slot] ?? ''}</span>
                 ))}
               </span>
             )}
@@ -648,9 +661,17 @@ function Lobby(props: {
   onRules: () => void;
 }) {
   return (
-    <div className="sudoku__lobby">
-      <p className="sudoku__blurb">Proper Sudoku. Play Easy, Medium or Hard on your own — or race the room on the same board.</p>
-
+    <SharedLobby
+      prefix="sudoku"
+      blurb="Proper Sudoku. Play Easy, Medium or Hard on your own — or race the room on the same board."
+      joinCode={props.joinCode}
+      joinError={props.joinError}
+      onJoinCode={props.onJoinCode}
+      onJoin={props.onJoin}
+      onRules={props.onRules}
+    >
+      {/* The one game that asks how hard before it deals. It keeps its own
+          picker, and the two choices under it are the shared cards. */}
       <div className="sudoku__difficulties">
         {DIFFICULTIES.map((option) => (
           <button
@@ -667,40 +688,18 @@ function Lobby(props: {
         ))}
       </div>
 
-      <button type="button" className="sudoku__primary" onClick={props.onSolo}>
-        Play on this device
-      </button>
-      <button type="button" className="sudoku__primary sudoku__primary--alt" onClick={props.onCreate}>
-        Race your friends
-      </button>
-
-      <form
-        className="sudoku__join"
-        onSubmit={(event) => {
-          event.preventDefault();
-          props.onJoin(props.joinCode);
-        }}
-      >
-        <label htmlFor="sudoku-join">Join with a code</label>
-        <div className="sudoku__join-row">
-          <input
-            id="sudoku-join"
-            value={props.joinCode}
-            onChange={(event) => props.onJoinCode(event.target.value)}
-            placeholder="cars feed"
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-          <button type="submit" disabled={!props.joinCode.trim()}>
-            Join
-          </button>
-        </div>
-        {props.joinError && <p className="sudoku__join-error">{props.joinError}</p>}
-      </form>
-
-      <HowToPlayLink onClick={props.onRules} />
-    </div>
+      <LobbyCard
+        title="Play on this device"
+        blurb="A board to yourself, at the pace you like"
+        onClick={props.onSolo}
+      />
+      <LobbyCard
+        title="Race your friends"
+        blurb="The same board for everyone. First to finish takes it."
+        onClick={props.onCreate}
+        alt
+      />
+    </SharedLobby>
   );
 }
 

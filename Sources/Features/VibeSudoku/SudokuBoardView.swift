@@ -117,16 +117,24 @@ struct SudokuBoardView: View {
         return VibeTheme.tileIdle
     }
 
+    /// The marks in a cell: up to four numbers, two by two.
+    ///
+    /// It used to be a 3x3 grid with each digit in its own fixed square, which
+    /// made every digit the same size as the smallest possible one. With four
+    /// marks at most, four bigger numbers in reading order are easier to read at
+    /// a glance — and a glance is all a note gets.
     private func noteGrid(_ marks: Set<Int>, size: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            ForEach(0..<3, id: \.self) { row in
+        let shown = marks.sorted().prefix(VibeSudokuModel.maximumNotes).map(String.init)
+
+        return VStack(spacing: 0) {
+            ForEach(0..<2, id: \.self) { row in
                 HStack(spacing: 0) {
-                    ForEach(0..<3, id: \.self) { column in
-                        let digit = row * 3 + column + 1
-                        Text(marks.contains(digit) ? "\(digit)" : " ")
-                            .font(.system(size: size * 0.24, weight: .semibold, design: .rounded))
+                    ForEach(0..<2, id: \.self) { column in
+                        let position = row * 2 + column
+                        Text(position < shown.count ? shown[position] : " ")
+                            .font(.system(size: size * 0.34, weight: .bold, design: .rounded))
                             .foregroundStyle(VibeTheme.tertiaryText)
-                            .frame(width: size / 3, height: size / 3)
+                            .frame(width: size / 2, height: size / 2)
                     }
                 }
             }

@@ -14,6 +14,13 @@
 
 export const SIDE = 9;
 export const CELL_COUNT = 81;
+
+/**
+ * How many numbers a cell's notes hold: four, shown big, rather than nine tiny
+ * ones. A phone-sized cell cannot show nine marks anybody can read, and an
+ * unreadable note is worse than no note.
+ */
+export const MAXIMUM_NOTES = 4;
 export const ALL_VALUES = 0x1ff;
 
 export type Difficulty = 'easy' | 'medium' | 'hard';

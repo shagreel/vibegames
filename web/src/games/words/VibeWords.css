@@ -1,3 +1,10 @@
+.game-lobby[data-game='words'] {
+  /* The site's colour for Word Vibe. The game's own stylesheet has no palette
+     variables to borrow — it was written before the suite had one. */
+  --lobby-a: #21b8a8;
+  --lobby-b: #4585f5;
+}
+
 .vibewords-container {
   display: flex;
   flex-direction: column;
@@ -7,27 +14,7 @@
   font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
 }
 
-.vibewords-header {
-  position: relative;
-  border-bottom: 1px solid #3a3a3c;
-  padding: 1rem;
-  text-align: center;
-}
-
 /* Sits in the header's left margin so the title stays centred. */
-.vibewords-header .back-to-games {
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.vibewords-header h1 {
-  margin: 0;
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
 
 .player-count {
   margin-top: 0.5rem;
@@ -530,9 +517,6 @@
 
 /* Mobile Responsive Styles */
 @media (max-width: 640px) {
-  .vibewords-header h1 {
-    font-size: 1.75rem;
-  }
 
   .cell {
     width: 52px;
@@ -642,24 +626,9 @@
     margin: 0.25rem 0;
   }
 
-  .vibewords-header {
-    padding: 0.5rem;
-  }
-
-  .vibewords-header h1 {
-    font-size: 1.5rem;
-  }
 }
 
 /* The heart sits in the right margin, opposite the way back. */
-.vibewords-header__corner {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-}
 
 /* The code, in the lobby, where every other game puts it. It used to exist only
    inside the link the copy button puts on the clipboard, so whoever created the

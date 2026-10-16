@@ -28,6 +28,20 @@ final class VibeSudokuModel: ObservableObject {
     @Published private(set) var puzzle: SudokuPuzzle?
     @Published private(set) var values = [Int](repeating: 0, count: SudokuPuzzle.cellCount)
     @Published private(set) var notes = [Set<Int>](repeating: [], count: SudokuPuzzle.cellCount)
+
+    /// How many numbers a cell's notes hold.
+    ///
+    /// Four, and shown as four big numbers rather than nine small ones. It is a
+    /// deliberate limit rather than a technical one — a cell can have nine
+    /// candidates — because a phone-sized cell cannot show nine marks anyone can
+    /// read, and an unreadable note is worse than no note.
+    static let maximumNotes = 4
+
+    /// Set when a note is refused because the cell is full.
+    ///
+    /// A key that does nothing is worse than one that says why, and the notes
+    /// are the one place in this game where a tap can be ignored.
+    @Published private(set) var noteNotice: String?
     @Published private(set) var selectedCell: Int?
     @Published var isNoteMode = false
     @Published private(set) var solved = false
@@ -249,6 +263,7 @@ final class VibeSudokuModel: ObservableObject {
 
     func select(_ index: Int) {
         guard index >= 0, index < SudokuPuzzle.cellCount else { return }
+        noteNotice = nil
         // Tapping the selected cell again clears the selection.
         selectedCell = (selectedCell == index) ? nil : index
     }
@@ -258,10 +273,14 @@ final class VibeSudokuModel: ObservableObject {
         guard !puzzle.isGiven(index) else { return }
 
         if isNoteMode {
+            noteNotice = nil
             if notes[index].contains(digit) {
                 notes[index].remove(digit)
-            } else {
+            } else if notes[index].count < Self.maximumNotes {
                 notes[index].insert(digit)
+            } else {
+                noteNotice = "Notes hold \(Self.maximumNotes) numbers."
+                return
             }
             return
         }

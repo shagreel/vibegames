@@ -12,20 +12,6 @@
   color: #ffffff;
 }
 
-.trio__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.85rem 0.75rem;
-  border-bottom: 1px solid #2a2a2d;
-}
-
-.trio__header .back-to-games {
-  position: absolute;
-  left: 0.75rem;
-}
-
 .trio__leave {
   position: static;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -42,19 +28,6 @@
 .trio__leave:hover {
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.3);
-}
-
-.trio__titles {
-  text-align: center;
-  min-width: 0;
-}
-
-.trio__titles h1 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
 }
 
 .trio__subtitle {
@@ -92,6 +65,11 @@
   margin: 0 0 0.5rem;
   color: #9aa0a6;
   text-align: center;
+}
+
+.game-lobby[data-game='trio'] {
+  --lobby-a: var(--trio-a);
+  --lobby-b: var(--trio-b);
 }
 
 .trio-card-button {
@@ -628,19 +606,9 @@
 
 /* Wider screens get a wider table, not bigger cards forever. */
 @media (min-width: 720px) {
-  .trio__titles h1 {
-    font-size: 1.25rem;
-  }
 }
 
 /* The heart shares the corner with whatever else the screen needs there. */
-.trio__corner {
-  position: absolute;
-  right: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
 
 .trio__corner .trio__leave {
   position: static;

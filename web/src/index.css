@@ -76,3 +76,188 @@ body {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* ── the game header ──────────────────────────────────────────────────────
+   Five games had five headers: five paddings, three border colours, two
+   title sizes, one title that was not uppercase at all, and one where the
+   heart sat in the middle because its title did not grow. They are one
+   component's worth of markup with five sets of class names, so the layout
+   and the type live here, once, and each game keeps only what is its own.
+
+   `position: absolute` with no `top` on the back and the corner is deliberate:
+   a flex container's centred alignment places them, so nothing needs a
+   transform — and a transform anywhere around the heart is what made the
+   support panel lay itself out inside a 40x40 box (see Support.tsx). */
+.game-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* One height whether or not the game has a subtitle under its name: the
+     board below should not move when one appears mid-game, and four headers at
+     74px and one at 58px is the inconsistency this whole block exists to end. */
+  min-height: 4.6rem;
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid #2a2a2d;
+}
+
+.game-header .back-to-games {
+  position: absolute;
+  left: 0.75rem;
+}
+
+.game-header .game-header__corner {
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.game-header .game-header__title {
+  min-width: 0;
+  text-align: center;
+}
+
+.game-header .game-header__title h1,
+.game-header .game-header__title strong {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.game-header .game-header__title p,
+.game-header .game-header__title span {
+  display: block;
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8b9197;
+}
+
+/* ── the game lobby ───────────────────────────────────────────────────────
+   Three games open on the same screen: play on this device, start a room, or
+   join one with a code. It was written twice — Trio and Sudoku — and Word Vibe
+   simply did not have it, which is what two copies of a thing produce.
+
+   The accent comes from the game, so a Trio card is gold and a Word Vibe card
+   is teal, but the shape, the spacing and the join field are one definition. */
+.game-lobby {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.game-lobby__blurb {
+  margin: 0 0 0.5rem;
+  color: #9aa0a6;
+  text-align: center;
+}
+
+.lobby-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.05rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.3rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+/* The one the game would rather you picked. */
+.lobby-card[data-alt='false'] {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--lobby-a, #4585f5) 22%, transparent),
+    color-mix(in srgb, var(--lobby-b, #21b8a8) 16%, transparent));
+  border-color: color-mix(in srgb, var(--lobby-a, #4585f5) 40%, transparent);
+}
+
+.lobby-card strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.lobby-card span {
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}
+
+.lobby-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.game-lobby__join {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.game-lobby__join label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b9197;
+}
+
+.game-lobby__join-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.game-lobby__join input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 1rem;
+  height: 3.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.game-lobby__join input:focus-visible {
+  outline: 2px solid var(--lobby-a, #4585f5);
+  outline-offset: 2px;
+}
+
+.game-lobby__join button {
+  padding: 0 1.4rem;
+  border: none;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--lobby-a, #4585f5), var(--lobby-b, #21b8a8));
+  color: #1b1b1b;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.game-lobby__join button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.game-lobby__join-error {
+  margin: 0;
+  color: #ff8c8c;
+  font-size: 0.85rem;
+}

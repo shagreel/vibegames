@@ -311,6 +311,8 @@ struct VibeSudokuView: View {
             }
             .padding(.vertical, 6)
             .accessibilityIdentifier("sudoku.countdown")
+        } else if let notice = model.noteNotice {
+            banner(notice, symbol: "pencil", tint: VibeTheme.tertiaryText)
         } else if model.isWaitingForHost {
             waitingPanel
         } else if model.solved {

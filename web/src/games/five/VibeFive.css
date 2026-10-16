@@ -40,19 +40,6 @@
   background: linear-gradient(90deg, var(--warn), var(--calm));
 }
 
-.five__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.85rem 0.75rem 0.9rem;
-}
-
-.five__header .back-to-games {
-  position: absolute;
-  left: 0.75rem;
-}
-
 .five__settings-button {
   position: static;
   width: 2.5rem;
@@ -72,25 +59,6 @@
   stroke: #ffffff;
   stroke-width: 1.8;
   stroke-linecap: round;
-}
-
-.five__titles {
-  text-align: center;
-}
-
-.five__titles h1 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-}
-
-.five__titles p {
-  margin: 0.15rem 0 0;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #8b9197;
 }
 
 /* ── the category card ─────────────────────────────────────────────────── */
@@ -198,9 +166,17 @@
   box-shadow: 0 0 28px rgba(97, 235, 153, 0.6);
 }
 
+/* The dial fades in where it belongs.
+   It used to pop: `translate(-50%, -50%) scale(0.6)` growing to full size. That
+   transform was written for an absolutely positioned dial, and this one is
+   `position: relative` — so for the first 0.28s it sat half its own width up and
+   to the left, and then snapped into place when the animation ended. Both times
+   the dial appears — when the screen opens and when the clock starts — it looked
+   like the timer had been drawn in the wrong place and jumped. Nothing moves
+   now. */
 @keyframes five-pop {
-  from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
-  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ── the dial ──────────────────────────────────────────────────────────── */
@@ -473,13 +449,6 @@
 }
 
 /* The heart shares the corner with whatever else the screen needs there. */
-.five__corner {
-  position: absolute;
-  right: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
 
 .five__corner .five__settings-button {
   position: static;

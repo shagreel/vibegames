@@ -4,6 +4,7 @@ import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import BackToGames from '../../hub/BackToGames';
 import { SupportButton } from '../../hub/Support';
+import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
@@ -63,6 +64,12 @@ function VibeWords() {
   // The name is shared with the other three games, so somebody who has played
   // any of them is not asked again here.
   const [nameSubmitted, setNameSubmitted] = useState(() => savedName() !== '');
+  /** Playing on this device: a word dealt here, with no room and no network. */
+  const [solo, setSolo] = useState(false);
+  /** Chosen a room of their own, so the intro gets out of the way. */
+  const [creating, setCreating] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
   const [winner, setWinner] = useState<{ name: string; timestamp: number } | null>(null);
   // Worked out once, from the address bar, before the first paint. There is no
   // setter: nothing else ever decides which room this is.
@@ -504,6 +511,32 @@ function VibeWords() {
     }
   };
 
+  /// Play on this device.
+  ///
+  /// The web client never had this: it opened on a name field and a "create a
+  /// game" button, so solo play existed in the code — `handlePlayAgain` has a
+  /// branch for it — and was unreachable. The app has had "Play on this device"
+  /// all along, and the site has claimed solo play for five games.
+  ///
+  /// No name is asked for, because there is nobody to tell it to.
+  const playSolo = () => {
+    setSolo(true);
+    resetGame();
+    setGameStarted(true);
+    trackGameStart(GAMES.words, { mode: 'solo' });
+  };
+
+  /// Join somebody else's room, the way the other games do: put its code in the
+  /// address and let the app arrive there.
+  const join = (code: string) => {
+    const wanted = normaliseGameCode(code);
+    if (!wanted) {
+      setJoinError('That does not look like a code');
+      return;
+    }
+    window.location.assign(`/words?game=${wanted}`);
+  };
+
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (playerName.trim()) {
@@ -595,12 +628,12 @@ function VibeWords() {
 
   return (
     <div className="vibewords-container">
-      <header className="vibewords-header">
+      <header className="vibewords-header game-header">
         <BackToGames />
-        <div className="vibewords-header__corner">
+        <div className="vibewords-header__corner game-header__corner">
           <SupportButton game="words" />
         </div>
-        <div className="vibewords-titles">
+        <div className="vibewords-titles game-header__title">
           <h1>Word Vibe</h1>
         </div>
         {playerCount > 0 && (
@@ -611,8 +644,35 @@ function VibeWords() {
       </header>
 
       <div className="game-content">
-        {/* Name input */}
-        {!nameSubmitted && (
+        {/* The way in: on your own, a room of your own, or somebody else's. */}
+        {!solo && !creating && !gameExists && (
+          <SharedLobby
+            prefix="words"
+            blurb="Six guesses. Everyone gets the same word."
+            joinCode={joinCode}
+            joinError={joinError}
+            onJoinCode={setJoinCode}
+            onJoin={join}
+            onRules={() => setRulesOpen(true)}
+          >
+            <LobbyCard
+              title="Play on this device"
+              blurb="A word to yourself, and nobody waiting on you"
+              onClick={playSolo}
+            />
+            <LobbyCard
+              title="Race your friends"
+              blurb="The same word at the same time. First to solve it wins."
+              onClick={() => setCreating(true)}
+              alt
+            />
+          </SharedLobby>
+        )}
+
+        {/* The name, once there is somebody to tell it to: after choosing a room
+            of your own, or on arriving in one. Not before — solo never asks, and
+            the lobby is not a place that needs a name. */}
+        {!solo && !nameSubmitted && (creating || gameExists) && (
           <div className="name-input-container">
             <form onSubmit={handleNameSubmit} className="name-form">
               <input
@@ -633,7 +693,7 @@ function VibeWords() {
         )}
 
         {/* Create game button - shown when game doesn't exist yet */}
-        {nameSubmitted && !gameExists && (
+        {!solo && creating && nameSubmitted && !gameExists && (
           <div className="start-game-container">
             <p className="start-game-message">
               Create a game to get started!
@@ -650,7 +710,7 @@ function VibeWords() {
         )}
 
         {/* Start game button for creator */}
-        {nameSubmitted && isCreator && gameExists && !gameStarted && (
+        {!solo && nameSubmitted && isCreator && gameExists && !gameStarted && (
           <div className="start-game-container">
             {/* The code, said out loud. It used to exist only inside the link the
                 copy button puts on the clipboard, so the person who created the
@@ -716,6 +776,7 @@ function VibeWords() {
           </div>
         )}
 
+        {(solo || gameStarted) && (
         <div className={`grid ${shake ? 'shake' : ''}`}>
           {grid.map((row, i) => (
             <div key={i} className="grid-row">
@@ -736,6 +797,9 @@ function VibeWords() {
           ))}
         </div>
 
+        )}
+
+        {(solo || gameStarted) && (
         <div className="keyboard">
           {keyboardRows.map((row, i) => (
             <div key={i} className="keyboard-row">
@@ -760,16 +824,19 @@ function VibeWords() {
             </div>
           ))}
         </div>
+        )}
 
-        <div className="button-container">
-          {!visibleCountdown && winner !== null && (
-            <button className="reset-button" onClick={handlePlayAgain}>
-              Play Again
-            </button>
-          )}
-        </div>
+        {(solo || gameStarted) && (
+          <div className="button-container">
+            {!visibleCountdown && winner !== null && (
+              <button className="reset-button" onClick={handlePlayAgain}>
+                Play Again
+              </button>
+            )}
+          </div>
+        )}
 
-        <HowToPlayLink onClick={() => setRulesOpen(true)} />
+        {(solo || gameStarted) && <HowToPlayLink onClick={() => setRulesOpen(true)} />}
       </div>
     </div>
   );
