@@ -37,6 +37,7 @@ struct VibeSudokuSettingsView: View {
             }
             .toolbarBackground(VibeTheme.canvasTop, for: .navigationBar)
         }
+        .followingAppearance()
     }
 
     // MARK: - Sections

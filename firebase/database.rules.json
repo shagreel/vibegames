@@ -151,6 +151,10 @@
           },
           "$other": {
             ".validate": false
+          },
+          "hints": {
+            ".write": true,
+            ".validate": "newData.isBoolean()"
           }
         },
         "players": {

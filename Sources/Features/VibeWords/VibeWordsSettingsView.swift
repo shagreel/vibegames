@@ -29,5 +29,6 @@ struct VibeWordsSettingsView: View {
             }
             .toolbarBackground(VibeTheme.canvasTop, for: .navigationBar)
         }
+        .followingAppearance()
     }
 }

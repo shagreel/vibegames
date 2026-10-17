@@ -19,6 +19,7 @@ struct TrioTake: Equatable {
 ///         createdAt   1737052800000
 ///         started     true
 ///         restartTime 1737052810000
+///         hints       false
 ///       players/{shortID}          true while that player is here
 ///       taken/{cardID}             { seq, by, name }
 ///
@@ -37,6 +38,9 @@ struct TrioSnapshot: Equatable {
     var creator: String?
     var started = false
     var restartTime: Date?
+    /// Whether this room plays with hints. A race with a hint button is a
+    /// different game, so it is the host's choice for everybody.
+    var hints = false
     /// How many people are here. Only the number is wanted — never a list.
     var playerCount = 0
     /// Accepted takes, oldest first.
@@ -62,6 +66,7 @@ struct TrioSnapshot: Equatable {
             exists = true
             creator = object["creator"] as? String
             started = (object["started"] as? Bool) ?? false
+            hints = (object["hints"] as? Bool) ?? false
 
             if let rawSeed = object["seed"] as? NSNumber {
                 let value = rawSeed.uint64Value
@@ -197,6 +202,9 @@ final class VibeTrioService {
             "creator": creatorName,
             "createdAt": Self.milliseconds(Date()),
             "started": false,
+            // Off, which is what a race has always been. The host can turn it on
+            // before the table is started.
+            "hints": false,
         ])
         try await markPresent(gameID: gameID, playerID: playerID)
     }
@@ -218,6 +226,12 @@ final class VibeTrioService {
 
     func startGame(gameID: String) async throws {
         try await gameReference(gameID)?.child("meta/started").setValue(true)
+    }
+
+    /// Turns hints on or off for the whole room. The host's to write, before the
+    /// start — the same rule the web client follows.
+    func setHints(gameID: String, enabled: Bool) async throws {
+        try await gameReference(gameID)?.child("meta/hints").setValue(enabled)
     }
 
     /// Claims three cards, if they are still there.

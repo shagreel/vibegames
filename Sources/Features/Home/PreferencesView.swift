@@ -64,6 +64,7 @@ struct PreferencesView: View {
                 }
             }
         }
+        .followingAppearance()
     }
 
     /// Where a settings screen keeps the version, the privacy policy and the way

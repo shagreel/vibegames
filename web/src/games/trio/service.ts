@@ -16,7 +16,7 @@ import { replay, wouldFormTrioByIds } from './engine';
  * A shared Vibe Pairings game.
  *
  *     trio/{gameId}
- *       meta/       seed, creator, createdAt, started, restartTime
+ *       meta/       seed, creator, createdAt, started, restartTime, hints
  *       players/    {shortId}: true        — presence, cleared on disconnect
  *       taken/      {cardId}: { seq, by, name }
  *
@@ -38,6 +38,14 @@ export interface TrioSnapshot {
   seed: number | null;
   creator: string | null;
   started: boolean;
+  /**
+   * Whether the room plays with hints.
+   *
+   * A race with a hint button is a different game — one player can see a
+   * pairing and the others cannot — so it is the host's choice for the room,
+   * made before the start, and everyone sees the same answer.
+   */
+  hints: boolean;
   restartTime: number | null;
   /** How many people are here. Only the number is wanted — never a list. */
   playerCount: number;
@@ -50,6 +58,7 @@ export const EMPTY_SNAPSHOT: TrioSnapshot = {
   seed: null,
   creator: null,
   started: false,
+  hints: false,
   restartTime: null,
   playerCount: 0,
   takes: [],
@@ -120,6 +129,7 @@ export function observeGame(
       seed: typeof rawSeed === 'number' ? rawSeed : null,
       creator: typeof meta?.creator === 'string' ? meta.creator : null,
       started: meta?.started === true,
+      hints: meta?.hints === true,
       restartTime: typeof meta?.restartTime === 'number' ? meta.restartTime : null,
       playerCount,
       takes: takesFrom(taken),
@@ -193,6 +203,9 @@ export async function createGame(
     creator: creatorName,
     createdAt: Date.now(),
     started: false,
+    // Off, which is what a race has always been. The host can turn it on
+    // before anybody starts.
+    hints: false,
   });
   await ensurePresent(gameId, playerId);
 }
@@ -206,6 +219,11 @@ export async function joinGame(gameId: string, playerId: string): Promise<void> 
     await remove(ref(database, `trio/${gameId}/meta/restartTime`)).catch(() => undefined);
   }
   await ensurePresent(gameId, playerId);
+}
+
+/** Turns hints on or off for the whole room. The host's to write, before the start. */
+export async function setHints(gameId: string, enabled: boolean): Promise<void> {
+  await set(ref(database, `trio/${gameId}/meta/hints`), enabled);
 }
 
 export async function startGame(gameId: string): Promise<void> {

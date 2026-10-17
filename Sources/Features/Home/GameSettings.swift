@@ -12,6 +12,29 @@ import SwiftUI
 /// the lights on is usually in the middle of a game, and having to leave it to
 /// do that is how a settings screen goes unused.
 
+/// Makes a sheet follow the appearance while it is open.
+///
+/// The colour scheme is set at the root of the app, and a sheet that is already
+/// presented does not reliably rebuild when that changes underneath it: one
+/// direction repaints and the other does not, which is what the owner reported.
+/// Applying it to the sheet's own content makes the sheet decide, instead of
+/// waiting for the presentation that put it on screen.
+struct ThemedSheet: ViewModifier {
+    @AppStorage("vibegames.appearance") private var appearance = AppearancePreference.system.rawValue
+
+    func body(content: Content) -> some View {
+        content.preferredColorScheme(AppearancePreference(rawValue: appearance)?.colorScheme)
+    }
+}
+
+extension View {
+    /// For the root of a sheet's content — every sheet in the suite, so none of
+    /// them is the one that lags.
+    func followingAppearance() -> some View {
+        modifier(ThemedSheet())
+    }
+}
+
 /// A heading over one group of settings.
 struct SettingsSectionTitle: View {
     private let text: String

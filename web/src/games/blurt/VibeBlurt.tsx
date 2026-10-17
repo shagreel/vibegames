@@ -278,32 +278,6 @@ function VibeBlurt() {
     action?.(who);
   };
 
-  // Somebody who followed a link has a code but is not in the room yet, and may
-  // not have a name either. Registering them is what puts them on the roster —
-  // without it they would watch a game they could not join.
-  const arrivalHandled = useRef(false);
-  useEffect(() => {
-    if (arrivalHandled.current || !gameId) return;
-    arrivalHandled.current = true;
-    const register = (who: string) => {
-      void joinGame(gameId, id, who).catch(() => {
-        // A link to a room that has been pruned (they live 24 hours) used to
-        // leave a lobby that could never start, with the message set and not
-        // shown: the join screen's error line is not on screen once a code is
-        // in the address bar. Go back to the join screen, say why, and let the
-        // player type the code again.
-        leave();
-        setJoinError(NO_GAME);
-      });
-    };
-    if (name) register(name);
-    // Opening the name prompt is a state change from an effect, which the rule
-    // rightly mistrusts in general. It is the point here: the effect exists to
-    // react to arriving with a code, and the only thing it can do about a player
-    // who has no name is ask for one.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    else requireName(register);
-  }, [gameId, name, id, requireName]);
 
   // Somebody who arrived after the start — or whose phone slept through it —
   // needs a team before they can play. Asked once, not on every snapshot.
@@ -407,7 +381,9 @@ function VibeBlurt() {
     });
   };
 
-  const leave = () => {
+  // A declaration rather than a `const`: the effect that lands on a dead room
+  // calls it, and that effect is written above this line.
+  function leave() {
     window.history.replaceState({}, '', '/blurt');
     setGameId(null);
     setSnapshot(EMPTY_SNAPSHOT);
@@ -415,7 +391,34 @@ function VibeBlurt() {
     askedForTeam.current = false;
     endingTurn.current = -1;
     reportedTurn.current = null;
-  };
+  }
+
+  // Somebody who followed a link has a code but is not in the room yet, and may
+  // not have a name either. Registering them is what puts them on the roster —
+  // without it they would watch a game they could not join.
+  const arrivalHandled = useRef(false);
+  useEffect(() => {
+    if (arrivalHandled.current || !gameId) return;
+    arrivalHandled.current = true;
+    const register = (who: string) => {
+      void joinGame(gameId, id, who).catch(() => {
+        // A link to a room that has been pruned (they live 24 hours) used to
+        // leave a lobby that could never start, with the message set and not
+        // shown: the join screen's error line is not on screen once a code is
+        // in the address bar. Go back to the join screen, say why, and let the
+        // player type the code again.
+        leave();
+        setJoinError(NO_GAME);
+      });
+    };
+    if (name) register(name);
+    // Opening the name prompt is a state change from an effect, which the rule
+    // rightly mistrusts in general. It is the point here: the effect exists to
+    // react to arriving with a code, and the only thing it can do about a player
+    // who has no name is ask for one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    else requireName(register);
+  }, [gameId, name, id, requireName]);
 
   const changeSettings = (nextPacks: string[]) => {
     setPacks(nextPacks);

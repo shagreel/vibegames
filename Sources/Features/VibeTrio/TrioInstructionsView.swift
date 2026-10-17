@@ -59,7 +59,7 @@ struct TrioInstructionsView: View {
                     text: "Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a good pairing — the other two are still yours to find."),
                 GameInstructions.Bullet(
                     lead: "Race",
-                    text: "Everyone gets the same boards on their own device. Whoever finds the most pairings wins."),
+                    text: "Everyone gets the same boards on their own device. Whoever finds the most pairings wins. The host decides whether the table has hints."),
                 GameInstructions.Bullet(
                     lead: "Wrong three",
                     text: "They flash red and nothing moves. Keep trying."),

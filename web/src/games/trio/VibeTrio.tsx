@@ -15,6 +15,7 @@ import {
   observeGame,
   randomSeed,
   scoresFrom,
+  setHints,
   shortId,
   startGame,
   type TrioSnapshot,
@@ -25,7 +26,12 @@ import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
-import { GameSettings, SettingsButton } from '../../hub/GameSettings';
+import {
+  GameSettings,
+  SettingsButton,
+  SettingsSection,
+  SettingsToggle,
+} from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
 import { RoundOver } from '../../hub/RoundOver';
 import './VibeTrio.css';
@@ -378,7 +384,38 @@ function VibeTrio() {
       <GameMessage text={notice || null} tone={notice ? 'warn' : 'info'} />
 
       {settingsOpen && (
-        <GameSettings prefix="trio" onClose={() => setSettingsOpen(false)} />
+        <GameSettings prefix="trio" onClose={() => setSettingsOpen(false)}>
+          {gameId && (
+            <SettingsSection
+              title="Hints"
+              note={
+                isHost && !snapshot.started
+                  ? 'Everyone plays the same way: a race with hints is a different game, so this is for the whole room.'
+                  : 'Only the host can change this, and only before the start.'
+              }
+            >
+              {/* A guest sees the setting, not a control: the answer is the
+                  room's, and it is read-only for anybody who did not set it. */}
+              {isHost && !snapshot.started ? (
+                <SettingsToggle
+                  label="Hints in this race"
+                  note="On gives every player the Hint button"
+                  on={snapshot.hints}
+                  onChange={(on) => {
+                    if (gameId) void setHints(gameId, on).catch(() => undefined);
+                  }}
+                />
+              ) : (
+                <div className="game-sheet__row">
+                  <span className="game-sheet__row-text">
+                    <strong>Hints in this race</strong>
+                    <span>{snapshot.hints ? 'On, for everybody' : 'Off, for everybody'}</span>
+                  </span>
+                </div>
+              )}
+            </SettingsSection>
+          )}
+        </GameSettings>
       )}
 
       {screen === 'lobby' ? (
@@ -673,7 +710,7 @@ function Board(props: {
       </div>
 
       <div className="trio__bottom">
-        {props.solo ? (
+        {props.solo || props.snapshot.hints ? (
           <button type="button" className="trio__hint" onClick={props.onHint}>
             Hint
           </button>
@@ -762,7 +799,7 @@ const TRIO_INSTRUCTIONS: HowToPlayContent = {
   ],
   bullets: [
     { lead: 'Solo', text: 'Clear the whole deck at your own pace. Stuck? **Hint** picks out one card of a good pairing — the other two are still yours to find.' },
-    { lead: 'Race', text: 'Everyone shares one table, so a good pairing taken by anybody is gone for everybody. The winner is whoever has taken the most when the deck runs out. No hints.' },
+    { lead: 'Race', text: 'Everyone shares one table, so a good pairing taken by anybody is gone for everybody. The winner is whoever has taken the most when the deck runs out. The host decides whether the table has hints.' },
     { lead: 'Wrong three', text: 'They flash red and nothing moves. Look again — the cards stay put.' },
   ],
 };

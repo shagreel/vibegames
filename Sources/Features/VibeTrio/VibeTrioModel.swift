@@ -81,6 +81,25 @@ final class VibeTrioModel: ObservableObject {
 
     var isWaitingForHost: Bool { isShared && !snapshot.started }
 
+    /// Whether this game plays with hints. Solo always does; a race only when
+    /// the host said so before the start.
+    var hintsEnabled: Bool { isShared ? snapshot.hints : true }
+
+    /// The host's, and only before the table is started — and only for a room
+    /// rather than a solo table.
+    var canChangeHints: Bool { isShared && isHost && !snapshot.started }
+
+    /// Turns hints on or off for the whole room.
+    func setHints(_ enabled: Bool) async {
+        guard canChangeHints, let gameID = sharedGameID else { return }
+        do {
+            try await service.setHints(gameID: gameID, enabled: enabled)
+        } catch {
+            FirebaseBootstrapper.record(error, during: "Could not change the hint setting")
+            errorMessage = "Could not change the hint setting: \(error.localizedDescription)"
+        }
+    }
+
     /// How many people are here, whether or not they have scored.
     var playerCount: Int { isShared ? snapshot.playerCount : 1 }
 
@@ -432,15 +451,15 @@ final class VibeTrioModel: ObservableObject {
         }
     }
 
-    /// Lights up a single card that belongs to a trio — solo play only.
+    /// Lights up a single card that belongs to a trio.
     ///
     /// One card, not the whole trio: the point is to narrow the search, and
-    /// handing over all three would just be the answer. Racing is a test of who
-    /// spots it first, so a hint there would be meaningless — the button is not
-    /// shown in a shared game, and this refuses one anyway.
+    /// handing over all three would just be the answer. Solo always has it; a
+    /// race has it only when the host turned it on for the room, because a race
+    /// with a hint button is a different game.
     @discardableResult
     func revealHint() -> Int? {
-        guard canPlay, !isShared, let trio = table?.availableTrios.first else { return nil }
+        guard canPlay, hintsEnabled, let trio = table?.availableTrios.first else { return nil }
         rejected = []
         selected = [trio[0]]
         return trio[0]

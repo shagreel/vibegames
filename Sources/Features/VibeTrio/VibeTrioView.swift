@@ -36,7 +36,7 @@ struct VibeTrioView: View {
         }
         .task { AppAnalytics.screen(.trio) }
         .sheet(isPresented: $showingSettings) {
-            VibeTrioSettingsView()
+            VibeTrioSettingsView(model: model)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -349,7 +349,7 @@ struct VibeTrioView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 10) {
-            if !model.isShared {
+            if model.hintsEnabled {
                 Button {
                     model.revealHint()
                 } label: {
@@ -366,6 +366,15 @@ struct VibeTrioView: View {
                 .buttonStyle(.plain)
                 .disabled(!model.canPlay)
                 .accessibilityIdentifier("trio.hint")
+            } else {
+                // The room's own answer, said out loud: the button is missing
+                // because the host turned hints off, not because it is broken.
+                Text("Race — no hints")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .accessibilityIdentifier("trio.hintsOff")
             }
 
             Text("\(model.remainingInDeck) left in the deck")

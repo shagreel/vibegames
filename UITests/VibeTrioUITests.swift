@@ -121,6 +121,46 @@ final class VibeTrioUITests: XCTestCase {
         attach(app, named: "54-trio-shared-started")
     }
 
+    /// A race can be played with hints, if the host says so before the start.
+    ///
+    /// The setting is the room's rather than the phone's: a race where one player
+    /// has a Hint button and the others do not is not the same game, so the host
+    /// writes it into the room and everybody reads it.
+    func testTheHostCanTurnHintsOnForTheRoom() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openLobby(app)
+
+        let create = app.buttons["trio.createGame"]
+        XCTAssertTrue(create.exists, "The race option should be listed")
+        try XCTSkipUnless(create.isEnabled, "Multiplayer needs a configured Firebase project")
+        create.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["trio.gameCode"].firstMatch
+                        .waitForExistence(timeout: backendTimeout),
+                      "Should land in the waiting room")
+        attach(app, named: "53-trio-shared-host")
+
+        // Off to begin with: a race has never had hints.
+        app.buttons["trio.settings"].tap()
+        let toggle = app.switches["trio.hintsToggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5),
+                      "the host should be offered the room's hint setting")
+        XCTAssertEqual(toggle.value as? String, "0", "a new race starts without hints")
+        toggle.tap()
+        XCTAssertEqual(toggle.value as? String, "1", "tapping it should turn hints on")
+        app.buttons["trio.settings.done"].tap()
+
+        // Once the table is started, the button is there because the room has
+        // hints on.
+        app.buttons["trio.startShared"].tap()
+        let hint = app.buttons["trio.hint"]
+        XCTAssertTrue(hint.waitForExistence(timeout: 10),
+                      "with hints on, the table should offer the Hint button")
+        XCTAssertTrue(hint.isEnabled)
+        attach(app, named: "58-trio-hints-on")
+    }
+
     /// The point of a shared table: a trio taken on one phone is gone for good.
     /// Leaving and rejoining turns this device into a late arrival at its own
     /// game, which is exactly the case the server's record of takes has to cover.
