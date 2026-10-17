@@ -17,7 +17,7 @@
         },
         "createdAt": {
           ".write": "!data.exists()",
-          ".validate": "newData.isNumber()"
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 300000"
         },
         "started": {
           ".write": true,
@@ -31,6 +31,9 @@
           },
           "timestamp": {
             ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
           }
         },
         "restartTime": {
@@ -40,7 +43,16 @@
         "players": {
           ".write": true,
           "$playerId": {
-            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().matches(/^.{1,24}$/) && newData.child('joinedAt').isNumber()"
+            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().matches(/^.{1,24}$/) && newData.child('joinedAt').isNumber()",
+            "name": {
+              ".validate": "newData.isString() && newData.val().matches(/^.{1,24}$/)"
+            },
+            "joinedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "$other": {
@@ -55,7 +67,7 @@
         ".validate": "newData.hasChildren(['seed', 'difficulty', 'creator', 'createdAt'])",
         "seed": {
           ".write": "!data.exists() || data.parent().child('winner').exists()",
-          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296"
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296 && newData.val() % 1 === 0"
         },
         "difficulty": {
           ".write": "!data.exists() || data.parent().child('winner').exists()",
@@ -67,7 +79,7 @@
         },
         "createdAt": {
           ".write": "!data.exists()",
-          ".validate": "newData.isNumber()"
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 300000"
         },
         "started": {
           ".write": true,
@@ -81,6 +93,9 @@
           },
           "timestamp": {
             ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
           }
         },
         "restartTime": {
@@ -90,7 +105,16 @@
         "players": {
           ".write": true,
           "$playerId": {
-            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().matches(/^.{1,24}$/) && newData.child('joinedAt').isNumber()"
+            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().matches(/^.{1,24}$/) && newData.child('joinedAt').isNumber()",
+            "name": {
+              ".validate": "newData.isString() && newData.val().matches(/^.{1,24}$/)"
+            },
+            "joinedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "$other": {
@@ -107,7 +131,7 @@
           ".validate": "newData.hasChildren(['seed', 'creator', 'createdAt'])",
           "seed": {
             ".write": true,
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296 && newData.val() % 1 === 0"
           },
           "creator": {
             ".write": "!data.exists()",
@@ -115,7 +139,7 @@
           },
           "createdAt": {
             ".write": "!data.exists()",
-            ".validate": "newData.isNumber()"
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 300000"
           },
           "started": {
             ".write": true,
@@ -176,7 +200,7 @@
           ".validate": "newData.val() === null || newData.val() === 'feedback' || newData.val() === 'crash'"
         },
         "createdAt": {
-          ".validate": "newData.isNumber()"
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 86400000"
         },
         "$other": {
           ".validate": false
@@ -192,7 +216,7 @@
           ".validate": "newData.hasChildren(['seed', 'creator', 'createdAt'])",
           "seed": {
             ".write": true,
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4294967296 && newData.val() % 1 === 0"
           },
           "creator": {
             ".write": "!data.exists()",
@@ -200,7 +224,7 @@
           },
           "createdAt": {
             ".write": "!data.exists()",
-            ".validate": "newData.isNumber()"
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 300000"
           },
           "started": {
             ".write": true,

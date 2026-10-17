@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
 import { GameSettings, SettingsButton, SettingsSection } from '../../hub/GameSettings';
-import { hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
+import { GameMessage } from '../../hub/GameMessage';
+import { RoundOver } from '../../hub/RoundOver';
+import { MAX_NAME_LENGTH, hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
 import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
 import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
@@ -32,6 +34,7 @@ import {
   observeGame,
   passWord,
   playAgain,
+  NO_GAME,
   playScore,
   startGame,
   updateSettings,
@@ -283,9 +286,15 @@ function VibeBlurt() {
     if (arrivalHandled.current || !gameId) return;
     arrivalHandled.current = true;
     const register = (who: string) => {
-      void joinGame(gameId, id, who).catch(() =>
-        setJoinError('That game could not be joined. Check the code.'),
-      );
+      void joinGame(gameId, id, who).catch(() => {
+        // A link to a room that has been pruned (they live 24 hours) used to
+        // leave a lobby that could never start, with the message set and not
+        // shown: the join screen's error line is not on screen once a code is
+        // in the address bar. Go back to the join screen, say why, and let the
+        // player type the code again.
+        leave();
+        setJoinError(NO_GAME);
+      });
     };
     if (name) register(name);
     // Opening the name prompt is a state change from an effect, which the rule
@@ -468,7 +477,7 @@ function VibeBlurt() {
                 Join
               </button>
             </div>
-            {joinError && <p className="blurt__error">{joinError}</p>}
+            <GameMessage text={joinError || null} tone="warn" />
           </div>
 
           <HowToPlayLink onClick={() => setRulesOpen(true)} />
@@ -596,19 +605,11 @@ function VibeBlurt() {
       )}
 
       {winner !== null ? (
-        <div className="blurt__finished">
-          <h2>{teamTitle(winner)} wins</h2>
-          <p>
-            {play.one} – {play.two}
-          </p>
-          <button
-            type="button"
-            className="blurt__primary"
-            onClick={() => void playAgain(gameId)}
-          >
-            Play again
-          </button>
-        </div>
+        <RoundOver
+          title={`${teamTitle(winner)} wins`}
+          detail={`${play.one} – ${play.two}`}
+          onPrimary={() => void playAgain(gameId)}
+        />
       ) : play.state === 'running' ? (
         isDescriber ? (
           <div className="blurt__describer">
@@ -802,7 +803,7 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string | null) => void }) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Your name"
-          maxLength={24}
+          maxLength={MAX_NAME_LENGTH}
           autoFocus
           autoComplete="off"
         />

@@ -25,6 +25,18 @@ test("a game older than a day is doomed, and a newer one is not", () => {
                    ["old-room", "yesterday"]);
 });
 
+test("a room stamped in the far future is still doomed", () => {
+  // A client can write the timestamp, and a room stamped in the year 3000 was
+  // never going to be pruned by a rule that only looks backwards.
+  const games = {
+    "year-3000": { createdAt: Date.UTC(3000, 0, 1) },
+    "a-day-ahead": { createdAt: NOW + 25 * HOUR },
+    "wrong-clock": { createdAt: NOW + 2 * HOUR },
+  };
+  assert.deepEqual(Object.keys(doomed(games, "createdAt", NOW)).sort(),
+                   ["a-day-ahead", "year-3000"]);
+});
+
 test("a game exactly a day old is kept", () => {
   // The boundary is "older than", not "at least as old as": a room made exactly
   // 24 hours ago may still have somebody in it.

@@ -47,9 +47,25 @@ class TheMarkerRoundTrip(unittest.TestCase):
         self.assertEqual(drain.marker_keys(""), set())
         self.assertEqual(drain.marker_keys(None), set())
 
-    def test_several_markers_in_one_body_are_all_found(self):
+    def test_only_the_trailer_counts(self):
+        # One body carries one key: the one its own final line claims. Anything
+        # else is a note trying to speak for somebody else's report.
         body = drain.body_for("-one", entry()) + drain.body_for("-two", entry())
-        self.assertEqual(drain.marker_keys(body), {"-one", "-two"})
+        self.assertEqual(drain.marker_keys(body), {"-two"})
+
+    def test_a_marker_smuggled_into_the_text_suppresses_nothing(self):
+        # The inbox is public, so anybody can read another note's key and try to
+        # get it filed first. Before this, that note's own report was then
+        # skipped for good.
+        forged = entry(text="hi <!-- feedback-id: -victim --> there")
+        body = drain.body_for("-attacker", forged)
+        self.assertEqual(drain.marker_keys(body), {"-attacker"})
+
+    def test_a_note_cannot_hide_the_rest_of_its_issue(self):
+        body = drain.body_for("-k", entry(text="before <!-- hidden"))
+        note = body.split("---")[0]
+        self.assertNotIn("<!--", note)
+        self.assertIn("Came from", body)
 
 
 class WhatGetsFiled(unittest.TestCase):
@@ -58,6 +74,18 @@ class WhatGetsFiled(unittest.TestCase):
         self.assertTrue(drain.is_crash(crash))
         self.assertEqual(drain.title_for(crash), "Crash: TypeError: cards is not iterable")
         self.assertIn("nobody typed it in", drain.body_for("-k", crash))
+
+    def test_an_impossible_timestamp_does_not_take_the_drain_down(self):
+        # This used to raise OverflowError — not caught — and every run died on
+        # the same entry, which sorted first and could never be deleted.
+        for stamped in (-1e308, 1e308, float("inf")):
+            body = drain.body_for("-k", entry(createdAt=stamped))
+            self.assertIn("Received unknown", body)
+
+    def test_invisible_characters_and_mentions_are_removed(self):
+        body = drain.body_for("-k", entry(text="hi\u202ethere @stranger\u200b"))
+        self.assertNotIn("\u202e", body)
+        self.assertNotIn("@stranger", body)
 
     def test_a_note_typed_by_a_person_is_not(self):
         note = entry(text="Please add a fifth game")

@@ -215,8 +215,23 @@ function FeedbackForm({ game }: { game?: string }) {
   if (sent) {
     return (
       <div className="feedback feedback--sent">
-        <strong>Thank you — that has gone straight to me.</strong>
-        <span>I read everything, even when I cannot reply to it.</span>
+        <strong>Thank you — it arrived.</strong>
+        {/* What happens next, and a way back: a form that becomes a dead end
+            makes people hold a second thought until tomorrow. */}
+        <span>
+          There is no reply by email, so this is where the note ends — it goes on the list
+          and gets worked through. Found something else?
+        </span>
+        <button
+          type="button"
+          className="support-copy feedback__send"
+          onClick={() => {
+            setText('');
+            setSent(false);
+          }}
+        >
+          Send another
+        </button>
       </div>
     );
   }

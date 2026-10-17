@@ -27,7 +27,13 @@ export class SeededGenerator {
     // The seed *is* the state; `next()` does the add-and-mix, which is how
     // SplitMix64 is defined. See `SeededGenerator.swift` for why pre-scrambling
     // it here made consecutive seeds replay the same stream one draw apart.
-    this.state = BigInt(seed) & 0xffffffffffffffffn;
+    //
+    // Coerced, not trusted: the seed arrives from the database, where any client
+    // may have written it, and `BigInt(0.5)` throws — which would take the whole
+    // screen down for everybody in that room. A fractional seed becomes the
+    // integer it names, which is what the app has always done (`UInt32`).
+    const whole = Number.isFinite(seed) ? Math.trunc(seed) : 0;
+    this.state = BigInt(whole >>> 0) & 0xffffffffffffffffn;
   }
 
   next(): bigint {

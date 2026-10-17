@@ -5,13 +5,19 @@ import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
 import { GameSettings, SettingsButton } from '../../hub/GameSettings';
+import { GameMessage } from '../../hub/GameMessage';
+import { RoundOver } from '../../hub/RoundOver';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 // Aliased because this screen has its own `playerName` state. The name is the
 // suite's, not this game's, so it is only ever asked for once.
-import { playerName as savedName, setPlayerName as savePlayerName } from '../../identity';
+import {
+  MAX_NAME_LENGTH,
+  playerName as savedName,
+  setPlayerName as savePlayerName,
+} from '../../identity';
 import './VibeWords.css';
 
 type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'current';
@@ -72,9 +78,17 @@ function VibeWords() {
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [winner, setWinner] = useState<{ name: string; timestamp: number } | null>(null);
-  // Worked out once, from the address bar, before the first paint. There is no
-  // setter: nothing else ever decides which room this is.
-  const [gameId] = useState(() => arrivedAtRoom());
+  /**
+   * The room this screen is in, if it is in one.
+   *
+   * It used to be minted by the state initialiser, always — so solo play was a
+   * room with a code, a room that was never written, and every listener for it
+   * fired with nothing and told the solo round that it had not started. The app
+   * has three sessions (lobby, solo, shared) and no id in the first two; this is
+   * the same shape. A room exists when one is chosen, and a link that carries
+   * one is the same choice arriving by another road.
+   */
+  const [gameId, setGameId] = useState<string | null>(() => roomFromUrl());
   const [isCreator, setIsCreator] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameExists, setGameExists] = useState(false);
@@ -95,9 +109,18 @@ function VibeWords() {
   // there is a number in step, and stops a stale one outliving its restart time.
   const visibleCountdown = restartTime === null ? null : countdown;
 
-  // Listen for game state and winner updates. Every game is a room — there is no
-  // room-less mode left to branch on — so this always subscribes.
+  // Listen for game state and winner updates — but only when there is a room.
+  //
+  // In solo there is no game id, and this used to subscribe to `games/null`
+  // anyway: the four listeners fired with nothing and wrote the *shared* game's
+  // state into a solo round, including `gameStarted = false`. A solo player
+  // could type four or five guesses and then find the keyboard dead, because a
+  // listener for a room that does not exist had just said the game had not
+  // started. Solo deals its own word and is otherwise self-contained, so it
+  // subscribes to nothing.
   useEffect(() => {
+    if (!gameId) return;
+
     // Listen for game existence (so we know when someone creates it)
     const gameRef = ref(database, `games/${gameId}`);
     const gameExistsUnsubscribe = onValue(gameRef, (snapshot) => {
@@ -138,7 +161,7 @@ function VibeWords() {
           // alike. Skipped when the same word arrives twice, which is what a
           // reconnection looks like, and what React's development double-mount
           // would otherwise turn into two counts.
-          trackGameStart(GAMES.words, { mode: gameId ? 'shared' : 'solo' });
+          trackGameStart(GAMES.words, { mode: 'shared' });
         }
 
         previousAnswerRef.current = newWord;
@@ -556,7 +579,16 @@ function VibeWords() {
   };
 
   const handleCreateGame = async () => {
-    if (!gameId || !playerName.trim()) return;
+    if (!playerName.trim()) return;
+
+    // The room is made here, not on arrival: this is the moment somebody asked
+    // for one. It goes into the address bar so a reload comes back to the same
+    // room rather than to the lobby.
+    const room = gameId ?? makeGameCode();
+    if (!gameId) {
+      setGameId(room);
+      rememberRoomInUrl(room);
+    }
 
     // Select a word for this game
     const selectedWord = getNewWord();
@@ -569,7 +601,7 @@ function VibeWords() {
     }
 
     // Create the game in Firebase with the word AND add creator as first player
-    const gameRef = ref(database, `games/${gameId}`);
+    const gameRef = ref(database, `games/${room}`);
     await set(gameRef, {
       word: selectedWord.toUpperCase(),
       creator: playerName.trim(),
@@ -595,7 +627,7 @@ function VibeWords() {
     setAnswer(selectedWord.toUpperCase());
 
     // Mark this user as creator in localStorage
-    localStorage.setItem('vibewords.hostedGameID', gameId);
+    localStorage.setItem('vibewords.hostedGameID', room);
     setIsCreator(true);
     setGameExists(true);
     setPlayerAddedToGame(true); // Creator is now added as a player
@@ -689,7 +721,7 @@ function VibeWords() {
                 onChange={(e) => setPlayerName(e.target.value)}
                 placeholder="Enter your name"
                 className="name-input"
-                maxLength={20}
+                maxLength={MAX_NAME_LENGTH}
                 autoFocus
               />
               <button type="submit" className="name-submit-button">
@@ -725,7 +757,7 @@ function VibeWords() {
                 game had nothing to read out to the room. */}
             <div className="words__code">
               <span className="words__code-label">Read this out</span>
-              <strong className="words__code-value">{displayGameCode(gameId)}</strong>
+              <strong className="words__code-value">{displayGameCode(gameId ?? '')}</strong>
               <span className="words__code-hint">
                 Everyone else: Word Vibe → Join with a code
               </span>
@@ -765,23 +797,33 @@ function VibeWords() {
           </div>
         )}
 
-        {/* Winner announcement */}
-        {winner && winner.name !== playerName && !visibleCountdown && (
-          <div className="winner-announcement">
-            🏆 {winner.name} won this game!
-          </div>
-        )}
+        {/* One message at a time, floating over the board rather than pushing
+            it down: the keyboard moved under the player's hands every time a
+            word was refused. */}
+        <GameMessage
+          text={
+            visibleCountdown
+              ? null
+              : shareMessage ||
+                (winner && winner.name !== playerName ? `${winner.name} won this game!` : '') ||
+                // The panel below says how the round ended; saying it twice, one
+                // over the other, reads like two things happened.
+                (gameOver ? '' : message) ||
+                null
+          }
+          tone={won ? 'good' : message && !won ? 'warn' : 'info'}
+        />
 
-        {message && !visibleCountdown && (
-          <div className={`message ${won ? 'success' : ''}`}>
-            {message}
-          </div>
-        )}
-
-        {shareMessage && (
-          <div className="message share-message">
-            {shareMessage}
-          </div>
+        {gameOver && !visibleCountdown && (
+          <RoundOver
+            title={won ? 'Solved!' : `The word was ${answer}`}
+            detail={
+              won
+                ? `In ${guesses.length} ${guesses.length === 1 ? 'guess' : 'guesses'}`
+                : 'The next one is a new word.'
+            }
+            onPrimary={() => void handlePlayAgain()}
+          />
         )}
 
         {(solo || gameStarted) && (
@@ -863,16 +905,28 @@ function VibeWords() {
  * settled on instead of minting another one — which would leave the address bar
  * and the game pointing at different rooms.
  */
-function arrivedAtRoom(): string {
+/**
+ * The room a link is carrying, if it is carrying one. Never invents one.
+ *
+ * A code read off somebody's screen and typed in may arrive with capitals or a
+ * space where the screen showed one, so what lands in the address bar is the
+ * canonical form — the same room, spelt the way the app spells it.
+ */
+function roomFromUrl(): string | null {
   const typed = new URLSearchParams(window.location.search).get('game');
-  const given = typed ? normaliseGameCode(typed) : '';
-  const room = given || makeGameCode();
+  if (!typed) return null;
 
+  const room = normaliseGameCode(typed);
+  if (!room) return null;
+  if (room !== typed) rememberRoomInUrl(room);
+  return room;
+}
+
+/** Puts a room in the address bar, so a reload comes back to it. */
+function rememberRoomInUrl(room: string): void {
   const url = new URL(window.location.href);
   url.searchParams.set('game', room);
   window.history.replaceState({}, '', `${url.pathname}${url.search}`);
-
-  return room;
 }
 
 export default VibeWords;

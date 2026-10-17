@@ -34,7 +34,11 @@ export function formatReport(details: CrashDetails): string {
     lines.push('', ...details.stack.split('\n').slice(0, 8).map((line) => line.trim()));
   }
 
-  lines.push('', `Page: ${window.location.pathname}${window.location.search}`);
+  // The path only. A crash on a shared link carries `?game=<code>` in its search
+  // string, and this report becomes a public issue — so the room code would be
+  // published by the app itself. The code is not a secret, but it is a key to a
+  // room, and nothing here needs it.
+  lines.push('', `Page: ${window.location.pathname}`);
   if (details.origin) lines.push(`Source: ${details.origin}`);
   lines.push(`Browser: ${navigator.userAgent}`);
 

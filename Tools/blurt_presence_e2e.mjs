@@ -410,6 +410,36 @@ console.log("\n5. the word moves to somebody still in the room");
   check(rule.includes(mate.name), `the rule names ${mate.name}, who is`);
 }
 
+// ── a link to a room that is not there ───────────────────────────────────
+// Rooms are pruned after 24 hours, so an old link is a normal thing to open.
+// It used to leave a lobby that could never start and file an unhandled
+// "PERMISSION_DENIED" as a crash: the presence write tried to *create* the
+// room, which the rules refuse.
+{
+  const context = await browser.createBrowserContext();
+  const page = await context.newPage();
+  const raised = [];
+  page.on("pageerror", (error) => raised.push(String(error).split("\n")[0]));
+
+  await page.goto(`${SITE}/blurt`, { waitUntil: "networkidle0" });
+  await page.evaluate(() => localStorage.setItem("vibegames.playerName", "Tester"));
+  await page.goto(`${SITE}/blurt?game=gone-rope`, { waitUntil: "networkidle0" });
+  await new Promise((done) => setTimeout(done, 3000));
+
+  const ended = await page.evaluate(() => ({
+    url: new URL(window.location.href).pathname + new URL(window.location.href).search,
+    message: document.querySelector(".game-message__text")?.textContent?.trim() ?? null,
+    joinField: Boolean(document.querySelector(".blurt__join input")),
+  }));
+  console.log("   a dead link ended at:", ended.url, "saying", JSON.stringify(ended.message));
+  check(ended.url === "/blurt", `a dead link returns to the join screen (got ${ended.url})`);
+  check(ended.message === "No game with that code",
+    `and says why (got ${JSON.stringify(ended.message)})`);
+  check(ended.joinField, "with the code field ready to type in");
+  check(raised.length === 0, `and raises nothing (got ${JSON.stringify(raised)})`);
+  await context.close();
+}
+
 await browser.close();
 console.log(failures.length ? `\n${failures.length} CHECK(S) FAILED` : "\nAll checks passed.");
 process.exit(failures.length ? 1 : 0);

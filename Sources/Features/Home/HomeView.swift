@@ -21,6 +21,8 @@ struct HomeView: View {
                     GameCard(entry: entry)
                 }
 
+                playInBrowserCard
+
                 footer
             }
             .padding(.horizontal, 20)
@@ -111,6 +113,84 @@ struct HomeView: View {
         .buttonStyle(.plain)
         .padding(.top, 4)
         .accessibilityIdentifier("hub.playerName")
+    }
+
+    /// The browser version is live, so it is a place to play rather than a line
+    /// about something on its way. The whole card is the `Link`, because a card
+    /// that looked tappable next to a QR code should open the same thing the QR
+    /// code does. Same margins, radius, fill and type as the game cards around
+    /// it.
+    private var playInBrowserCard: some View {
+        Link(destination: Support.playURL) {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Play in your browser")
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
+                        .foregroundStyle(VibeTheme.primaryText)
+
+                    // No count in the copy: the number of games goes stale, and
+                    // the suite stopped saying "five" for that reason.
+                    Text("The same games, nothing to install.")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: 14) {
+                    qrPlate
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("play.vibegames.party")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(VibeTheme.primaryText)
+
+                        Text("Scan with another device, or tap to open.")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(VibeTheme.tertiaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(VibeTheme.tertiaryText)
+                }
+            }
+            .padding(16)
+            .background {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(VibeTheme.surface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(VibeTheme.hairline, lineWidth: 1)
+                    }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        }
+        .buttonStyle(PressableCardStyle())
+        .accessibilityLabel("Play in your browser. The same games, nothing to install. play.vibegames.party")
+        .accessibilityHint("Opens play.vibegames.party")
+        .accessibilityIdentifier("hub.playInBrowser")
+    }
+
+    /// Black on white in both appearances, with its own quiet zone. A QR code on
+    /// the dark card would not scan, and this is the one place a bare white is
+    /// right: the code is fixed black-on-white rather than a themed colour.
+    private var qrPlate: some View {
+        Image("browser-qr")
+            .resizable()
+            .interpolation(.none)
+            .scaledToFit()
+            .frame(width: 120, height: 120)
+            .padding(10)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white)
+            }
+            // The URL beside it is the readable version, so the picture says
+            // nothing VoiceOver needs to hear twice.
+            .accessibilityHidden(true)
     }
 
     private var footer: some View {

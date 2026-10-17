@@ -153,7 +153,10 @@ export function observeGame(
       // (`length >= 1`), and a refused write is silent — which is how a phone
       // sat in a team, invisible to the roster and skipped by the rotation.
       if (!name) return;
-      void ensurePresent(gameId, playerId, name);
+      // A floating promise here is what filed a crash report: a room that had
+      // been pruned refuses the write, and nothing was catching it. Presence is
+      // best-effort — the roster is the room's, not this tab's.
+      void ensurePresent(gameId, playerId, name).catch(() => undefined);
     }),
   ];
 
@@ -240,8 +243,17 @@ export async function createGame(
 }
 
 export async function joinGame(gameId: string, playerId: string, name: string): Promise<void> {
+  // Look before knocking. A room that is not there has nothing to join, and the
+  // presence write would try to *create* it — which the rules refuse, because a
+  // guest must never manufacture a room. That refusal is what reached the crash
+  // reporter, labelled only "PERMISSION_DENIED: Permission denied".
+  const meta = await get(ref(database, `blurt/${gameId}/meta`));
+  if (!meta.exists()) throw new Error(NO_GAME);
   await ensurePresent(gameId, playerId, name);
 }
+
+/** What a player is told when a code does not name a room. */
+export const NO_GAME = 'No game with that code';
 
 /** The room's settings, so the lobby shows everyone the same thing. */
 export async function updateSettings(

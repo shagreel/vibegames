@@ -66,36 +66,47 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 page.on("pageerror", (e) => console.log("  [page error]", String(e).slice(0, 160)));
 
-// ── a visit with no code gets a room of its own ──────────────────────────
+// ── a visit with no code is a menu, not a room ───────────────────────────
+//
+// It used to mint a code on arrival, which made solo play a room that was never
+// written: the listeners for it told the solo round it had not started, and
+// "play again" tried to write a word into a room that did not exist.
 await page.goto(`${SITE}/words`, { waitUntil: "networkidle0" });
-await page.waitForSelector(".name-input", { timeout: 15000 });
+await page.waitForSelector(".lobby-card", { timeout: 15000 });
 
-const firstUrl = new URL(page.url());
-const firstCode = firstUrl.searchParams.get("game") ?? "";
-say("the address bar gained:", firstCode);
-check(/^[a-z]{4}-[a-z]{4}$/.test(firstCode),
-  `a first visit is put in a room of its own (got ${JSON.stringify(firstCode)})`);
+const bareUrl = new URL(page.url());
+check(!bareUrl.searchParams.get("game"),
+  `a first visit is not put in a room (got ${JSON.stringify(bareUrl.search)})`);
+check(await page.$(".name-input") === null,
+  "and it does not ask for a name before there is anybody to tell it to");
 
-// ── and a refresh comes back to the same room ────────────────────────────
-await page.reload({ waitUntil: "networkidle0" });
+// ── choosing a room is what makes one ────────────────────────────────────
+await clickByText(".lobby-card", "Race your friends");
 await page.waitForSelector(".name-input", { timeout: 15000 });
-const afterReload = new URL(page.url()).searchParams.get("game") ?? "";
-check(afterReload === firstCode,
-  `a reload keeps the room (was ${firstCode}, now ${afterReload || "nothing"})`);
-
-// A code that arrived in a link may have been retyped by hand: capitals, and a
-// space where the screen showed one.
-const retyped = firstCode.replace("-", " ").toUpperCase();
-await page.goto(`${SITE}/words?game=${encodeURIComponent(retyped)}`, { waitUntil: "networkidle0" });
-await page.waitForSelector(".name-input", { timeout: 15000 });
-const normalised = new URL(page.url()).searchParams.get("game") ?? "";
-check(normalised === firstCode,
-  `a code retyped from the screen lands in the same room (got ${normalised})`);
 
 // ── a name is asked for once ─────────────────────────────────────────────
 await page.type(".name-input", "Tester");
 await page.click(".name-submit-button");
 await page.waitForSelector(".start-game-button", { timeout: 10000 });
+
+const firstUrl = new URL(page.url());
+check(!firstUrl.searchParams.get("game"),
+  "the room is not minted until the game is created");
+
+await clickByText(".start-game-button", "Create Game");
+await sleep(2500);
+const firstCode = new URL(page.url()).searchParams.get("game") ?? "";
+say("the address bar gained:", firstCode);
+check(/^[a-z]{4}-[a-z]{4}$/.test(firstCode),
+  `creating a game puts its code in the address bar (got ${JSON.stringify(firstCode)})`);
+
+// ── and a refresh comes back to the same room ────────────────────────────
+await page.reload({ waitUntil: "networkidle0" });
+await sleep(1200);
+const afterReload = new URL(page.url()).searchParams.get("game") ?? "";
+check(afterReload === firstCode,
+  `a reload keeps the room (was ${firstCode}, now ${afterReload || "nothing"})`);
+
 
 // ── create it, then start it ─────────────────────────────────────────────
 async function clickByText(selector, text) {
@@ -114,8 +125,6 @@ async function clickByText(selector, text) {
   if (!clicked) throw new Error(`no ${selector} saying ${text}`);
 }
 
-await clickByText(".start-game-button", "Create Game");
-await sleep(2500);
 await clickByText(".start-game-button", "Start Game");
 await sleep(2500);
 
@@ -124,7 +133,7 @@ await sleep(2500);
 await page.keyboard.type("ZZZZZ");
 await page.keyboard.press("Enter");
 await sleep(600);
-const refusal = await page.$eval(".message", (el) => el.textContent.trim()).catch(() => null);
+const refusal = await page.$eval(".game-message__text", (el) => el.textContent.trim()).catch(() => null);
 check(refusal === "Not in word list",
   `the started board accepts input (got ${JSON.stringify(refusal)})`);
 
@@ -162,6 +171,17 @@ await page.reload({ waitUntil: "networkidle0" });
 await sleep(1200);
 const askedAgain = await page.$(".name-input");
 check(askedAgain === null, "the remembered name is not asked for again");
+
+// ── a code retyped from the screen lands in the same room ───────────────
+// Capitals, and a space where the screen showed one.
+const retyped = firstCode.replace("-", " ").toUpperCase();
+await page.goto(`${SITE}/words?game=${encodeURIComponent(retyped)}`, { waitUntil: "networkidle0" });
+await sleep(1500);
+const normalised = new URL(page.url()).searchParams.get("game") ?? "";
+check(normalised === firstCode,
+  `a code retyped from the screen lands in the room it names (got ${JSON.stringify(normalised)})`);
+check(await page.$(".grid") !== null,
+  "and arriving that way goes straight back to the live board");
 
 await browser.close();
 

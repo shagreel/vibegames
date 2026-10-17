@@ -21,7 +21,7 @@ const { logger } = require("firebase-functions");
 const { initializeApp } = require("firebase-admin/app");
 const { getDatabase } = require("firebase-admin/database");
 
-const { MAX_AGE_HOURS, TREES, doomed } = require("./prune");
+const { FEEDBACK_MAX_AGE_HOURS, MAX_AGE_HOURS, TREES, doomed } = require("./prune");
 
 initializeApp();
 
@@ -59,6 +59,19 @@ async function prune(now = Date.now()) {
     await database.ref(tree).update(stale);
     deleted += count;
     logger.info(`/${tree}: deleted ${count}`, { codes: Object.keys(stale) });
+  }
+
+  // The feedback inbox: every note in it is already an issue, so a month-old
+  // entry is a public copy of something permanent that nobody needs to keep.
+  const inbox = await database.ref("feedback").get();
+  if (inbox.exists()) {
+    const stale = doomed(inbox.val(), "createdAt", now, FEEDBACK_MAX_AGE_HOURS);
+    const count = Object.keys(stale).length;
+    if (count > 0) {
+      await database.ref("feedback").update(stale);
+      deleted += count;
+      logger.info(`/feedback: deleted ${count}`);
+    }
   }
 
   logger.info(`done: deleted ${deleted}, kept ${kept}, older than ${MAX_AGE_HOURS}h`);

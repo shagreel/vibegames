@@ -218,10 +218,12 @@ final class HomeUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
 
-        // "Other ways to help" as a heading is fine; a route to somewhere else
-        // that takes money is not. So the markers are the names of other payment
-        // services and the website that carries one, not the words.
-        let elsewhere = ["venmo", "paypal", "cash.app", "vibegames.party"]
+        // A heading is fine; a route to somewhere else that takes money is not.
+        // So the markers are the names of the payment services and of the page
+        // that carries them — not the words, and not the site itself. The hub
+        // names `play.vibegames.party` on purpose: it is the way to the same free
+        // games in a browser, which is not a way to pay for anything.
+        let elsewhere = ["venmo", "paypal", "cash.app", "ways-to-help"]
 
         func offersAnotherWayToPay() -> String? {
             for marker in elsewhere {

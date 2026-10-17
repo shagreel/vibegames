@@ -232,7 +232,7 @@ struct VibeTrioView: View {
             header(title: "VIBE PAIRINGS", subtitle: gameSubtitle)
             statusArea
             if model.isFinished {
-                leaderboard
+                roundOverPanel
             } else {
                 board
                 bottomBar
@@ -403,32 +403,43 @@ struct VibeTrioView: View {
         }
     }
 
+    /// The end of the game, in the suite's one treatment for it.
+    ///
+    /// The standings are this game's own addition: the panel's title says who
+    /// won, and these say what each player took. The panel carries `trio.result`
+    /// — it is the whole result now, not the one line of text that used to say
+    /// it — and the standings keep the identifier the UI tests wait for.
+    private var roundOverPanel: some View {
+        RoundOverPanel(title: resultTitle,
+                       detail: resultDetail,
+                       accent: AnyShapeStyle(VibeTheme.vibeTrio),
+                       primaryIdentifier: "trio.playAgain",
+                       action: { Task { await model.playAgain() } }) {
+            standings
+        }
+        // Grouped, not propagated: without this the identifier would be copied
+        // onto every child, including the button.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("trio.result")
+    }
+
+    /// The score line under the result, in the words the leaderboard used.
+    private var resultDetail: String {
+        if model.isShared {
+            return "\(model.formattedElapsed) · \(model.playerCount == 1 ? "1 player" : "\(model.playerCount) players")"
+        }
+        return "\(model.myScore == 1 ? "1 good pairing" : "\(model.myScore) good pairings") in \(model.formattedElapsed)"
+    }
+
     /// The end state: who took what, best first, ties level at the top.
     ///
     /// Only players who took something appear, because only a take carries a
     /// name — and taking two when the whole table is hunting is worth a trophy.
-    private var leaderboard: some View {
+    private var standings: some View {
         let rows = model.standings
         let best = rows.first?.score ?? 0
 
-        return VStack(spacing: 12) {
-            VStack(spacing: 4) {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(VibeTheme.vibeTrio)
-                Text(resultTitle)
-                    .font(.system(size: 22, weight: .black, design: .rounded))
-                    .foregroundStyle(VibeTheme.primaryText)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("trio.result")
-                Text(model.isShared
-                     ? "\(model.formattedElapsed) · \(model.playerCount == 1 ? "1 player" : "\(model.playerCount) players")"
-                     : "\(model.myScore == 1 ? "1 good pairing" : "\(model.myScore) good pairings") in \(model.formattedElapsed)")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-            }
-            .padding(.top, 8)
-
+        return VStack(spacing: 10) {
             if rows.isEmpty {
                 Text("Nobody cleared a good pairing this time.")
                     .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -447,12 +458,8 @@ struct VibeTrioView: View {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(VibeTheme.hairline, lineWidth: 1)
                 }
-                .padding(.horizontal, 18)
             }
-
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("trio.leaderboard")
     }
@@ -563,17 +570,9 @@ struct VibeTrioView: View {
 
                 GameSettingsButton(prefix: "trio") { showingSettings = true }
 
-                if model.isFinished {
-                    Button("Play again") {
-                        Task { await model.playAgain() }
-                    }
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .background { Capsule().fill(VibeTheme.vibeTrio) }
-                    .accessibilityIdentifier("trio.playAgain")
-                } else if model.isShared {
+                // The way to start another deck used to live here, in a pill in
+                // the corner. It is the panel's button now.
+                if model.isShared {
                     ShareLink(item: shareText) {
                         Image(systemName: "square.and.arrow.up")
                     }

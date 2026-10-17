@@ -232,6 +232,10 @@ struct VibeWordsView: View {
         VStack(spacing: 0) {
             header(title: "WORD VIBE", subtitle: gameSubtitle)
             statusArea
+            if model.isRoundOver {
+                roundOverPanel
+                    .padding(.bottom, 8)
+            }
             VibeWordsBoardView(guesses: model.guesses,
                                currentGuess: model.currentGuess,
                                answer: model.answer,
@@ -257,6 +261,19 @@ struct VibeWordsView: View {
         return "Solo game"
     }
 
+    /// The end of the round, in the suite's one treatment for it.
+    ///
+    /// The `words.playAgain` identifier lives here rather than in the header:
+    /// that is what the UI tests tap, and the button it names has moved.
+    private var roundOverPanel: some View {
+        RoundOverPanel(title: model.won ? "Solved!" : "The word was \(model.answer)",
+                       detail: model.won ? "In \(model.guesses.count) guesses" : "The next one is a new word.",
+                       accent: AnyShapeStyle(VibeTheme.vibeWords),
+                       primaryIdentifier: "words.playAgain") {
+            Task { await model.playAgain() }
+        }
+    }
+
     @ViewBuilder
     private var statusArea: some View {
         if let countdown = model.countdown {
@@ -273,11 +290,17 @@ struct VibeWordsView: View {
             .accessibilityIdentifier("words.countdown")
         } else if model.isWaitingForHost {
             waitingPanel
-        } else if let winner = model.snapshot.winner, winner.name != model.playerName {
-            banner("\(winner.name) solved it first!", symbol: "trophy.fill", tint: VibeTheme.tilePresent)
+        } else if model.isRoundOver {
+            // The panel below says how the round ended. The one thing it cannot
+            // say is who got there first when that was somebody else, so that is
+            // all that is left here.
+            if let winner = model.snapshot.winner, winner.name != model.playerName {
+                banner("\(winner.name) solved it first!", symbol: "trophy.fill", tint: VibeTheme.tilePresent)
+            }
         } else if let message = model.message {
-            banner(message, symbol: model.won ? "checkmark.circle.fill" : "info.circle.fill",
-                   tint: model.won ? VibeTheme.tileCorrect : VibeTheme.warn)
+            // Refusals and errors. The won/lost copy now belongs to the panel,
+            // so it never reaches this line.
+            banner(message, symbol: "info.circle.fill", tint: VibeTheme.warn)
         }
     }
 
@@ -347,17 +370,9 @@ struct VibeWordsView: View {
 
                 GameSettingsButton(prefix: "words") { showingSettings = true }
 
-                if model.isRoundOver {
-                    Button("Play again") {
-                        Task { await model.playAgain() }
-                    }
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(VibeTheme.primaryText)
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .background { Capsule().fill(VibeTheme.vibeWords) }
-                    .accessibilityIdentifier("words.playAgain")
-                } else if model.isShared {
+                // The way to start another round used to live here, in a pill in
+                // the corner. It is the panel's button now.
+                if model.isShared {
                     ShareLink(item: shareText) {
                         Image(systemName: "square.and.arrow.up")
                     }

@@ -6,6 +6,7 @@ build step, no dependencies, nothing to install.
 ```
 site/
   index.html
+  about.html          who makes the games, and why they are free
   ways-to-help.html   what the app's "Ways to help" link opens
   support.html        the support URL the App Store listing asks for
   privacy.html        the privacy policy URL, and what the app actually does

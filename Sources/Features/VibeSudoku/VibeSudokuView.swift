@@ -267,6 +267,11 @@ struct VibeSudokuView: View {
             header(title: "NUMBER VIBE", subtitle: gameSubtitle)
             statusArea
 
+            if model.isRoundOver {
+                roundOverPanel
+                    .padding(.bottom, 8)
+            }
+
             if let puzzle = model.puzzle {
                 SudokuBoardView(puzzle: puzzle,
                                 values: model.values,
@@ -306,6 +311,43 @@ struct VibeSudokuView: View {
         return parts.joined(separator: " · ")
     }
 
+    /// The end of the board, in the suite's one treatment for it.
+    ///
+    /// The next board's difficulty is chosen here, where the player is about to
+    /// start it, rather than only in the lobby — having to leave the screen to
+    /// change it is how that setting went unused. A shared board is the host's
+    /// choice, so the picker is solo only.
+    private var roundOverPanel: some View {
+        RoundOverPanel(
+            title: model.solved ? "Solved!" : "\(model.snapshot.winner?.name ?? "Someone") finished first",
+            detail: "\(model.filledCount) of 81 · \(model.formattedElapsed)",
+            accent: AnyShapeStyle(VibeTheme.vibeSudoku),
+            primaryIdentifier: "sudoku.playAgain",
+            action: { Task { await model.playAgain() } }
+        ) {
+            if !model.isShared {
+                nextBoardDifficulty
+            }
+        }
+    }
+
+    private var nextBoardDifficulty: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Next board")
+                .font(.system(size: 12, weight: .black, design: .rounded))
+                .kerning(1.2)
+                .foregroundStyle(VibeTheme.tertiaryText)
+
+            Picker("Difficulty for the next board", selection: $model.difficulty) {
+                ForEach(SudokuDifficulty.allCases) { difficulty in
+                    Text(difficulty.title).tag(difficulty)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("sudoku.roundOver.difficulty")
+        }
+    }
+
     @ViewBuilder
     private var statusArea: some View {
         if let countdown = model.countdown {
@@ -324,13 +366,9 @@ struct VibeSudokuView: View {
             banner(notice, symbol: "pencil", tint: VibeTheme.tertiaryText)
         } else if model.isWaitingForHost {
             waitingPanel
-        } else if model.solved {
-            banner("Solved in \(model.formattedElapsed)!", symbol: "checkmark.circle.fill",
-                   tint: VibeTheme.tileCorrect)
-        } else if let winner = model.snapshot.winner, winner.name != model.playerName {
-            banner("\(winner.name) finished first!", symbol: "trophy.fill",
-                   tint: VibeTheme.tilePresent)
         } else if let error = model.errorMessage {
+            // The solved/finished lines moved into the panel. What is left here
+            // is what the panel cannot say — a restart that would not start.
             banner(error, symbol: "exclamationmark.triangle.fill", tint: VibeTheme.warn)
         }
     }
@@ -400,17 +438,9 @@ struct VibeSudokuView: View {
                 // notes per square is a setting, and settings live behind it.
                 GameSettingsButton(prefix: "sudoku") { isShowingSettings = true }
 
-                if model.isRoundOver {
-                    Button("Play again") {
-                        Task { await model.playAgain() }
-                    }
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(VibeTheme.primaryText)
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .background { Capsule().fill(VibeTheme.vibeSudoku) }
-                    .accessibilityIdentifier("sudoku.playAgain")
-                } else if model.isShared {
+                // The way to start another board used to live here, in a pill in
+                // the corner. It is the panel's button now.
+                if model.isShared {
                     ShareLink(item: shareText) {
                         Image(systemName: "square.and.arrow.up")
                     }

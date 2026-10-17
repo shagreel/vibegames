@@ -32,14 +32,6 @@
   cursor: pointer;
 }
 
-.sudoku__notice {
-  margin: 0 auto;
-  padding: 0.4rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--notice);
-}
-
 /* ── board ─────────────────────────────────────────────────────────────── */
 
 .sudoku__board {
@@ -385,41 +377,9 @@
 
 /* ── result ────────────────────────────────────────────────────────────── */
 
-.sudoku__result {
-  position: fixed;
-  inset: auto 0 0 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 1.4rem 1.5rem calc(1.4rem + env(safe-area-inset-bottom));
-  border-radius: 1.6rem 1.6rem 0 0;
-  background: var(--surface);
-  border-top: 1px solid var(--line-soft);
-  animation: sudoku-rise 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-  z-index: 20;
-}
-
 @keyframes sudoku-rise {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
-}
-
-.sudoku__trophy {
-  margin: 0;
-  font-size: 2rem;
-}
-
-.sudoku__result h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
-}
-
-.sudoku__result p {
-  margin: 0;
-  color: var(--ink-faint);
-  font-size: 0.9rem;
 }
 
 /* ── countdown ─────────────────────────────────────────────────────────── */

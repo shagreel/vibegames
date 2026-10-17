@@ -756,58 +756,52 @@ struct VibeBlurtView: View {
             Spacer()
 
             if let winner = model.winner {
-                Text("\(winner.title) wins")
-                    .font(.system(size: 34, weight: .black, design: .rounded))
-                    .foregroundStyle(VibeTheme.blurtTeam(winner))
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("blurt.winner")
-            }
-
-            HStack(spacing: 10) {
-                ForEach(BlurtTeam.allCases, id: \.rawValue) { team in
-                    VStack(spacing: 4) {
-                        Text(team.title.uppercased())
-                            .font(.system(size: 11, weight: .black, design: .rounded))
-                            .kerning(1.2)
-                        Text("\(model.score(of: team))")
-                            .font(.system(size: 40, weight: .black, design: .rounded))
-                        Text(model.names(on: team).joined(separator: ", "))
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(VibeTheme.blurtTeam(team)
-                                .opacity(model.myTeam == team ? 1 : 0.5))
-                    }
+                RoundOverPanel(
+                    title: "\(winner.title) wins",
+                    detail: "\(model.score(of: .one)) – \(model.score(of: .two))",
+                    accent: AnyShapeStyle(VibeTheme.vibeBlurt),
+                    primaryIdentifier: "blurt.playAgain",
+                    action: { Task { await model.playAgain() } }
+                ) {
+                    teamScores
                 }
+                // The panel is the winner announcement now, so it carries the
+                // identifier the title used to. Grouped rather than propagated,
+                // so the button underneath keeps its own.
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("blurt.winner")
             }
-            .padding(.horizontal, 20)
 
             Spacer()
-
-            Button {
-                Task { await model.playAgain() }
-            } label: {
-                Text("Play again")
-                    .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(VibeTheme.vibeBlurt)
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("blurt.playAgain")
-            .padding(.horizontal, 20)
         }
         .padding(.bottom, 20)
+    }
+
+    /// Both teams' totals, and who was on each side.
+    private var teamScores: some View {
+        HStack(spacing: 10) {
+            ForEach(BlurtTeam.allCases, id: \.rawValue) { team in
+                VStack(spacing: 4) {
+                    Text(team.title.uppercased())
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .kerning(1.2)
+                    Text("\(model.score(of: team))")
+                        .font(.system(size: 40, weight: .black, design: .rounded))
+                    Text(model.names(on: team).joined(separator: ", "))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(VibeTheme.blurtTeam(team)
+                            .opacity(model.myTeam == team ? 1 : 0.5))
+                }
+            }
+        }
     }
 
     // MARK: - Shared pieces

@@ -96,7 +96,10 @@ describe('formatReport', () => {
     const lines = report.split('\n');
 
     expect(lines[0]).toBe('TypeError: boom');
-    expect(report).toContain('Page: /trio?game=abc12345');
+    // The path, without the room code: a report becomes a public issue, and the
+    // code is a key to a room somebody may still be playing in.
+    expect(report).toContain('Page: /trio');
+    expect(report).not.toContain('?game=');
     expect(report).toContain('Browser: Mozilla/5.0 (Test)');
   });
 

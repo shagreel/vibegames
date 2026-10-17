@@ -136,7 +136,9 @@ export function trackPageView(path: string): void {
 
   track('page_view', () => ({
     page_path: path,
-    page_location: window.location.href,
+    // Deliberately not `page_location`: that is the whole URL, and a game URL
+    // carries the room code. The page view is about the screen, not the room.
+    page_location: `${window.location.origin}${path}`,
     page_title: document.title,
     screen_name: SCREENS[path] ?? 'unknown',
   }));

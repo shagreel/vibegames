@@ -22,11 +22,43 @@ enum PlayerIdentity {
     /// value counts, so the exact word is not load-bearing.
     static let askedValue = "yes"
 
-    /// The name as it should be shown and stored: trimmed, and nil rather than
+    /// The longest name anybody may have.
+    ///
+    /// The database has always capped a name at 24 characters and the clients
+    /// did not, so a longer name failed every write it was part of — joining a
+    /// room, being listed in it, recording a win — with a bare
+    /// `PERMISSION_DENIED`. One number, here and in the web client, and the
+    /// same one as the rules.
+    static let maxNameLength = 24
+
+    /// The name as it should be shown and stored: trimmed, without the
+    /// invisible characters a name must not carry, capped, and nil rather than
     /// blank, so a field full of spaces never counts as a name.
+    ///
+    /// The invisible ones are the zero-width characters and the bidi overrides
+    /// that let one player's name render as another's in a room's list.
     static func clean(_ raw: String?) -> String? {
-        let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        let stripped = (raw ?? "").unicodeScalars.filter { scalar in
+            let value = scalar.value
+            let control = value < 0x20 || (value >= 0x7F && value <= 0x9F)
+            let invisible = value >= 0x200B && value <= 0x200F
+            let bidi = value >= 0x202A && value <= 0x202E
+            let isolates = value >= 0x2066 && value <= 0x2069
+            return !control && !invisible && !bidi && !isolates
+        }
+
+        let trimmed = String(String.UnicodeScalarView(stripped))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return String(trimmed.prefix(maxNameLength))
+    }
+
+    /// Forgets the name, leaving the install and its id alone.
+    ///
+    /// The privacy page tells people they can clear it; until now the only way
+    /// was to type a different one.
+    static func forgetName() {
+        UserDefaults.standard.removeObject(forKey: nameKey)
     }
 
     /// Migrates the older Vibe-Words-only keys if they are present, so an

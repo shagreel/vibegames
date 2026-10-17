@@ -32,34 +32,6 @@
   gap: 1rem;
 }
 
-.message {
-  background-color: var(--ink);
-  color: var(--page);
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.25rem;
-  font-weight: 600;
-  animation: slideDown 0.3s ease-out;
-  min-height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.message.success {
-  background-color: #6aaa64;
-  color: #ffffff;
-}
-
-.message.share-message {
-  background-color: #538d4e;
-  color: #ffffff;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-1rem);
-  }
   to {
     opacity: 1;
     transform: translateY(0);
@@ -338,18 +310,6 @@
 }
 
 /* Winner announcement */
-.winner-announcement {
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: var(--on-accent);
-  padding: 1rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: bold;
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
-  animation: slideDown 0.3s ease-out, pulse 2s ease-in-out infinite;
-  box-shadow: 0 4px 6px rgba(255, 215, 0, 0.3);
-}
-
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);

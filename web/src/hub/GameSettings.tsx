@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { playerName, setPlayerName } from '../identity';
+import { MAX_NAME_LENGTH, cleanName, forgetPlayerName, playerName, setPlayerName } from '../identity';
 import {
   subscribeTheme,
   setThemePreference,
@@ -89,7 +89,21 @@ export function GameSettings({
       <div className="game-sheet">
         <h2>Game settings</h2>
 
-        <h3>Your name</h3>
+        <h3>
+          <span>Your name</span>
+          {name && (
+            <button
+              type="button"
+              className="game-sheet__forget"
+              onClick={() => {
+                forgetPlayerName();
+                setName('');
+              }}
+            >
+              Forget it
+            </button>
+          )}
+        </h3>
         <input
           className="game-sheet__field"
           type="text"
@@ -97,13 +111,18 @@ export function GameSettings({
           placeholder="Your name"
           aria-label="Your name"
           autoComplete="off"
+          maxLength={MAX_NAME_LENGTH}
           onChange={(event) => {
-            setName(event.target.value);
-            const trimmed = event.target.value.trim();
-            if (trimmed) setPlayerName(trimmed);
+            // The field keeps exactly what was typed — trimming it as it is
+            // typed makes the space between two words impossible to type — and
+            // the stored name is the cleaned form.
+            const typed = event.target.value.slice(0, MAX_NAME_LENGTH);
+            setName(typed);
+            const stored = cleanName(typed);
+            if (stored) setPlayerName(stored);
           }}
         />
-        <p>Shown to everyone in a game you play together.</p>
+        <p>Shown to everyone in a game you play together. Up to {MAX_NAME_LENGTH} characters.</p>
 
         <h3>Appearance</h3>
         <div className="game-sheet__choices" role="group" aria-label="Appearance">

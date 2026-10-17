@@ -9,8 +9,10 @@ import {
   SettingsSection,
   SettingsToggle,
 } from '../../hub/GameSettings';
+import { GameMessage } from '../../hub/GameMessage';
+import { RoundOver, RoundOverChoices } from '../../hub/RoundOver';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
-import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
+import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import {
   CELL_COUNT,
   NOTE_LIMITS,
@@ -455,7 +457,7 @@ function VibeSudoku() {
         )}
       </GameHeader>
 
-      {notice && <div className="sudoku__notice">{notice}</div>}
+      <GameMessage text={notice || null} tone={notice ? 'warn' : 'info'} />
 
       {screen === 'lobby' ? (
         <Lobby
@@ -502,24 +504,29 @@ function VibeSudoku() {
       )}
 
       {roundOver && screen === 'game' && (
-        <div className="sudoku__result">
-          <p className="sudoku__trophy" aria-hidden="true">
-            🏆
-          </p>
-          <h2>
-            {solved
+        <RoundOver
+          title={
+            solved
               ? gameId
                 ? 'You finished it!'
                 : 'Solved!'
-              : `${snapshot.winner?.name ?? 'Someone'} finished first`}
-          </h2>
-          <p>
-            {filled} of {CELL_COUNT} · {formatElapsed(elapsed)}
-          </p>
-          <button type="button" className="sudoku__start" onClick={playAgain}>
-            Play again
-          </button>
-        </div>
+              : `${snapshot.winner?.name ?? 'Someone'} finished first`
+          }
+          detail={`${filled} of ${CELL_COUNT} · ${formatElapsed(elapsed)}`}
+          onPrimary={playAgain}
+        >
+          {/* Choosing the next board's difficulty belongs here, where you are
+              about to start it, rather than only in the lobby. A shared board
+              is the host's choice, so this is solo only. */}
+          {!gameId && (
+            <RoundOverChoices
+              label="Difficulty for the next board"
+              options={DIFFICULTIES}
+              value={difficulty}
+              onChange={(id) => setDifficulty(id as Difficulty)}
+            />
+          )}
+        </RoundOver>
       )}
 
       {countdown !== null && (
@@ -810,7 +817,7 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string | null) => void }) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Your name"
-          maxLength={24}
+          maxLength={MAX_NAME_LENGTH}
           autoFocus
           autoComplete="off"
         />

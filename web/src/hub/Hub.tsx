@@ -69,7 +69,14 @@ function Hub() {
         </ul>
 
         <footer className="hub__footer">
-          <a href="https://vibegames.party">About Vibe Games</a>
+          {/* The two pages the App Store listing asks for, and the one that says
+              who makes this. The app has had all three on its hub all along;
+              the menu here had only the last one. */}
+          <a href="https://vibegames.party/about">About Vibe Games</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://vibegames.party/support">Support</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://vibegames.party/privacy">Privacy</a>
         </footer>
       </div>
     </div>

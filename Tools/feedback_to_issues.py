@@ -85,8 +85,19 @@ def fetch_inbox(database: str) -> dict:
 
 
 def marker_keys(text: str) -> set[str]:
-    """The feedback keys an issue body claims to be about."""
-    return set(MARKER_PATTERN.findall(text or ""))
+    """The feedback key an issue body claims to be about.
+
+    Only the last non-empty line counts, and only if it is the marker on its
+    own. Reading every marker anywhere in the body let a note about somebody
+    else's key — and the inbox is public, so the keys are readable — suppress
+    that person's real report for good: the drain would think it had already
+    been filed.
+    """
+    lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    if not lines:
+        return set()
+    match = MARKER_PATTERN.fullmatch(lines[-1])
+    return {match.group(1)} if match else set()
 
 
 def already_synced(repo: str, token: str) -> set[str]:
@@ -143,19 +154,51 @@ def title_for(entry: dict) -> str:
     # A crash report's first line is the exception, which makes a better title
     # than the top of its stack.
     text = " ".join(str(entry.get("text", "")).splitlines()[0:1]).strip()
+    text = re.sub(r"<!--|-->|@", "", text)
     if len(text) > 70:
         text = text[:67].rstrip() + "…"
     prefix = "Crash: " if is_crash(entry) else "Feedback: "
+    text = INVISIBLE.sub("", text)
     return prefix + text if text else ("Crash" if is_crash(entry) else "Feedback")
+
+
+# Characters a note may not carry: C0/C1 controls, the invisible zero-width
+# characters and the bidi overrides. The rules let a name or a note carry them,
+# and they reach a terminal and a browser as something nobody wrote.
+INVISIBLE = re.compile(
+    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]"
+)
+
+
+def clean_text(raw) -> str:
+    """A note as it should appear in an issue: no invisibles, no HTML comments,
+    and no live `@mention`."""
+    text = INVISIBLE.sub("", str(raw or ""))
+    # An HTML comment can hide the rest of the body — including the marker and
+    # the line that says where the note came from — from anybody reading it.
+    text = text.replace("<!--", "<! --").replace("-->", "-- >")
+    # A mention notifies a stranger; the zero-width space keeps the text
+    # readable and the notification dead.
+    text = text.replace("@", "@\u200b")
+    return text.strip()[:2000]
 
 
 def body_for(key: str, entry: dict) -> str:
     stamped = entry.get("createdAt")
     try:
+        milliseconds = float(stamped) / 1000
+        # A note claiming to be from the year 100,000,000 is not a note with a
+        # bad timestamp, it is a note trying to sort first forever — and
+        # `fromtimestamp` raises `OverflowError` for it, which is not a
+        # `ValueError`. One of those took the whole drain down: the entry sorted
+        # first, could not be deleted, and every run died on it.
+        now = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        if not (0 <= milliseconds <= now + 86400):
+            raise ValueError("timestamp out of range")
         when = datetime.datetime.fromtimestamp(
-            float(stamped) / 1000, datetime.timezone.utc
+            milliseconds, datetime.timezone.utc
         ).strftime("%d %b %Y, %H:%M UTC")
-    except (TypeError, ValueError, OSError):
+    except (TypeError, ValueError, OSError, OverflowError, ArithmeticError):
         when = "unknown"
 
     phone = entry.get("source") == "ios"
@@ -175,7 +218,7 @@ def body_for(key: str, entry: dict) -> str:
         lead = "Someone typed this in and sent it."
 
     return (
-        f"{entry.get('text', '').strip()}\n\n"
+        f"{clean_text(entry.get('text'))}\n\n"
         "---\n\n"
         f"{lead}\n\n"
         f"Came from {where}. Received {when}.\n\n"

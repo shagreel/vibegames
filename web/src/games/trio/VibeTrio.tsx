@@ -20,12 +20,14 @@ import {
   type TrioSnapshot,
 } from './service';
 import { displayGameCode, normaliseGameCode } from '../../lib/gameCode';
-import { isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
+import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
 import { GameSettings, SettingsButton } from '../../hub/GameSettings';
+import { GameMessage } from '../../hub/GameMessage';
+import { RoundOver } from '../../hub/RoundOver';
 import './VibeTrio.css';
 
 /**
@@ -373,7 +375,7 @@ function VibeTrio() {
         )}
       </GameHeader>
 
-      {notice && <div className="trio__notice">{notice}</div>}
+      <GameMessage text={notice || null} tone={notice ? 'warn' : 'info'} />
 
       {settingsOpen && (
         <GameSettings prefix="trio" onClose={() => setSettingsOpen(false)} />
@@ -717,17 +719,15 @@ function Leaderboard(props: {
         : `Tie at ${best}`;
 
   return (
-    <div className="trio__leaderboard">
-      <p className="trio__trophy" aria-hidden="true">
-        🏆
-      </p>
-      <h2>{title}</h2>
-      <p className="trio__result-sub">
-        {props.gameId
+    <RoundOver
+      title={title}
+      detail={
+        props.gameId
           ? `${formatElapsed(props.elapsed)} · ${props.snapshot.playerCount} ${props.snapshot.playerCount === 1 ? 'player' : 'players'}`
-          : `${props.myTakes} ${props.myTakes === 1 ? 'good pairing' : 'good pairings'} in ${formatElapsed(props.elapsed)}`}
-      </p>
-
+          : `${props.myTakes} ${props.myTakes === 1 ? 'good pairing' : 'good pairings'} in ${formatElapsed(props.elapsed)}`
+      }
+      onPrimary={props.onPlayAgain}
+    >
       {rows.length > 0 && (
         <ol className="trio__standings">
           {rows.map((row, index) => (
@@ -740,11 +740,7 @@ function Leaderboard(props: {
           ))}
         </ol>
       )}
-
-      <button type="button" className="trio__start" onClick={props.onPlayAgain}>
-        Play again
-      </button>
-    </div>
+    </RoundOver>
   );
 }
 
@@ -798,7 +794,7 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string | null) => void }) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Your name"
-          maxLength={24}
+          maxLength={MAX_NAME_LENGTH}
           autoFocus
           autoComplete="off"
         />

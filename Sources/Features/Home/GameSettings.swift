@@ -135,7 +135,19 @@ struct GameSettingsSections: View {
 
     private var nameSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SettingsSectionTitle("Your name")
+            HStack(alignment: .firstTextBaseline) {
+                SettingsSectionTitle("Your name")
+                Spacer(minLength: 8)
+                if !draftName.isEmpty {
+                    Button("Forget it") {
+                        PlayerIdentity.forgetName()
+                        draftName = ""
+                    }
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .accessibilityIdentifier("gameSettings.forgetName")
+                }
+            }
 
             PlayerNameField(text: $draftName,
                             identifier: "gameSettings.nameField",
@@ -145,7 +157,7 @@ struct GameSettingsSections: View {
                 // is swiped away. A field left empty does not erase the name.
                 .onChange(of: draftName) { _, _ in commitName() }
 
-            Text("Shown to everyone in a game you play together.")
+            Text("Shown to everyone in a game you play together. Up to \(PlayerIdentity.maxNameLength) characters.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -172,6 +184,12 @@ struct GameSettingsSections: View {
     }
 
     private func commitName() {
+        // Trimmed and capped as it is typed: the rules refuse a name over 24
+        // characters, and a field that lets you type one is a field that lets
+        // you break every game you are in.
         if let clean = PlayerIdentity.clean(draftName) { PlayerIdentity.name = clean }
+        if draftName.count > PlayerIdentity.maxNameLength {
+            draftName = String(draftName.prefix(PlayerIdentity.maxNameLength))
+        }
     }
 }

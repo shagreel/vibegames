@@ -280,13 +280,29 @@ private struct FeedbackForm: View {
     }
 
     private var thanks: some View {
-        VStack(spacing: 4) {
-            Text("Thank you — that has gone straight to me.")
+        VStack(spacing: 8) {
+            Text("Thank you — it arrived.")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
-            Text("I read everything, even when I cannot reply to it.")
+            // What happens next, and a way back: a box that becomes a dead end
+            // makes people hold the second thought until tomorrow. The words
+            // match the web's panel, which is the same panel on a different
+            // screen.
+            Text("There is no reply by email, so this is where the note ends — it goes on the list and gets worked through. Found something else?")
                 .font(.system(size: 12.5, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button("Send another") {
+                text = ""
+                sent = false
+            }
+            .font(.system(size: 14, weight: .bold, design: .rounded))
+            .foregroundStyle(VibeTheme.primaryText)
+            .padding(.horizontal, 18)
+            .frame(height: 40)
+            .background { Capsule().fill(VibeTheme.surfaceStrong) }
+            .accessibilityIdentifier("feedback.sendAnother")
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)

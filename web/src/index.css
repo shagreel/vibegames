@@ -48,6 +48,8 @@
      is dark in both. */
   --on-accent: #1b1b1b;
   --danger: #ff8c8c;
+  --ok: #6aaa64;
+  --warn: #c9b458;
 
   /* The menu's title, which is painted with a gradient rather than a colour:
      white to a soft blue on the dark page, near-black to a deeper blue on the
@@ -100,6 +102,8 @@
   --key-ink: #17171a;
 
   --danger: #c02a24;
+  --ok: #4c8c46;
+  --warn: #a08125;
 
   --title-a: #17171a;
   --title-b: #4a5b7a;
@@ -407,6 +411,32 @@ body {
   color: var(--ink-muted);
 }
 
+/* The heading and the way to forget the name under it share a line. */
+.game-sheet h3 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.game-sheet__forget {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.game-sheet__forget:hover {
+  color: var(--ink);
+}
+
 .game-sheet__done {
   margin-top: 0.4rem;
   padding: 0.9rem 1.4rem;
@@ -556,4 +586,129 @@ body {
 
 .game-settings-button:hover {
   background: var(--raise-2);
+}
+
+/* ── a message that does not move the board ───────────────────────────────
+   Every game has one, and each one used to sit in the flow above the board, so
+   the board and the keyboard moved under the player's hands mid-word. This is a
+   toast under the header instead: fixed, out of the layout, and animated with
+   opacity alone so nothing near a `position: fixed` element carries a
+   transform. */
+.game-message {
+  position: fixed;
+  top: 4.9rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem;
+  pointer-events: none;
+  z-index: 35;
+}
+
+.game-message__text {
+  max-width: 26rem;
+  padding: 0.55rem 1.05rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.28);
+  animation: game-message-in 0.16s ease-out;
+}
+
+.game-message[data-tone='good'] .game-message__text {
+  border-color: transparent;
+  background: var(--ok);
+  color: #ffffff;
+}
+
+.game-message[data-tone='warn'] .game-message__text {
+  border-color: transparent;
+  background: var(--warn);
+  color: var(--on-accent);
+}
+
+@keyframes game-message-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── the end of a round ───────────────────────────────────────────────────
+   One shape for "it is over, here is what happened, start another": a card in
+   the game's own column, a line of detail, and the one button a player wants at
+   that moment — full width, because a small target in a corner is what this
+   replaced. */
+.round-over {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 26rem;
+  margin: 0.5rem auto 0;
+  padding: 1.15rem 1.2rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 1.4rem;
+  background: var(--surface);
+  text-align: center;
+}
+
+.round-over__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.round-over__detail {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.round-over__primary {
+  margin-top: 0.15rem;
+  padding: 0.9rem 1.4rem;
+  border: none;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--lobby-a, #4585f5), var(--lobby-b, #21b8a8));
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.round-over__primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.round-over__choices {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 1rem;
+  background: var(--raise);
+}
+
+.round-over__choice {
+  flex: 1;
+  padding: 0.55rem 0.4rem;
+  border: none;
+  border-radius: 0.8rem;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.round-over__choice[data-on='true'] {
+  background: var(--surface-2);
+  color: var(--ink);
 }
