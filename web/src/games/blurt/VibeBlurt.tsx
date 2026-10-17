@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
 import { GameSettings, SettingsButton, SettingsSection } from '../../hub/GameSettings';
+import { GameCodeBadge } from '../../hub/GameCodeBadge';
 import { GameMessage } from '../../hub/GameMessage';
 import { RoundOver } from '../../hub/RoundOver';
 import { MAX_NAME_LENGTH, hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
@@ -496,13 +497,11 @@ function VibeBlurt() {
       <div className="blurt">
         <BlurtHeader onLeave={leave} gameId={gameId} onShowSettings={() => setShowSettings(true)} />
         <div className="blurt__lobby">
-          <div className="blurt__code">
-            <span className="blurt__code-label">Read this out</span>
-            <strong className="blurt__code-value">{displayGameCode(gameId)}</strong>
-            <span className="blurt__code-hint">
-              Everyone else: Similar Vibe → Join with a code
-            </span>
-          </div>
+          <GameCodeBadge
+            code={gameId}
+            className="blurt__code-value"
+            hint="Everyone else: Similar Vibe → Join with a code"
+          />
 
           <section className="blurt__panel">
             <h2>In the room ({Object.keys(snapshot.players).length})</h2>

@@ -25,7 +25,19 @@ export function newTable(seed: number): TrioTable {
   });
 }
 
-/** Deals three more while the table has no trio but the deck still has cards. */
+/**
+ * Deals three more while the table has no trio, and gives them back as soon as
+ * they are not needed.
+ *
+ * The extra deal is a way out of a dead end, not a new table size: once a take
+ * leaves the original twelve with a trio among them, the three that were added
+ * go back to the top of the deck and the board is twelve again. Without this the
+ * table only ever grew — fifteen, eighteen — and the last cards dealt sat in the
+ * layout while the game went on among the first twelve.
+ *
+ * Returning them to the front of the deck, in the order they were dealt, is what
+ * keeps every device rebuilding the identical table from the same takes.
+ */
 function ensurePlayable(table: TrioTable): TrioTable {
   let visible = [...table.visible];
   let remaining = [...table.remaining];
@@ -36,6 +48,14 @@ function ensurePlayable(table: TrioTable): TrioTable {
     visible = [...visible, ...remaining.slice(0, take)];
     remaining = remaining.slice(take);
     extraDeals += 1;
+  }
+
+  if (visible.length > INITIAL_DEAL) {
+    const base = visible.slice(0, INITIAL_DEAL);
+    if (hasTrioAmong(base)) {
+      remaining = [...visible.slice(INITIAL_DEAL), ...remaining];
+      visible = base;
+    }
   }
 
   return { ...table, visible, remaining, extraDeals };

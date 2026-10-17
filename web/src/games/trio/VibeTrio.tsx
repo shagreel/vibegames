@@ -33,6 +33,7 @@ import {
   SettingsToggle,
 } from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
+import { GameCodeBadge } from '../../hub/GameCodeBadge';
 import { RoundOver } from '../../hub/RoundOver';
 import './VibeTrio.css';
 
@@ -115,14 +116,38 @@ function VibeTrio() {
 
   // MARK: - The game id in the URL
 
+  /**
+   * Arriving on a shared link is still joining.
+   *
+   * Setting the game id alone put the player in the room but not on the list:
+   * they could see the table and nobody could see them, which is exactly what a
+   * link is for. It also checked nothing — a pruned room left them staring at a
+   * lobby that would never start. This is what Number Vibe and Similar Vibe have
+   * always done.
+   */
+  const arrivedByLink = useRef(false);
   useEffect(() => {
     const typed = new URLSearchParams(window.location.search).get('game');
-    if (!typed) return;
+    if (!typed || arrivedByLink.current) return;
     // A code in a link may have been retyped by hand rather than copied.
     const wanted = normaliseGameCode(typed);
     if (!wanted) return;
-    setGameId(wanted);
-    setIsHost(isHosting(wanted));
+    arrivedByLink.current = true;
+
+    withName(() => {
+      void joinGame(wanted, id)
+        .then(() => {
+          setIsHost(isHosting(wanted));
+          setGameId(wanted);
+        })
+        .catch(() => {
+          setGameId(null);
+          setJoinError('No game with that code');
+          window.history.replaceState({}, '', '/trio');
+        });
+    });
+    // Once, on arrival; `withName` handles a missing name by asking for it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // MARK: - Watching a shared game
@@ -140,6 +165,21 @@ function VibeTrio() {
     const remaining = pending.filter((p) => !confirmed.has(p.ids.join(',')));
     if (remaining.length !== pending.length) setPending(remaining);
   }, [gameId, snapshot.takes, pending]);
+
+  // A card that has left the table cannot stay selected.
+  //
+  // Somebody else's take replaces cards where they stand, so a selection held
+  // across it pointed at cards that were no longer there: the next two taps made
+  // a "trio" of two new cards and one that had gone, and the board flashed red
+  // at a pair.
+  useEffect(() => {
+    if (!table) return;
+    const here = new Set(table.visible.map((card) => card.id));
+    setSelected((current) => {
+      const kept = current.filter((id) => here.has(id));
+      return kept.length === current.length ? current : kept;
+    });
+  }, [table]);
 
   // A fresh round: clear everything that belonged to the last one.
   const previousSeed = useRef<number | null>(null);
@@ -335,7 +375,10 @@ function VibeTrio() {
   };
 
   const hint = () => {
-    if (!table || gameId) return;
+    // Solo always has hints; a room has them when the host turned them on. The
+    // button was drawn for both and this only worked for solo, so a guest's
+    // hint did nothing at all.
+    if (!table || !(gameId === null || snapshot.hints)) return;
     const trio = firstTrio(table.visible);
     if (!trio) return;
     setRejected([]);
@@ -537,7 +580,10 @@ function Waiting(props: {
 }) {
   return (
     <div className="trio__waiting">
-      <p className="trio__code">Code {displayGameCode(props.gameId)}</p>
+      <GameCodeBadge code={props.gameId}
+                     size="inline"
+                     className="trio__code"
+                     hint="Everyone else: Vibe Pairings → Join with a code" />
       <p className="trio__waiting-text">
         {props.isHost
           ? 'Start when everyone has joined. Clear the deck together — the first to spot a good pairing takes it.'

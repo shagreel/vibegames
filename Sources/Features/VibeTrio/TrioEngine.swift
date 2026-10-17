@@ -102,14 +102,32 @@ struct TrioTable {
         return table
     }
 
-    /// Deals three more whenever the table has no trio but the deck still has
-    /// cards — without this the game can dead-end.
+    /// Deals three more whenever the table has no trio, and gives them back as
+    /// soon as they are not needed.
+    ///
+    /// The extra deal is a way out of a dead end, not a new table size: once a
+    /// take leaves the original twelve with a trio among them, the three that
+    /// were added go back to the top of the deck and the board is twelve again.
+    /// Without this the table only ever grew — fifteen, eighteen — and the cards
+    /// dealt last sat on the board while the game went on among the first twelve.
+    ///
+    /// Returning them to the front of the deck, in the order they were dealt, is
+    /// what keeps every device rebuilding the identical table from the same
+    /// takes — this is the same arithmetic as `engine.ts`.
     private mutating func ensurePlayable() {
         while !hasTrio, !remaining.isEmpty {
             let take = min(3, remaining.count)
             visible.append(contentsOf: remaining.prefix(take))
             remaining.removeFirst(take)
             extraDeals += 1
+        }
+
+        if visible.count > Self.initialDeal {
+            let base = Array(visible.prefix(Self.initialDeal))
+            if TrioDeck.hasTrio(among: base) {
+                remaining.insert(contentsOf: visible.dropFirst(Self.initialDeal), at: 0)
+                visible = base
+            }
         }
     }
 

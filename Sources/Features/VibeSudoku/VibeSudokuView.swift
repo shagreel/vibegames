@@ -375,11 +375,12 @@ struct VibeSudokuView: View {
 
     private var waitingPanel: some View {
         VStack(spacing: 10) {
-            Text("CODE \(GameCode.display(model.sharedGameID ?? ""))")
-                .font(.system(size: 15, weight: .black, design: .monospaced))
-                .kerning(2)
-                .foregroundStyle(VibeTheme.primaryText)
-                .accessibilityIdentifier("sudoku.gameCode")
+            GameCodeBadge(code: model.sharedGameID ?? "",
+                          size: .inline,
+                          identifier: "sudoku.gameCode",
+                          hint: model.isHost
+                              ? "Read this out — everyone joins with it."
+                              : "Everyone else: Number Vibe → Join with a code")
 
             Text(model.isHost
                  ? "Start when everyone has joined. Everyone races the same \(model.snapshot.difficulty.title) board."
@@ -455,8 +456,7 @@ struct VibeSudokuView: View {
     }
 
     private var shareText: String {
-        let code = model.sharedGameID ?? ""
-        return "Race me at Number Vibe — open the app and enter code \(GameCode.display(code))"
+        GameInvite.text(game: .sudoku, code: model.sharedGameID ?? "")
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

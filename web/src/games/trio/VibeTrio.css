@@ -190,14 +190,6 @@
   text-align: center;
 }
 
-.trio__code {
-  margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-}
-
 .trio__waiting-text {
   margin: 0;
   max-width: 24rem;

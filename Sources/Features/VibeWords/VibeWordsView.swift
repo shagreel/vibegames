@@ -306,11 +306,12 @@ struct VibeWordsView: View {
 
     private var waitingPanel: some View {
         VStack(spacing: 10) {
-            Text("CODE \(GameCode.display(model.sharedGameID ?? ""))")
-                .font(.system(size: 15, weight: .black, design: .monospaced))
-                .kerning(2)
-                .foregroundStyle(VibeTheme.primaryText)
-                .accessibilityIdentifier("words.gameCode")
+            GameCodeBadge(code: model.sharedGameID ?? "",
+                          size: .inline,
+                          identifier: "words.gameCode",
+                          hint: model.isHost
+                              ? "Read this out — everyone joins with it."
+                              : "Everyone else: Word Vibe → Join with a code")
 
             Text(model.isHost
                  ? "Start when everyone has joined."
@@ -387,8 +388,7 @@ struct VibeWordsView: View {
     }
 
     private var shareText: String {
-        let code = model.sharedGameID ?? ""
-        return "Join my Word Vibe game — open the app and enter code \(GameCode.display(code))"
+        GameInvite.text(game: .words, code: model.sharedGameID ?? "")
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {

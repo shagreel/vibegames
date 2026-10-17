@@ -712,3 +712,64 @@ body {
   background: var(--surface-2);
   color: var(--ink);
 }
+
+/* ── a shared game's code ─────────────────────────────────────────────────
+   It read `Code TRAM PUFF` in one line — three four-letter words in a row. The
+   caption and the box say what it is, and the dot between the halves says the
+   two words are one code. */
+.game-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.game-code__caption {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.game-code__words {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 1rem;
+  background: var(--raise);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  /* The letters are read out loud across a room; the padding keeps the last one
+     from looking clipped by its own tracking. */
+  padding-right: 0.9rem;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+/* The wrapper exists to hide the dot from screen readers, not to lay out. */
+.game-code__words > span {
+  display: contents;
+}
+
+.game-code[data-size='inline'] .game-code__words {
+  font-size: 1.2rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.8rem;
+}
+
+.game-code__dot {
+  color: var(--ink-dim);
+  letter-spacing: 0;
+}
+
+.game-code__hint {
+  max-width: 22rem;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  text-align: center;
+}

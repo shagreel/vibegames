@@ -219,25 +219,10 @@ struct VibeBlurtView: View {
     /// selectable in case somebody would rather text it.
     private var codeCard: some View {
         VStack(spacing: 10) {
-            Text("READ THIS OUT")
-                .font(.system(size: 11, weight: .black, design: .rounded))
-                .kerning(1.8)
-                .foregroundStyle(VibeTheme.tertiaryText)
-
-            Text(GameCode.display(model.sharedGameID ?? ""))
-                .font(.system(size: 40, weight: .black, design: .monospaced))
-                .kerning(6)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .foregroundStyle(VibeTheme.primaryText)
-                .textSelection(.enabled)
-                .accessibilityIdentifier("blurt.gameCode")
-                .accessibilityLabel("Game code \(GameCode.display(model.sharedGameID ?? ""))")
-
-            Text("Everyone else: Similar Vibe → Join with a code")
-                .font(.system(size: 12.5, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
-                .multilineTextAlignment(.center)
+            GameCodeBadge(code: model.sharedGameID ?? "",
+                          size: .prominent,
+                          identifier: "blurt.gameCode",
+                          hint: "Everyone else: Similar Vibe → Join with a code")
         }
         .padding(.vertical, 20)
         .padding(.horizontal, 16)
@@ -871,7 +856,7 @@ struct VibeBlurtView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        "Describe it, don't say it — Similar Vibe. Open the app and enter code \(GameCode.display(code))"
+        GameInvite.text(game: .blurt, code: code)
     }
 
     /// Runs a shared-game action, collecting a name first if there is not one.

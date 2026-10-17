@@ -194,3 +194,69 @@ describe('the table', () => {
     expect(replayed.triosTaken).toBe(1);
   });
 });
+
+/**
+ * The table grows out of a dead end and shrinks back as soon as it can.
+ *
+ * The extra deal is a way out of a table with no trio, not a new size for the
+ * board: a table of fifteen with a trio among the first twelve should be twelve
+ * again, so the cards dealt last do not sit on the board while the game goes on
+ * without them. The invariant is exact and holds after every take.
+ */
+describe('the size of the table', () => {
+  const BASE = 12;
+
+  it('is never bigger than it has to be, after any take', () => {
+    for (let seed = 0; seed < 60; seed += 1) {
+      let table = newTable(seed);
+      let guard = 0;
+      while (!isFinished(table) && guard < 60) {
+        guard += 1;
+        if (table.visible.length > BASE) {
+          expect(
+            firstTrio(table.visible.slice(0, BASE)),
+            `seed ${seed} sat at ${table.visible.length} with a trio among the first ${BASE}`,
+          ).toBeNull();
+        }
+
+        const trio = firstTrio(table.visible);
+        if (!trio) break;
+        const next = takeAt(table, trio);
+        expect(next).not.toBeNull();
+        table = next!;
+
+        // Nothing is lost or invented by growing and shrinking again: every
+        // card the deck has not dealt is still there, and a taken trio is gone
+        // from the game when the deck runs out.
+        expect(table.visible.length + table.remaining.length + 3 * table.triosTaken).toBe(81);
+        expect(new Set(table.visible.map((card) => card.id)).size).toBe(table.visible.length);
+      }
+    }
+  });
+
+  it('gives back the cards it dealt to get unstuck', () => {
+    // A table stuck at twelve grows; when a later take leaves twelve that can be
+    // played again, the three it borrowed go back to the deck.
+    let sawGrown = false;
+    let sawShrink = false;
+
+    for (let seed = 0; seed < 80 && !(sawGrown && sawShrink); seed += 1) {
+      let table = newTable(seed);
+      let guard = 0;
+      while (!isFinished(table) && guard < 60) {
+        guard += 1;
+        const before = table.visible.length;
+        const trio = firstTrio(table.visible);
+        if (!trio) break;
+        const next = takeAt(table, trio);
+        if (!next) break;
+        table = next;
+        if (table.visible.length > before) sawGrown = true;
+        if (table.visible.length === BASE && before > BASE) sawShrink = true;
+      }
+    }
+
+    expect(sawGrown, 'no table in the sample ever needed an extra deal').toBe(true);
+    expect(sawShrink, 'no table in the sample ever gave its cards back').toBe(true);
+  });
+});

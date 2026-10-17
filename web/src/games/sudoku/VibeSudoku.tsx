@@ -10,6 +10,7 @@ import {
   SettingsToggle,
 } from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
+import { GameCodeBadge } from '../../hub/GameCodeBadge';
 import { RoundOver, RoundOverChoices } from '../../hub/RoundOver';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
@@ -768,7 +769,10 @@ function Waiting(props: {
 }) {
   return (
     <div className="sudoku__waiting">
-      <p className="sudoku__code">Code {displayGameCode(props.gameId)}</p>
+      <GameCodeBadge code={props.gameId}
+                     size="inline"
+                     className="sudoku__code"
+                     hint="Everyone else: Number Vibe → Join with a code" />
       <p className="sudoku__waiting-text">
         {props.isHost
           ? `Everyone races the same ${props.snapshot.difficulty} board. Start when they have joined.`

@@ -5,12 +5,13 @@ import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
 import { GameSettings, SettingsButton } from '../../hub/GameSettings';
+import { GameCodeBadge } from '../../hub/GameCodeBadge';
 import { GameMessage } from '../../hub/GameMessage';
 import { RoundOver } from '../../hub/RoundOver';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import HowToPlay, { HowToPlayLink, type HowToPlayContent } from '../../hub/HowToPlay';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
-import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
+import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 // Aliased because this screen has its own `playerName` state. The name is the
 // suite's, not this game's, so it is only ever asked for once.
 import {
@@ -755,13 +756,11 @@ function VibeWords() {
             {/* The code, said out loud. It used to exist only inside the link the
                 copy button puts on the clipboard, so the person who created the
                 game had nothing to read out to the room. */}
-            <div className="words__code">
-              <span className="words__code-label">Read this out</span>
-              <strong className="words__code-value">{displayGameCode(gameId ?? '')}</strong>
-              <span className="words__code-hint">
-                Everyone else: Word Vibe → Join with a code
-              </span>
-            </div>
+            <GameCodeBadge
+              code={gameId ?? ''}
+              className="words__code-value"
+              hint="Everyone else: Word Vibe → Join with a code"
+            />
             <p className="start-game-message">
               You created this game! Click start when everyone has joined.
             </p>

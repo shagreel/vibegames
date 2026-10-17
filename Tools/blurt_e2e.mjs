@@ -129,9 +129,10 @@ await nameSelf(players[0].page, players[0].name);
 await players[0].page.waitForSelector(".blurt__code-value", { timeout: 20000 });
 const code = await players[0].page.$eval(".blurt__code-value", (el) => el.textContent.trim());
 say("code shown to the host:", code);
-// The display puts a space between the words: the separator is a reading aid
-// rather than part of the code, so it is shown but never required.
-check(/^[A-Z]{4} [A-Z]{4}$/.test(code), `the code reads as two words, a space apart (got ${code})`);
+// The display sets the two halves apart with a dot, so the code does not read as
+// three words in a row. The separator is a reading aid, not part of the code.
+check(/^[A-Z]{4}·[A-Z]{4}$/.test(code),
+  `the code reads as two words, a dot apart (got ${code})`);
 
 // The other three arrive on a link whose code has been retyped by hand rather
 // than copied: lower case, with a hyphen where the screen showed a space. That
@@ -139,7 +140,8 @@ check(/^[A-Z]{4} [A-Z]{4}$/.test(code), `the code reads as two words, a space ap
 // it is the only thing that checks the code is normalised on the way in. The
 // screen shows eight capitals and a space, so the interesting case is somebody
 // reaching for the wrong separator.
-const [wordOne, wordTwo] = code.toLowerCase().split(" ");
+const letters = code.replace(/[^A-Za-z]/g, "").toLowerCase();
+const [wordOne, wordTwo] = [letters.slice(0, 4), letters.slice(4)];
 const retyped = `${wordOne}-${wordTwo}`;
 say("the others retype it as:", retyped);
 
@@ -242,7 +244,8 @@ if (gear) {
   const shown = await firstDescriber.player.page
     .$eval(".blurt__sheet .blurt__code-value", (el) => el.textContent.trim())
     .catch(() => null);
-  check(shown === code, `the sheet shows the room's code (got ${JSON.stringify(shown)})`);
+  const sameCode = (shown ?? "").replace(/[^A-Za-z]/g, "") === code.replace(/[^A-Za-z]/g, "");
+  check(sameCode, `the sheet shows the room's code (got ${JSON.stringify(shown)})`);
   // Closed again, so the round carries on underneath it.
   await firstDescriber.player.page.click(".blurt__sheet .blurt__skip");
   await sleep(400);

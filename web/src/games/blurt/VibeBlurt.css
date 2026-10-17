@@ -79,40 +79,6 @@
   color: var(--ink-muted);
 }
 
-.blurt__code {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 1.25rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 1.5rem;
-  background: var(--surface);
-}
-
-.blurt__code-label {
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-
-.blurt__code-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 2.1rem;
-  letter-spacing: 0.3em;
-  /* The letters are read out loud across a room; the padding keeps the last
-     one from looking clipped by its own tracking. */
-  padding-left: 0.3em;
-  user-select: all;
-}
-
-.blurt__code-hint {
-  font-size: 0.75rem;
-  color: var(--ink-muted);
-  text-align: center;
-}
-
 .blurt__panel {
   padding: 1rem;
   border: 1px solid var(--line);
@@ -485,6 +451,15 @@
   border: 1px solid var(--line);
   border-radius: 1.5rem;
   background: var(--sheet);
+}
+
+.blurt__sheet .blurt__code-value {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--ink);
 }
 
 .blurt__sheet h2 {

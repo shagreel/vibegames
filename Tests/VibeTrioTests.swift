@@ -173,6 +173,35 @@ final class TrioTableTests: XCTestCase {
         }
     }
 
+    /// The table grows out of a dead end and shrinks back as soon as it can.
+    ///
+    /// The extra deal is a way out of a table with no trio, not a new size for
+    /// the board: a table of fifteen with a trio among the first twelve should
+    /// be twelve again, so the cards dealt last do not sit on the board while
+    /// the game goes on without them. This is the same rule as `engine.ts`, and
+    /// the fixtures keep the two honest about it.
+    func testTheTableIsNeverBiggerThanItHasToBe() {
+        for seed in UInt32(0)..<40 {
+            var table = TrioTable(seed: seed)
+            var played = 0
+
+            while let trio = table.availableTrios.first, played < 60 {
+                played += 1
+
+                if table.visible.count > TrioTable.initialDeal {
+                    let base = Array(table.visible.prefix(TrioTable.initialDeal))
+                    XCTAssertFalse(TrioDeck.hasTrio(among: base),
+                                   "seed \(seed) sat at \(table.visible.count) with a trio among the first twelve")
+                }
+
+                XCTAssertTrue(table.takeTrio(at: trio), "seed \(seed) refused its own trio")
+                XCTAssertEqual(table.visible.count + table.remaining.count + 3 * table.triosTaken,
+                               81,
+                               "seed \(seed) lost or invented a card")
+            }
+        }
+    }
+
     func testSameSeedProducesTheSameTable() {
         for seed in UInt32(0)..<20 {
             let first = TrioTable(seed: seed)

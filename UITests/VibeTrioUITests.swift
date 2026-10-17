@@ -111,7 +111,7 @@ final class VibeTrioUITests: XCTestCase {
         XCTAssertFalse(firstCard.isEnabled, "cards stay face down until the host starts")
         XCTAssertNil(parse(firstCard.label), "a face-down card should not name its features")
 
-        app.buttons["trio.startShared"].tap()
+        tapStart(app)
 
         let faceUp = expectation(for: NSPredicate(format: "isEnabled == true"),
                                  evaluatedWith: firstCard)
@@ -153,7 +153,7 @@ final class VibeTrioUITests: XCTestCase {
 
         // Once the table is started, the button is there because the room has
         // hints on.
-        app.buttons["trio.startShared"].tap()
+        tapStart(app)
         let hint = app.buttons["trio.hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 10),
                       "with hints on, the table should offer the Hint button")
@@ -500,6 +500,21 @@ final class VibeTrioUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Starts the table.
+    ///
+    /// Tapped by coordinate rather than with `element.tap()`, which activates at
+    /// a grouped element's own activation point — and inside the waiting panel
+    /// that point is not the button's centre. A person's finger lands on the
+    /// button, which is what this taps: the centre of the button's frame.
+    private func tapStart(_ app: XCUIApplication) {
+        let start = app.buttons["trio.startShared"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5), "the host should be offered Start")
+        let frame = start.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
+            .tap()
+    }
 
     private func openLobby(_ app: XCUIApplication) {
         let tile = app.descendants(matching: .any)["game.vibe-trio"].firstMatch

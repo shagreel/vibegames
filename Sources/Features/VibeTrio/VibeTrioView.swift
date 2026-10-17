@@ -518,11 +518,12 @@ struct VibeTrioView: View {
 
     private var waitingPanel: some View {
         VStack(spacing: 10) {
-            Text("CODE \(GameCode.display(model.sharedGameID ?? ""))")
-                .font(.system(size: 15, weight: .black, design: .monospaced))
-                .kerning(2)
-                .foregroundStyle(VibeTheme.primaryText)
-                .accessibilityIdentifier("trio.gameCode")
+            GameCodeBadge(code: model.sharedGameID ?? "",
+                          size: .inline,
+                          identifier: "trio.gameCode",
+                          hint: model.isHost
+                              ? "Read this out — everyone joins with it."
+                              : "Everyone else: Vibe Pairings → Join with a code")
 
             Text(model.isHost
                  ? "Start when everyone has joined. Clear the deck together — first good pairing taken is yours."
@@ -596,8 +597,7 @@ struct VibeTrioView: View {
     }
 
     private var shareText: String {
-        let code = model.sharedGameID ?? ""
-        return "Race me at Vibe Pairings — open the app and enter code \(GameCode.display(code))"
+        GameInvite.text(game: .trio, code: model.sharedGameID ?? "")
     }
 
     private func banner(_ text: String, symbol: String, tint: Color) -> some View {
