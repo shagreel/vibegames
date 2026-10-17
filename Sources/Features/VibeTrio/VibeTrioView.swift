@@ -553,47 +553,27 @@ struct VibeTrioView: View {
     // MARK: - Shared pieces
 
     private func header(title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                if model.session == .lobby { dismiss() } else { model.leaveGame() }
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(VibeIconButtonStyle())
-            .accessibilityLabel(model.session == .lobby ? "Back to games" : "Leave game")
-            .accessibilityIdentifier("trio.back")
+        GameHeaderBar(title: title,
+                      subtitle: subtitle,
+                      backIdentifier: "trio.back",
+                      backLabel: model.session == .lobby ? "Back to games" : "Leave game",
+                      onBack: {
+                          if model.session == .lobby { dismiss() } else { model.leaveGame() }
+                      }) {
+            SupportButton(game: .trio)
 
-            VStack(spacing: 3) {
-                Text(title)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .kerning(3.5)
-                    .foregroundStyle(VibeTheme.primaryText)
-                Text(subtitle)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
+            GameSettingsButton(prefix: "trio") { showingSettings = true }
 
-            HStack(spacing: 6) {
-                SupportButton(game: .trio)
-
-                GameSettingsButton(prefix: "trio") { showingSettings = true }
-
-                // The way to start another deck used to live here, in a pill in
-                // the corner. It is the panel's button now.
-                if model.isShared {
-                    ShareLink(item: shareText) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .buttonStyle(VibeIconButtonStyle())
-                    .accessibilityLabel("Share game code")
+            // The way to start another deck used to live here, in a pill in
+            // the corner. It is the panel's button now.
+            if model.isShared {
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up")
                 }
+                .buttonStyle(VibeIconButtonStyle())
+                .accessibilityLabel("Share game code")
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
     }
 
     private var shareText: String {

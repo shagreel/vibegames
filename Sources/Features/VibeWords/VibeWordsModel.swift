@@ -74,7 +74,19 @@ final class VibeWordsModel: ObservableObject {
         isShared && !snapshot.started
     }
 
-    var isRoundOver: Bool { won || lost }
+    /// Over when this player is done — or when somebody else got there first.
+    ///
+    /// A shared round used to stay open after another player solved it: their
+    /// win was recorded and announced to nobody, the board still took guesses,
+    /// and solving it afterwards showed this player "Solved!". The race is over
+    /// when it is won, which is how Number Vibe and Vibe Pairings behave.
+    var isRoundOver: Bool { won || lost || someoneElseWon }
+
+    /// The stored winner, when it is not this player.
+    var someoneElseWon: Bool {
+        guard let winner = snapshot.winner else { return false }
+        return winner.name != playerName
+    }
 
     /// Whether the board takes input at all.
     ///

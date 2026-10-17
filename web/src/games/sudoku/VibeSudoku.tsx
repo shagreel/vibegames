@@ -186,17 +186,25 @@ function VibeSudoku() {
     return observeGame(gameId, setSnapshot);
   }, [gameId]);
 
+  // Before the clock, because the clock waits for it: a shared board is dealt
+  // when its seed arrives but is not playable until the host starts.
+  const waitingForHost = gameId !== null && snapshot.seed !== null && !snapshot.started;
+
   // MARK: - Clock
 
   useEffect(() => {
-    if (!puzzle || solved) return;
+    // A shared board is dealt the moment its seed arrives, but nobody can play
+    // it until the host starts — so the clock does not start either. The time is
+    // part of the race: a room waiting a minute for a fourth player should not
+    // open with a minute on the board.
+    if (!puzzle || solved || waitingForHost) return;
     const started = Date.now() - elapsed * 1000;
     const timer = window.setInterval(() => setElapsed((Date.now() - started) / 1000), 500);
     return () => window.clearInterval(timer);
     // Restarting the timer on every elapsed tick would be wrong; it is keyed to
     // the puzzle instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [puzzle, solved]);
+  }, [puzzle, solved, waitingForHost]);
 
   useEffect(() => {
     if (snapshot.restartTime == null) {
@@ -294,7 +302,6 @@ function VibeSudoku() {
 
   // MARK: - Playing
 
-  const waitingForHost = gameId !== null && snapshot.seed !== null && !snapshot.started;
   const canPlay = puzzle !== null && !solved && !waitingForHost;
 
   const conflicting = useMemo(() => conflictsIn(values), [values]);

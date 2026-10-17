@@ -266,12 +266,27 @@ struct VibeWordsView: View {
     /// The `words.playAgain` identifier lives here rather than in the header:
     /// that is what the UI tests tap, and the button it names has moved.
     private var roundOverPanel: some View {
-        RoundOverPanel(title: model.won ? "Solved!" : "The word was \(model.answer)",
-                       detail: model.won ? "In \(model.guesses.count) guesses" : "The next one is a new word.",
+        RoundOverPanel(title: roundOverTitle,
+                       detail: roundOverDetail,
                        accent: AnyShapeStyle(VibeTheme.vibeWords),
                        primaryIdentifier: "words.playAgain") {
             Task { await model.playAgain() }
         }
+    }
+
+    /// Who won the round, in the panel's own words.
+    private var roundOverTitle: String {
+        if model.won { return "Solved!" }
+        if let winner = model.snapshot.winner, winner.name != model.playerName {
+            return "\(winner.name) solved it first"
+        }
+        return "The word was \(model.answer)"
+    }
+
+    private var roundOverDetail: String {
+        if model.won { return "In \(model.guesses.count) guesses" }
+        if model.someoneElseWon { return "The next one is a new word." }
+        return "The next one is a new word."
     }
 
     @ViewBuilder
@@ -291,12 +306,9 @@ struct VibeWordsView: View {
         } else if model.isWaitingForHost {
             waitingPanel
         } else if model.isRoundOver {
-            // The panel below says how the round ended. The one thing it cannot
-            // say is who got there first when that was somebody else, so that is
-            // all that is left here.
-            if let winner = model.snapshot.winner, winner.name != model.playerName {
-                banner("\(winner.name) solved it first!", symbol: "trophy.fill", tint: VibeTheme.tilePresent)
-            }
+            // The panel says how the round ended, including who got there first.
+            // Nothing more is needed here.
+            EmptyView()
         } else if let message = model.message {
             // Refusals and errors. The won/lost copy now belongs to the panel,
             // so it never reaches this line.
@@ -344,47 +356,27 @@ struct VibeWordsView: View {
     // MARK: - Shared pieces
 
     private func header(title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                if model.session == .lobby { dismiss() } else { model.leaveGame() }
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(VibeIconButtonStyle())
-            .accessibilityLabel(model.session == .lobby ? "Back to games" : "Leave game")
-            .accessibilityIdentifier("words.back")
+        GameHeaderBar(title: title,
+                      subtitle: subtitle,
+                      backIdentifier: "words.back",
+                      backLabel: model.session == .lobby ? "Back to games" : "Leave game",
+                      onBack: {
+                          if model.session == .lobby { dismiss() } else { model.leaveGame() }
+                      }) {
+            SupportButton(game: .words)
 
-            VStack(spacing: 3) {
-                Text(title)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .kerning(3.5)
-                    .foregroundStyle(VibeTheme.primaryText)
-                Text(subtitle)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
+            GameSettingsButton(prefix: "words") { showingSettings = true }
 
-            HStack(spacing: 6) {
-                SupportButton(game: .words)
-
-                GameSettingsButton(prefix: "words") { showingSettings = true }
-
-                // The way to start another round used to live here, in a pill in
-                // the corner. It is the panel's button now.
-                if model.isShared {
-                    ShareLink(item: shareText) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .buttonStyle(VibeIconButtonStyle())
-                    .accessibilityLabel("Share game code")
+            // The way to start another round used to live here, in a pill in
+            // the corner. It is the panel's button now.
+            if model.isShared {
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up")
                 }
+                .buttonStyle(VibeIconButtonStyle())
+                .accessibilityLabel("Share game code")
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 10)
     }
 
     private var shareText: String {

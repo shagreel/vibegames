@@ -385,7 +385,7 @@ function VibeWords() {
     // well left a player who went straight to "Play on this device" with a board
     // and a keyboard that did nothing.
     const needsName = !solo && !nameSubmitted;
-    if (gameOver || !gameStarted || needsName || visibleCountdown !== null) return;
+    if (roundOver || !gameStarted || needsName || visibleCountdown !== null) return;
 
     if (key === 'ENTER') {
       if (currentGuess.length !== WORD_LENGTH) {
@@ -436,7 +436,7 @@ function VibeWords() {
       setCurrentGuess(currentGuess + key);
       setMessage('');
     }
-  }, [currentGuess, guesses, gameOver, gameStarted, nameSubmitted, solo, answer, gameId, playerName,
+  }, [currentGuess, guesses, roundOver, gameStarted, nameSubmitted, solo, answer, gameId, playerName,
       visibleCountdown]);
 
   // Keyboard event listener
@@ -469,7 +469,7 @@ function VibeWords() {
   for (let i = 0; i < MAX_GUESSES; i++) {
     const row: Cell[] = [];
     const guess = guesses[i];
-    const isCurrentRow = i === guesses.length && !gameOver;
+    const isCurrentRow = i === guesses.length && !roundOver;
 
     for (let j = 0; j < WORD_LENGTH; j++) {
       if (guess) {
@@ -515,11 +515,9 @@ function VibeWords() {
   };
 
   const handlePlayAgain = async () => {
-    // For shared games, only allow restart if game is over (won or lost)
-    if (gameId && !gameOver) return;
-
-    // For solo games, only allow restart if game is actually over
-    if (!gameId && !gameOver) return;
+    // Only when the round is actually over — which now includes somebody else
+    // having won it.
+    if (!roundOver) return;
 
     if (gameId) {
       // For shared games, whoever clicks "Play Again" sets the new word
@@ -804,18 +802,24 @@ function VibeWords() {
             visibleCountdown
               ? null
               : shareMessage ||
-                (winner && winner.name !== playerName ? `${winner.name} won this game!` : '') ||
-                // The panel below says how the round ended; saying it twice, one
-                // over the other, reads like two things happened.
-                (gameOver ? '' : message) ||
+                // The panel below says how the round ended, including who got
+                // there first; saying it twice, one over the other, reads like
+                // two things happened.
+                (roundOver ? '' : message) ||
                 null
           }
           tone={won ? 'good' : message && !won ? 'warn' : 'info'}
         />
 
-        {gameOver && !visibleCountdown && (
+        {roundOver && !visibleCountdown && (
           <RoundOver
-            title={won ? 'Solved!' : `The word was ${answer}`}
+            title={
+              won
+                ? 'Solved!'
+                : winner && winner.name !== playerName
+                  ? `${winner.name} solved it first`
+                  : `The word was ${answer}`
+            }
             detail={
               won
                 ? `In ${guesses.length} ${guesses.length === 1 ? 'guess' : 'guesses'}`

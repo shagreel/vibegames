@@ -227,6 +227,11 @@ final class VibeSudokuModel: ObservableObject {
         }
         previousSeed = seed
         loadPuzzle(seed: seed, difficulty: newSnapshot.difficulty)
+
+        // The host started: the race has begun, so the clock begins now.
+        if !isWaitingForHost, clockTask == nil, !solved {
+            startClock()
+        }
         updateCountdown()
     }
 
@@ -248,7 +253,17 @@ final class VibeSudokuModel: ObservableObject {
             values = generated.givens
             notes = [Set<Int>](repeating: [], count: SudokuPuzzle.cellCount)
             solved = false
-            startClock()
+            // A shared board is dealt the moment its seed arrives, but nobody
+            // can play it until the host starts — so the clock should not start
+            // either. The time is part of the race; a room that waits a minute
+            // for a fourth player should not open with a minute on the board.
+            if isWaitingForHost {
+                clockTask?.cancel()
+                clockTask = nil
+                elapsed = 0
+            } else {
+                startClock()
+            }
         }
     }
 

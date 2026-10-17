@@ -165,36 +165,15 @@ struct VibeFiveView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(VibeIconButtonStyle())
-            .accessibilityLabel("Back to games")
-            .accessibilityIdentifier("vibeFive.back")
+        GameHeaderBar(title: "VIBE FIVE",
+                      subtitle: model.roundNumber == 0 ? "Ready to play" : "Round \(model.roundNumber)",
+                      backIdentifier: "vibeFive.back",
+                      backLabel: "Back to games",
+                      onBack: { dismiss() }) {
+            SupportButton(game: .five)
 
-            VStack(spacing: 3) {
-                Text("VIBE FIVE")
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .kerning(3.5)
-                    .foregroundStyle(VibeTheme.primaryText)
-                Text(model.roundNumber == 0 ? "Ready to play" : "Round \(model.roundNumber)")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-            }
-            .frame(maxWidth: .infinity)
-
-            HStack(spacing: 6) {
-                SupportButton(game: .five)
-
-                GameSettingsButton(prefix: "vibeFive") { isShowingSettings = true }
-            }
+            GameSettingsButton(prefix: "vibeFive") { isShowingSettings = true }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 14)
     }
 
     private func categoryCard(size: CGSize) -> some View {

@@ -792,67 +792,47 @@ struct VibeBlurtView: View {
     // MARK: - Shared pieces
 
     private func header(title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                if model.isShared { model.leaveGame() } else { dismiss() }
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(VibeIconButtonStyle())
-            .accessibilityLabel(model.isShared ? "Leave game" : "Back to games")
-            .accessibilityIdentifier("blurt.back")
+        GameHeaderBar(title: title,
+                      subtitle: subtitle,
+                      backIdentifier: "blurt.back",
+                      backLabel: model.isShared ? "Leave game" : "Back to games",
+                      onBack: {
+                          if model.isShared { model.leaveGame() } else { dismiss() }
+                      }) {
+            SupportButton(game: .blurt)
 
-            VStack(spacing: 3) {
-                Text(title)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .kerning(3.5)
-                    .foregroundStyle(VibeTheme.primaryText)
-                Text(subtitle)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
+            GameSettingsButton(prefix: "blurt") { showingSettings = true }
 
-            HStack(spacing: 6) {
-                SupportButton(game: .blurt)
-
-                GameSettingsButton(prefix: "blurt") { showingSettings = true }
-
-                if let code = model.sharedGameID, !model.hasStarted {
-                    ShareLink(item: shareText(code)) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .buttonStyle(VibeIconButtonStyle())
-                    .accessibilityLabel("Share game code")
+            if let code = model.sharedGameID, !model.hasStarted {
+                ShareLink(item: shareText(code)) {
+                    Image(systemName: "square.and.arrow.up")
                 }
+                .buttonStyle(VibeIconButtonStyle())
+                .accessibilityLabel("Share game code")
+            }
 
-                // Once the game is under way the code moves behind one icon.
-                // It used to vanish entirely: the big card only lives in the
-                // lobby and the share button was drawn only before the start.
-                // That is exactly when somebody new turns up — Blurt takes a
-                // late arrival and puts them on a team — so the code has to be
-                // reachable from the board, not only from the lobby.
-                if model.sharedGameID != nil, model.hasStarted {
-                    Button {
-                        showingCode = true
-                    } label: {
-                        // A person with a plus, not `slider.horizontal.3`: that
-                        // glyph means "Game settings" in Vibe Five, and the same
-                        // icon for two different buttons in two games is what
-                        // made them unreadable. This reads as "somebody else can
-                        // join", which is what the button is for.
-                        Image(systemName: "person.badge.plus")
-                    }
-                    .buttonStyle(VibeIconButtonStyle())
-                    .accessibilityLabel("Game code")
-                    .accessibilityIdentifier("blurt.showCode")
+            // Once the game is under way the code moves behind one icon.
+            // It used to vanish entirely: the big card only lives in the
+            // lobby and the share button was drawn only before the start.
+            // That is exactly when somebody new turns up — Blurt takes a
+            // late arrival and puts them on a team — so the code has to be
+            // reachable from the board, not only from the lobby.
+            if model.sharedGameID != nil, model.hasStarted {
+                Button {
+                    showingCode = true
+                } label: {
+                    // A person with a plus, not `slider.horizontal.3`: that
+                    // glyph means "Game settings" in Vibe Five, and the same
+                    // icon for two different buttons in two games is what
+                    // made them unreadable. This reads as "somebody else can
+                    // join", which is what the button is for.
+                    Image(systemName: "person.badge.plus")
                 }
+                .buttonStyle(VibeIconButtonStyle())
+                .accessibilityLabel("Game code")
+                .accessibilityIdentifier("blurt.showCode")
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
     }
 
     private func shareText(_ code: String) -> String {
