@@ -153,6 +153,30 @@ export function takeByIds(table: TrioTable, ids: readonly number[]): TrioTable |
 }
 
 /**
+ * Which of these takes actually happened.
+ *
+ * A shared game records takes as they are claimed, and a claim that lost a race
+ * — cards already taken by somebody else — can still be in the record, because
+ * the rules check the shape of a take and not the table it lands on. The board
+ * ignores those; the scoreboard did not, so a player could be shown twelve
+ * pairings in a round where only ten had been taken.
+ *
+ * Returns the indices (into `takes`) that the table accepted.
+ */
+export function appliedTakes(seed: number, takes: readonly (readonly number[])[]): Set<number> {
+  const applied = new Set<number>();
+  let table: TrioTable = newTable(seed);
+  takes.forEach((ids, index) => {
+    const next = takeByIds(table, ids);
+    if (next) {
+      table = next;
+      applied.add(index);
+    }
+  });
+  return applied;
+}
+
+/**
  * The table a shared game is looking at, rebuilt from the seed and the takes the
  * server accepted, in the order it accepted them.
  *

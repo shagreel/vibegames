@@ -260,7 +260,7 @@ final class VibeTrioModel: ObservableObject {
 
     private func beginObserving(gameID: String) {
         service.stopObserving(observation)
-        observation = service.observe(gameID: gameID) { [weak self] snapshot in
+        observation = service.observe(gameID: gameID, playerID: PlayerIdentity.id) { [weak self] snapshot in
             self?.apply(snapshot)
         }
     }
@@ -280,7 +280,9 @@ final class VibeTrioModel: ObservableObject {
             conflictNotice = nil
             clockTask?.cancel(); clockTask = nil
             elapsed = 0
-            startClock()
+            // A shared table is dealt when its seed arrives, but nobody can play
+            // it until the host starts — so the clock waits with the board.
+            if !isWaitingForHost { startClock() }
 
             // Every guest begins a round here rather than at any button: the
             // host's Start only writes a flag, and the seed arriving is what
@@ -289,6 +291,11 @@ final class VibeTrioModel: ObservableObject {
         }
 
         rebuildTable()
+
+        // The host started: the race has begun, so the clock begins now.
+        if !isWaitingForHost, clockTask == nil, !(table?.isFinished ?? false), isShared {
+            startClock()
+        }
         updateCountdown()
     }
 
@@ -418,6 +425,11 @@ final class VibeTrioModel: ObservableObject {
             rebuildTable()
             showConflict()
 
+        case .staleRound:
+            pendingTakes.removeAll { $0 == ids }
+            rebuildTable()
+            showConflict("A new deal started — try that again.")
+
         case .failed:
             pendingTakes.removeAll { $0 == ids }
             rebuildTable()
@@ -425,8 +437,8 @@ final class VibeTrioModel: ObservableObject {
         }
     }
 
-    private func showConflict() {
-        conflictNotice = TrioRules.conflictMessage
+    private func showConflict(_ message: String = TrioRules.conflictMessage) {
+        conflictNotice = message
         conflictTask?.cancel()
         conflictTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 2_000_000_000)

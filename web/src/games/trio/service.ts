@@ -10,7 +10,7 @@ import {
 } from 'firebase/database';
 import { shortId } from '../../lib/shortId';
 import { database } from '../../firebase';
-import { replay, wouldFormTrioByIds } from './engine';
+import { appliedTakes, replay, wouldFormTrioByIds } from './engine';
 
 /**
  * A shared Vibe Pairings game.
@@ -166,8 +166,18 @@ export function observeGame(
     }),
   );
 
-  // Rejoins: the id is derived, so this is the same player coming back.
+  // Presence, and presence again on every reconnect.
+  //
+  // `onDisconnect` removes a player when the socket drops, so a laptop lid or a
+  // train tunnel takes them off the roster — and nothing put them back: the
+  // room went on saying "1 player" while the person was looking at the table.
   void ensurePresent(gameId, playerId).catch(() => undefined);
+  unsubscribers.push(
+    onValue(ref(database, '.info/connected'), (snapshot) => {
+      if (snapshot.val() !== true) return;
+      void ensurePresent(gameId, playerId).catch(() => undefined);
+    }),
+  );
 
   return () => unsubscribers.forEach((off) => off());
 }
@@ -230,7 +240,7 @@ export async function startGame(gameId: string): Promise<void> {
   await set(ref(database, `trio/${gameId}/meta/started`), true);
 }
 
-export type ClaimOutcome = 'won' | 'taken' | 'failed';
+export type ClaimOutcome = 'won' | 'taken' | 'failed' | 'stale';
 
 /**
  * Claims three cards, if they are still there.
@@ -255,6 +265,13 @@ export async function claimTrio(
   const takenRef = ref(database, `trio/${gameId}/taken`);
 
   try {
+    // A board rebuilt from an old round would validate its cards against that
+    // round's table and write them into this one — a take nobody can see, which
+    // then counts on the scoreboard. Check the room is still the round this
+    // board was dealt for.
+    const room = await get(ref(database, `trio/${gameId}/meta/seed`));
+    if (room.val() !== seed) return 'stale';
+
     const result = await runTransaction(takenRef, (current: Record<string, TakenEntry> | null) => {
       const entries = current ?? {};
       const takes = takesFrom(entries);
@@ -292,11 +309,21 @@ export async function clearRestartTime(gameId: string): Promise<void> {
 }
 
 /** Names and scores, derived from the takes — never stored. */
+/**
+ * Every player's score: the takes that actually happened.
+ *
+ * Not every recorded take is one: a claim that lost a race is written too, and
+ * counting those made the scoreboard disagree with the deck — "twelve pairings
+ * and three, with fifty-one cards left" is forty-five cards taken out of a round
+ * where thirty had been.
+ */
 export function scoresFrom(snapshot: TrioSnapshot): Map<string, number> {
+  const applied = appliedTakes(snapshot.seed ?? 0, snapshot.takes.map((take) => take.cardIds));
   const scores = new Map<string, number>();
-  for (const take of snapshot.takes) {
+  snapshot.takes.forEach((take, index) => {
+    if (!applied.has(index)) return;
     scores.set(take.by, (scores.get(take.by) ?? 0) + 1);
-  }
+  });
   return scores;
 }
 

@@ -425,10 +425,46 @@ final class TrioSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.takes.map(\.name), ["Alex", "Sam", "Alex"])
     }
 
-    func testScoreIsHowManyTakesCarryYourID() {
-        let snapshot = TrioSnapshot(meta: ["seed": 123], players: nil, taken: taken)
+    /// A score is how many takes actually happened — not how many were written.
+    ///
+    /// The two used to differ: a claim that lost a race is recorded too, because
+    /// the rules check the shape of a take and not the table it lands on, and
+    /// counting those made the scoreboard disagree with the deck. This builds a
+    /// real round, takes two pairings from it, and asks the snapshot to score it.
+    func testScoreIsHowManyTakesActuallyHappened() throws {
+        var table = TrioTable(seed: 5)
+        var entries: [String: Any] = [:]
 
-        XCTAssertEqual(snapshot.scores, ["aaaa": 2, "bbbb": 1])
+        for (index, who) in [("aaaa", "Alex"), ("bbbb", "Sam")].enumerated() {
+            let trio = try XCTUnwrap(table.availableTrios.first)
+            for position in trio {
+                entries[String(table.visible[position].id)] = [
+                    "seq": index + 1, "by": who.0, "name": who.1,
+                ]
+            }
+            XCTAssertTrue(table.takeTrio(at: trio))
+        }
+
+        let snapshot = TrioSnapshot(meta: ["seed": 5], players: nil, taken: entries)
+        XCTAssertEqual(snapshot.scores, ["aaaa": 1, "bbbb": 1])
+    }
+
+    /// A take nobody could have made does not score and does not move the deck.
+    func testATakeThatNeverHappenedDoesNotScore() throws {
+        var table = TrioTable(seed: 5)
+        let trio = try XCTUnwrap(table.availableTrios.first)
+        var entries: [String: Any] = [:]
+        for position in trio {
+            entries[String(table.visible[position].id)] = ["seq": 1, "by": "aaaa", "name": "Alex"]
+        }
+
+        // A lost race: three cards that were never on this table.
+        for id in [999, 998, 997] {
+            entries[String(id)] = ["seq": 2, "by": "bbbb", "name": "Sam"]
+        }
+
+        let snapshot = TrioSnapshot(meta: ["seed": 5], players: nil, taken: entries)
+        XCTAssertEqual(snapshot.scores, ["aaaa": 1], "the claim that lost is not a pairing")
     }
 
     func testNameComesFromTheTakeSoOnlyScorersHaveOne() {

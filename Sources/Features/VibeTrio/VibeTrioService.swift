@@ -49,9 +49,17 @@ struct TrioSnapshot: Equatable {
     /// The card ids in the order the server accepted them.
     var takeIDs: [[Int]] { takes.map(\.cardIDs) }
 
-    /// Every player's score: how many takes carry their id.
+    /// Every player's score: the takes that actually happened.
+    ///
+    /// Not every recorded take is one — a claim that lost a race is written too
+    /// — and counting those made the scoreboard disagree with the deck.
     var scores: [String: Int] {
-        takes.reduce(into: [:]) { $0[$1.by, default: 0] += 1 }
+        guard let seed else { return [:] }
+        let applied = TrioTable.appliedTakeIndices(seed: seed, takes: takeIDs)
+        return takes.enumerated().reduce(into: [:]) { scores, pair in
+            guard applied.contains(pair.offset) else { return }
+            scores[pair.element.by, default: 0] += 1
+        }
     }
 
     /// The name a player took with, for labelling the scoreboard.
@@ -144,7 +152,14 @@ final class VibeTrioService {
 
     // MARK: - Observing
 
-    func observe(gameID: String, onChange: @escaping (TrioSnapshot) -> Void) -> TrioObservation? {
+    /// Watches a game.
+    ///
+    /// The player id is here for presence: `onDisconnect` takes a player off the
+    /// roster when the socket drops, and a phone that goes into a tunnel comes
+    /// back without one, so every reconnect puts them back.
+    func observe(gameID: String,
+                 playerID: String?,
+                 onChange: @escaping (TrioSnapshot) -> Void) -> TrioObservation? {
         guard let reference = gameReference(gameID) else { return nil }
 
         let observation = TrioObservation()
@@ -176,6 +191,16 @@ final class VibeTrioService {
             observation?.taken.removeValue(forKey: snapshot.key)
             observation?.emit()
         }))
+
+        // Presence again on every reconnect: a dropped socket has just taken
+        // this player off the roster, and nothing else puts them back.
+        if let playerID, let database {
+            let connected = database.reference(withPath: ".info/connected")
+            observation.handles.append((connected, connected.observe(.value) { [weak self] snapshot in
+                guard snapshot.value as? Bool == true else { return }
+                Task { try? await self?.markPresent(gameID: gameID, playerID: playerID) }
+            }))
+        }
 
         return observation
     }
@@ -253,6 +278,16 @@ final class VibeTrioService {
         guard let reference = gameReference(gameID)?.child("taken") else { return .failed }
         let short = Self.shortID(playerID: playerID, gameID: gameID)
 
+        // A board rebuilt from an old round would validate its cards against
+        // that round's table and write them into this one — a take nobody can
+        // see, which then counts on the scoreboard. Check the room is still the
+        // round this board was dealt for.
+        if let current = try? await gameReference(gameID)?.child("meta/seed").getData(),
+           let value = current.value as? NSNumber,
+           value.uint32Value != seed {
+            return .staleRound
+        }
+
         return await withCheckedContinuation { continuation in
             reference.runTransactionBlock({ current in
                 let entries = (current.value as? [String: Any]) ?? [:]
@@ -305,6 +340,8 @@ enum TrioClaim: Equatable {
     case won
     /// Another card in the claim had already gone.
     case takenBySomeoneElse
+    /// The board was dealt for a round that has since been replaced.
+    case staleRound
     /// The write did not reach the server.
     case failed
 }

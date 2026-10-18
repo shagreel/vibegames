@@ -213,14 +213,20 @@ function VibeTrio() {
     });
   }, [finished, seed, gameId, myTakes, elapsed]);
 
+  // Before the clock, because the clock waits for it: a shared table is dealt
+  // when its seed arrives but is not playable until the host starts.
+  const waitingForHost = gameId !== null && snapshot.seed !== null && !snapshot.started;
+
   // MARK: - Clocks
 
   useEffect(() => {
-    if (seed == null || finished) return;
+    // A shared table is dealt when its seed arrives, but nobody can play it
+    // until the host starts — so the clock waits with the board.
+    if (seed == null || finished || waitingForHost) return;
     const started = Date.now();
     const timer = window.setInterval(() => setElapsed((Date.now() - started) / 1000), 500);
     return () => window.clearInterval(timer);
-  }, [seed, finished]);
+  }, [seed, finished, waitingForHost]);
 
   useEffect(() => {
     if (snapshot.restartTime == null) {
@@ -351,7 +357,9 @@ function VibeTrio() {
         setNotice(
           outcome === 'taken'
             ? 'Someone got there first!'
-            : 'Could not reach the game. Check your connection.',
+            : outcome === 'stale'
+              ? 'A new deal started — try that again.'
+              : 'Could not reach the game. Check your connection.',
         );
         window.setTimeout(() => setNotice(''), 2500);
       });
@@ -397,7 +405,6 @@ function VibeTrio() {
 
   // MARK: - Rendering
 
-  const waitingForHost = gameId !== null && snapshot.seed !== null && !snapshot.started;
   const screen: Screen = table && (!gameId || snapshot.seed !== null) ? 'game' : 'lobby';
 
   if (showRules) {
