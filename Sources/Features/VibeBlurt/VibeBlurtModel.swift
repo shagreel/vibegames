@@ -328,6 +328,7 @@ final class VibeBlurtModel: ObservableObject {
 
     /// Back to the lobby, leaving the room.
     func leaveGame() {
+        dropPresence()
         stopClock()
         observation.map { service.stopObserving($0) }
         observation = nil
@@ -336,8 +337,20 @@ final class VibeBlurtModel: ObservableObject {
         askedForTeam = false
     }
 
+    /// Coming off the roster is part of leaving, not of disconnecting.
+    ///
+    /// Anyone can leave at any time, and the room should say so straight away
+    /// rather than waiting for the socket to drop.
+    private func dropPresence() {
+        guard let gameID = sharedGameID else { return }
+        service.removePresence(gameID: gameID, playerID: PlayerIdentity.id)
+    }
+
     func endSession() {
+        dropPresence()
         stopClock()
+        observation.map { service.stopObserving($0) }
+        observation = nil
         SoundEngine.shared.deactivate()
     }
 

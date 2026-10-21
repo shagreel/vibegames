@@ -148,6 +148,16 @@ function registerPresence(gameId: string, playerId: string): void {
   onDisconnect(ref(database, `sudoku/${gameId}/players/${playerId}`)).remove();
 }
 
+/**
+ * Takes the player off the roster the moment they leave.
+ *
+ * `onDisconnect` only covers a dropped socket; somebody who taps Back is still
+ * connected, so without this the room keeps counting a ghost.
+ */
+export function removePresence(gameId: string, playerId: string): void {
+  void remove(ref(database, `sudoku/${gameId}/players/${playerId}`)).catch(() => undefined);
+}
+
 export async function startGame(gameId: string): Promise<void> {
   await set(ref(database, `sudoku/${gameId}/started`), true);
 }

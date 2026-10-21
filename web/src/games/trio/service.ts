@@ -200,6 +200,17 @@ async function ensurePresent(gameId: string, playerId: string): Promise<void> {
   onDisconnect(playerRef).remove();
 }
 
+/**
+ * Takes the player off the roster the moment they leave.
+ *
+ * `onDisconnect` only covers a dropped socket; somebody who taps Back is still
+ * connected, so without this the room keeps counting a ghost.
+ */
+export function removePresence(gameId: string, playerId: string): void {
+  const id = shortId(playerId, gameId);
+  void remove(ref(database, `trio/${gameId}/players/${id}`)).catch(() => undefined);
+}
+
 export async function createGame(
   gameId: string,
   seed: number,

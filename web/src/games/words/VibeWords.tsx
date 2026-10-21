@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ref, onValue, set, get, onDisconnect } from 'firebase/database';
+import { ref, onValue, set, get, onDisconnect, remove } from 'firebase/database';
 import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import { SupportButton } from '../../hub/Support';
@@ -260,6 +260,20 @@ function VibeWords() {
 
     addPlayerToGame();
   }, [gameId, gameExists, nameSubmitted, playerName, playerAddedToGame]);
+
+  // Leaving the room takes this browser off the roster straight away.
+  //
+  // `onDisconnect` only fires when the socket drops, so going back to the games
+  // list would otherwise leave a ghost in the lobby until the tab was closed.
+  useEffect(() => {
+    if (!gameId) return undefined;
+    const browserId = localStorage.getItem('vibewords.playerID');
+    if (!browserId) return undefined;
+    const playerRef = ref(database, `games/${gameId}/players/${browserId}`);
+    return () => {
+      void remove(playerRef).catch(() => undefined);
+    };
+  }, [gameId]);
 
   // Countdown timer effect
   useEffect(() => {

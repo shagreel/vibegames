@@ -163,6 +163,15 @@ final class VibeWordsService {
         reference.child("players").child(playerID).onDisconnectRemoveValue()
     }
 
+    /// Takes the player off the roster the moment they leave.
+    ///
+    /// `onDisconnect` only covers a phone that dies or loses signal; somebody
+    /// who taps back is still connected, so without this the room goes on
+    /// counting a ghost until the app is closed.
+    func removePresence(gameID: String, playerID: String) {
+        gameReference(gameID)?.child("players").child(playerID).removeValue()
+    }
+
     func startGame(gameID: String) async throws {
         try await gameReference(gameID)?.child("started").setValue(true)
     }

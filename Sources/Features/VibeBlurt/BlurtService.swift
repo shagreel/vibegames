@@ -333,6 +333,16 @@ final class VibeBlurtService {
         try await reference.onDisconnectRemoveValue()
     }
 
+    /// Takes the player off the roster the moment they leave.
+    ///
+    /// `onDisconnect` only covers a phone that dies or loses signal; somebody
+    /// who taps back is still connected, so without this the room goes on
+    /// counting a ghost until the app is closed.
+    func removePresence(gameID: String, playerID: String) {
+        let short = Self.shortID(playerID: playerID, gameID: gameID)
+        gameReference(gameID)?.child("players").child(short).removeValue()
+    }
+
     /// Somebody who arrives after the start goes on the smaller team.
     ///
     /// Read from the roster rather than tracked, so a phone that slept through

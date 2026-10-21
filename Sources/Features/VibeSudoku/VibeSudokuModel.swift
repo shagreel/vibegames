@@ -185,11 +185,21 @@ final class VibeSudokuModel: ObservableObject {
     }
 
     func leaveGame() {
+        dropPresence()
         tearDownSharedGame()
         session = .lobby
         puzzle = nil
         clearBoard()
         errorMessage = nil
+    }
+
+    /// Coming off the roster is part of leaving, not of disconnecting.
+    ///
+    /// Anyone can leave at any time, and the room should say so straight away
+    /// rather than waiting for the socket to drop.
+    private func dropPresence() {
+        guard let gameID = sharedGameID else { return }
+        service.removePresence(gameID: gameID, playerID: PlayerIdentity.id)
     }
 
     @Published var errorMessage: String?
@@ -442,6 +452,7 @@ final class VibeSudokuModel: ObservableObject {
     }
 
     func endSession() {
+        dropPresence()
         countdownTask?.cancel(); countdownTask = nil
         clockTask?.cancel(); clockTask = nil
         service.stopObserving(observation)

@@ -36,6 +36,7 @@ import {
   passWord,
   playAgain,
   NO_GAME,
+  removePresence,
   playScore,
   startGame,
   updateSettings,
@@ -384,6 +385,14 @@ function VibeBlurt() {
 
   // A declaration rather than a `const`: the effect that lands on a dead room
   // calls it, and that effect is written above this line.
+  // Leaving is coming off the roster, not just dropping the socket. This covers
+  // both the button and heading off to the games list while still in a room,
+  // so nobody lingers in a lobby they walked out of.
+  useEffect(() => {
+    if (!gameId) return undefined;
+    return () => removePresence(gameId, id);
+  }, [gameId, id]);
+
   function leave() {
     window.history.replaceState({}, '', '/blurt');
     setGameId(null);

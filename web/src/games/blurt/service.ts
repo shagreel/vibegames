@@ -3,6 +3,7 @@ import {
   onDisconnect,
   onValue,
   ref,
+  remove,
   runTransaction,
   set,
   update,
@@ -216,6 +217,17 @@ async function ensurePresent(gameId: string, playerId: string, name: string): Pr
   const playerRef = ref(database, `blurt/${gameId}/players/${shortId(playerId, gameId)}`);
   await set(playerRef, name);
   onDisconnect(playerRef).remove();
+}
+
+/**
+ * Takes the player off the roster the moment they leave.
+ *
+ * `onDisconnect` only covers a dropped socket; somebody who taps Back is still
+ * connected, so without this the room keeps counting a ghost.
+ */
+export function removePresence(gameId: string, playerId: string): void {
+  const playerRef = ref(database, `blurt/${gameId}/players/${shortId(playerId, gameId)}`);
+  void remove(playerRef).catch(() => undefined);
 }
 
 /** The packs as the map the rules validate, all ticked or not at all. */

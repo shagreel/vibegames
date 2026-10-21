@@ -13,6 +13,7 @@ import {
   makeGameCode,
   nameOf,
   observeGame,
+  removePresence,
   randomSeed,
   scoresFrom,
   setHints,
@@ -307,6 +308,14 @@ function VibeTrio() {
         })
         .catch(() => setJoinError('No game with that code'));
     });
+
+  // Leaving is coming off the roster, not just dropping the socket. This covers
+  // both the button and heading off to the games list while still in a room,
+  // so nobody lingers in a lobby they walked out of.
+  useEffect(() => {
+    if (!gameId) return undefined;
+    return () => removePresence(gameId, id);
+  }, [gameId, id]);
 
   const leave = () => {
     setGameId(null);
