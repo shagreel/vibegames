@@ -830,7 +830,7 @@ function VibeWords() {
         />
 
         {someoneElseWon && !visibleCountdown && (
-          <p className="words__winner" role="status">
+          <p className="game-winner" role="status">
             🏆 {winner?.name} solved it first — finish yours if you like.
           </p>
         )}

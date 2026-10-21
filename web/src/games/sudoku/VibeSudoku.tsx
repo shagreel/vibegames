@@ -435,19 +435,22 @@ function VibeSudoku() {
 
   // MARK: - Rendering
 
-  const roundOver = solved || (snapshot.winner !== null && snapshot.winner.name !== name);
+  // This board being done is what ends the round here. Somebody else finishing
+  // first is news, not the end: in a room the grid stays playable, because a
+  // late arrival, or anyone slower, may still want to finish their own.
+  const someoneElseWon = snapshot.winner !== null && snapshot.winner.name !== name;
+  const roundOver = solved;
   const screen: Screen = puzzle && (!gameId || snapshot.seed !== null) ? 'game' : 'lobby';
 
-  // Sudoku has a win and no loss of its own: you either finish the grid or
-  // somebody finishes theirs first. Either way it is one transition out of play,
-  // reported once per seed.
+  // One transition out of play — this player's own board — reported once per
+  // seed. A win by somebody else is not this player's round ending.
   const reportedFinish = useRef<number | null>(null);
   useEffect(() => {
     if (!roundOver || seed == null || reportedFinish.current === seed) return;
     reportedFinish.current = seed;
     trackGameFinish(GAMES.sudoku, {
       mode: gameId ? 'shared' : 'solo',
-      outcome: solved ? 'won' : 'lost',
+      outcome: 'won',
       seconds: Math.round(elapsed),
     });
   }, [roundOver, seed, gameId, solved, elapsed]);
@@ -495,6 +498,14 @@ function VibeSudoku() {
       ) : (
         puzzle && (
           <>
+            {/* Said the moment it lands, and left on screen while this player
+                finishes their own grid: the round is over, the board is not. */}
+            {someoneElseWon && !solved && (
+              <p className="game-winner" role="status">
+                🏆 {snapshot.winner?.name} solved it first — finish yours if you like.
+              </p>
+            )}
+
             <Board
               puzzle={puzzle}
               values={values}
@@ -519,14 +530,12 @@ function VibeSudoku() {
 
       {roundOver && screen === 'game' && (
         <RoundOver
-          title={
-            solved
-              ? gameId
-                ? 'You finished it!'
-                : 'Solved!'
-              : `${snapshot.winner?.name ?? 'Someone'} finished first`
+          title={gameId ? 'You finished it!' : 'Solved!'}
+          detail={
+            someoneElseWon
+              ? `${snapshot.winner?.name ?? 'Somebody'} got there first, mind. The next board is a new one.`
+              : `${filled} of ${CELL_COUNT} · ${formatElapsed(elapsed)}`
           }
-          detail={`${filled} of ${CELL_COUNT} · ${formatElapsed(elapsed)}`}
           onPrimary={playAgain}
         >
           {/* Choosing the next board's difficulty belongs here, where you are

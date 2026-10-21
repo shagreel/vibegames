@@ -232,7 +232,7 @@ final class VibeWordsUITests: XCTestCase {
         let badge = app.descendants(matching: .any)["words.gameCode"].firstMatch
         XCTAssertTrue(badge.waitForExistence(timeout: backendTimeout),
                       "Should land in the waiting room after creating a game")
-        let room = try XCTUnwrap(Self.roomCode(from: badge.label),
+        let room = try XCTUnwrap(RoomSetup.code(from: badge.label),
                                  "Could not read a room code from: \(badge.label)")
 
         app.buttons["words.startShared"].tap()
@@ -240,7 +240,7 @@ final class VibeWordsUITests: XCTestCase {
         let board = app.descendants(matching: .any)["words.board"].firstMatch
         XCTAssertTrue(board.waitForExistence(timeout: backendTimeout), "The board should appear")
 
-        XCTAssertTrue(Self.writeWinner(room: room, name: "Early Bird"),
+        XCTAssertTrue(RoomSetup.writeWinner(path: "games", room: room, name: "Early Bird"),
                       "The database should accept the win")
 
         let banner = app.descendants(matching: .any)["words.winner"].firstMatch
@@ -251,36 +251,6 @@ final class VibeWordsUITests: XCTestCase {
         XCTAssertEqual(board.value as? String, "0 of 6 guesses used",
                        "The notice must not wait for this player's word to be finished")
         attach(app, named: "25-words-someone-else-won")
-    }
-
-    // MARK: - The room, for the shared-game test
-
-    /// `Game code TRAM PUFF` is the badge's label; the room is `tram-puff`.
-    private static func roomCode(from label: String) -> String? {
-        let words = label.split(whereSeparator: { !$0.isLetter })
-        guard words.count >= 2 else { return nil }
-        return words.suffix(2).joined(separator: "-").lowercased()
-    }
-
-    private static func writeWinner(room: String, name: String) -> Bool {
-        let url = URL(string: "https://vibe-words-party-default-rtdb.firebaseio.com"
-                      + "/games/\(room)/winner.json")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: [
-            "name": name,
-            "timestamp": Int(Date().timeIntervalSince1970 * 1000),
-        ])
-
-        let finished = DispatchSemaphore(value: 0)
-        var accepted = false
-        URLSession.shared.dataTask(with: request) { _, response, _ in
-            accepted = (response as? HTTPURLResponse)?.statusCode == 200
-            finished.signal()
-        }.resume()
-        _ = finished.wait(timeout: .now() + 15)
-        return accepted
     }
 
     // MARK: - Helpers

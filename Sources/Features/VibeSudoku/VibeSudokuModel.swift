@@ -377,8 +377,11 @@ final class VibeSudokuModel: ObservableObject {
 
     /// Starts the next round. Solo reloads immediately; a shared game writes a
     /// fresh seed and gives everyone a countdown to see the result.
+    ///
+    /// One at a time: the panel is offered when *this* player's board is done,
+    /// so the person who finishes first is the one who can start the next one.
     func playAgain() async {
-        guard solved || isRoundOver else { return }
+        guard solved else { return }
 
         if let gameID = sharedGameID {
             let seed = SudokuGenerator.randomSeed()
@@ -394,8 +397,16 @@ final class VibeSudokuModel: ObservableObject {
         }
     }
 
-    var isRoundOver: Bool {
-        solved || (snapshot.winner != nil && snapshot.winner?.name != playerName)
+    /// This player's board is finished — the round is over for them, not for the
+    /// room. Somebody else solving first leaves the grid playable, so a late
+    /// arrival, or anyone slower, can still finish their own.
+    var isRoundOver: Bool { solved }
+
+    /// Somebody else finished first, either before this player arrived or while
+    /// they were still filling squares.
+    var someoneElseWon: Bool {
+        guard let winner = snapshot.winner else { return false }
+        return winner.name != playerName
     }
 
     // MARK: - Clock

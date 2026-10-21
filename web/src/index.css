@@ -637,6 +637,23 @@ body {
   to { opacity: 1; }
 }
 
+/* ── somebody else finished first ──────────────────────────────────────────
+   Word Vibe and Number Vibe both announce another player's win as it lands and
+   keep it on screen while this player finishes their own board. It is a line in
+   the flow, not a toast: it belongs to the round and stays as long as the round
+   does. */
+.game-winner {
+  margin: 0.2rem 0 0.6rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(201, 180, 88, 0.5);
+  border-radius: 0.75rem;
+  background: rgba(201, 180, 88, 0.12);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 /* ── the end of a round ───────────────────────────────────────────────────
    One shape for "it is over, here is what happened, start another": a card in
    the game's own column, a line of detail, and the one button a player wants at

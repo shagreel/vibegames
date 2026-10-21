@@ -51,13 +51,15 @@ struct VibeSudokuView: View {
                                    mode: model.isShared ? .shared : .solo,
                                    grade: model.difficulty.rawValue)
         }
-        // Sudoku has a win and no loss of its own: you either finish the grid or
-        // somebody finishes theirs first, which from here is one transition.
+        // The finish this device reports is its own board being done. Somebody
+        // else getting there first is not the end of this player's round, and
+        // telling the story that way is what made a late arrival look like a
+        // loss they could do nothing about.
         .onChange(of: model.isRoundOver) { _, isOver in
             guard isOver else { return }
             AppAnalytics.gameFinish(.sudoku,
                                     mode: model.isShared ? .shared : .solo,
-                                    outcome: model.solved ? .won : .lost,
+                                    outcome: .won,
                                     seconds: Int(model.elapsed))
         }
     }
@@ -319,8 +321,8 @@ struct VibeSudokuView: View {
     /// choice, so the picker is solo only.
     private var roundOverPanel: some View {
         RoundOverPanel(
-            title: model.solved ? "Solved!" : "\(model.snapshot.winner?.name ?? "Someone") finished first",
-            detail: "\(model.filledCount) of 81 · \(model.formattedElapsed)",
+            title: "Solved!",
+            detail: roundOverDetail,
             accent: AnyShapeStyle(VibeTheme.vibeSudoku),
             primaryIdentifier: "sudoku.playAgain",
             action: { Task { await model.playAgain() } }
@@ -329,6 +331,18 @@ struct VibeSudokuView: View {
                 nextBoardDifficulty
             }
         }
+    }
+
+    /// What the panel says under "Solved!".
+    ///
+    /// In a room the first grid finished is the win, so somebody finishing later
+    /// is told who was quicker as well as what their own board took — the same
+    /// two lines Word Vibe gives.
+    private var roundOverDetail: String {
+        if model.someoneElseWon {
+            return "\(model.snapshot.winner?.name ?? "Somebody") got there first, mind. The next board is a new one."
+        }
+        return "\(model.filledCount) of 81 · \(model.formattedElapsed)"
     }
 
     private var nextBoardDifficulty: some View {
@@ -366,9 +380,17 @@ struct VibeSudokuView: View {
             banner(notice, symbol: "pencil", tint: VibeTheme.tertiaryText)
         } else if model.isWaitingForHost {
             waitingPanel
+        } else if model.someoneElseWon, !model.solved {
+            // Said the moment it happens, and kept on screen while this player
+            // finishes: the grid is still theirs to complete, so the notice is
+            // news rather than the end of the round.
+            banner("\(model.snapshot.winner?.name ?? "Somebody") solved it first — finish yours if you like.",
+                   symbol: "trophy.fill",
+                   tint: VibeTheme.tilePresent)
+                .accessibilityIdentifier("sudoku.winner")
         } else if let error = model.errorMessage {
-            // The solved/finished lines moved into the panel. What is left here
-            // is what the panel cannot say — a restart that would not start.
+            // The solved lines moved into the panel. What is left here is what
+            // the panel cannot say — a restart that would not start.
             banner(error, symbol: "exclamationmark.triangle.fill", tint: VibeTheme.warn)
         }
     }

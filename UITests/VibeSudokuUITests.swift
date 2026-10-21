@@ -166,6 +166,59 @@ final class VibeSudokuUITests: XCTestCase {
         attach(app, named: "33-sudoku-shared-host")
     }
 
+    /// Somebody else finishing first is announced, and this player's grid stays
+    /// theirs to finish.
+    ///
+    /// A room used to close for everyone the moment one board was solved: a late
+    /// arrival, or anyone slower, got a "finished first" panel and a dead board.
+    /// The win is news now, the way it is in Word Vibe.
+    func testSomebodyElseWinningLeavesTheBoardPlayable() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openSudokuLobby(app)
+
+        let create = app.buttons["sudoku.createGame"]
+        try XCTSkipUnless(create.exists && create.isEnabled,
+                          "Multiplayer needs a configured Firebase project")
+        create.tap()
+
+        let badge = app.descendants(matching: .any)["sudoku.gameCode"].firstMatch
+        XCTAssertTrue(badge.waitForExistence(timeout: backendTimeout),
+                      "Should land in the waiting room after creating a game")
+        let room = try XCTUnwrap(RoomSetup.code(from: badge.label),
+                                 "Could not read a room code from: \(badge.label)")
+
+        app.buttons["sudoku.startShared"].tap()
+
+        let board = app.descendants(matching: .any)["sudoku.board"].firstMatch
+        XCTAssertTrue(board.waitForExistence(timeout: backendTimeout), "The grid should appear")
+
+        XCTAssertTrue(RoomSetup.writeWinner(path: "sudoku", room: room, name: "Early Bird"),
+                      "The database should accept the win")
+
+        let banner = app.descendants(matching: .any)["sudoku.winner"].firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: backendTimeout),
+                      "A win by somebody else should be announced")
+        XCTAssertTrue(banner.label.contains("Early Bird"),
+                      "Expected the winner's name, got: \(banner.label)")
+        XCTAssertFalse(app.buttons["sudoku.playAgain"].exists,
+                       "The round-over panel belongs to this player's own board")
+
+        // The half that was wrong: the grid still takes a digit.
+        let empty = try firstEmptyCell(in: app)
+        empty.tap()
+        app.buttons["sudoku.digit.5"].tap()
+
+        let accepted = expectation(
+            for: NSPredicate(format: "label CONTAINS %@", "5"),
+            evaluatedWith: empty
+        )
+        wait(for: [accepted], timeout: 5)
+        XCTAssertFalse(empty.label.contains("empty"),
+                       "The board should still accept a digit, label was: \(empty.label)")
+        attach(app, named: "34-sudoku-someone-else-won")
+    }
+
     // MARK: - Helpers
 
     private func openSudokuLobby(_ app: XCUIApplication) {
