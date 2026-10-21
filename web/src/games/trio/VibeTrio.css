@@ -12,24 +12,6 @@
   color: var(--ink);
 }
 
-.trio__leave {
-  position: static;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--raise);
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.45rem 0.9rem;
-  cursor: pointer;
-}
-
-.trio__leave:hover {
-  color: var(--ink);
-  border-color: var(--line-hover);
-}
-
 .trio__subtitle {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
@@ -567,6 +549,3 @@
 
 /* The heart shares the corner with whatever else the screen needs there. */
 
-.trio__corner .trio__leave {
-  position: static;
-}

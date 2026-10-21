@@ -19,19 +19,6 @@
   color: var(--ink);
 }
 
-.sudoku__leave {
-  position: static;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--raise);
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.45rem 0.9rem;
-  cursor: pointer;
-}
-
 /* ── board ─────────────────────────────────────────────────────────────── */
 
 .sudoku__board {
@@ -454,10 +441,6 @@
 }
 
 /* The heart shares the corner with whatever else the screen needs there. */
-
-.sudoku__corner .sudoku__leave {
-  position: static;
-}
 
 /* Nine marks: every digit in its own square, small — the pencil-mark grid as it
    is read on paper. Four are shown bigger instead; see the rule above. */

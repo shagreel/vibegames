@@ -357,11 +357,15 @@ function VibeWords() {
     return state;
   };
 
-  // A round ends when this player runs out of guesses, or when they solve it,
-  // or when somebody else solves it first — which arrives over the wire and so
-  // has to be watched rather than logged where the guess was judged. Keyed on
-  // the word, so a rematch (a new word) is counted and a repeat is not.
-  const roundOver = gameOver || (winner !== null && winner.name !== playerName);
+  // A round ends for *this player* when they run out of guesses or solve it.
+  //
+  // Somebody else's win does not end it for everybody: the owner asked to be
+  // able to finish the word for fun, and the win is recorded against the first
+  // person regardless. It is announced the moment it arrives, which is what
+  // went wrong before — the notice only appeared once this player's own round
+  // was over, so a late joiner never saw it.
+  const someoneElseWon = winner !== null && winner.name !== playerName;
+  const roundOver = gameOver;
   const reportedWord = useRef<string | null>(null);
   useEffect(() => {
     if (!roundOver || !answer || reportedWord.current === answer) return;
@@ -811,6 +815,12 @@ function VibeWords() {
           tone={won ? 'good' : message && !won ? 'warn' : 'info'}
         />
 
+        {someoneElseWon && !visibleCountdown && (
+          <p className="words__winner" role="status">
+            🏆 {winner?.name} solved it first — finish yours if you like.
+          </p>
+        )}
+
         {roundOver && !visibleCountdown && (
           <RoundOver
             title={
@@ -822,7 +832,9 @@ function VibeWords() {
             }
             detail={
               won
-                ? `In ${guesses.length} ${guesses.length === 1 ? 'guess' : 'guesses'}`
+                ? someoneElseWon
+                  ? `${winner?.name} got there first, mind. The next one is a new word.`
+                  : `In ${guesses.length} ${guesses.length === 1 ? 'guess' : 'guesses'}`
                 : 'The next one is a new word.'
             }
             onPrimary={() => void handlePlayAgain()}

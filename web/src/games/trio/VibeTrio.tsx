@@ -351,8 +351,24 @@ function VibeTrio() {
       // Take it here and now — the cards go the instant they are spotted, not a
       // round trip later — then let the server decide who really got them.
       setPending((current) => [...current, { ids }]);
-      void claimTrio(gameId, seed, ids, id, playerName()).then((outcome) => {
+
+      const attempt = async (retried: boolean) => {
+        const outcome = await claimTrio(gameId, seed, ids, id, playerName());
         if (outcome === 'won') return; // The next snapshot carries it.
+
+        // A refusal is only believable if the cards are actually gone. The
+        // claim is judged on the server's copy of the table, and the two can
+        // disagree for a moment — a reconnect, or a room that changed while this
+        // screen was looking away. If our table still has all three, ask once
+        // more before telling the player somebody beat them to it.
+        const allStillHere = Boolean(
+          table && ids.every((id) => table.visible.some((card) => card.id === id)),
+        );
+        if (outcome === 'taken' && allStillHere && !retried) {
+          void attempt(true);
+          return;
+        }
+
         setPending((current) => current.filter((p) => p.ids.join(',') !== ids.join(',')));
         setNotice(
           outcome === 'taken'
@@ -362,7 +378,8 @@ function VibeTrio() {
               : 'Could not reach the game. Check your connection.',
         );
         window.setTimeout(() => setNotice(''), 2500);
-      });
+      };
+      void attempt(false);
     },
     [table, seed, gameId, id],
   );
@@ -421,14 +438,11 @@ function VibeTrio() {
             ? subtitle(table, gameId, snapshot, myTakes, elapsed)
             : undefined
         }
+        onBack={screen === 'game' && gameId ? leave : undefined}
+        backLabel={screen === 'game' && gameId ? 'Leave game' : undefined}
       >
         <SupportButton game="trio" />
         <SettingsButton prefix="trio" onClick={() => setSettingsOpen(true)} />
-        {screen === 'game' && gameId && (
-          <button type="button" className="trio__leave" onClick={leave}>
-            Leave
-          </button>
-        )}
       </GameHeader>
 
       <GameMessage text={notice || null} tone={notice ? 'warn' : 'info'} />

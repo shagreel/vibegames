@@ -246,6 +246,9 @@ struct VibeWordsView: View {
                 .padding(.vertical, 6)
             VibeWordsKeyboardView(feedbackFor: model.keyboardFeedback(for:),
                                   onKey: model.press)
+                // The keyboard belongs to a round: a new word rebuilds it, so
+                // last round's tint cannot outlive the board it described.
+                .id(roundToken)
                 .padding(.horizontal, 6)
                 .padding(.bottom, 6)
                 .disabled(!model.canPlay)
@@ -284,8 +287,10 @@ struct VibeWordsView: View {
     }
 
     private var roundOverDetail: String {
+        if model.won, model.someoneElseWon {
+            return "\(model.snapshot.winner?.name ?? "Somebody") got there first, mind. The next one is a new word."
+        }
         if model.won { return "In \(model.guesses.count) guesses" }
-        if model.someoneElseWon { return "The next one is a new word." }
         return "The next one is a new word."
     }
 
@@ -305,10 +310,14 @@ struct VibeWordsView: View {
             .accessibilityIdentifier("words.countdown")
         } else if model.isWaitingForHost {
             waitingPanel
-        } else if model.isRoundOver {
-            // The panel says how the round ended, including who got there first.
-            // Nothing more is needed here.
-            EmptyView()
+        } else if model.someoneElseWon {
+            // Said as soon as it happens, and kept on screen while this player
+            // finishes their own word — the win is theirs whoever is first, so
+            // there is no race left to lose, but the board is still playable.
+            banner("\(model.snapshot.winner?.name ?? "Somebody") solved it first — finish yours if you like.",
+                   symbol: "trophy.fill",
+                   tint: VibeTheme.tilePresent)
+                .accessibilityIdentifier("words.winner")
         } else if let message = model.message {
             // Refusals and errors. The won/lost copy now belongs to the panel,
             // so it never reaches this line.

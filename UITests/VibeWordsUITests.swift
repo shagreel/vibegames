@@ -131,6 +131,56 @@ final class VibeWordsUITests: XCTestCase {
         attach(app, named: "25-words-keyboard-state")
     }
 
+    /// A new word starts with a clean keyboard.
+    ///
+    /// The keyboard takes its colours from a closure rather than from a value,
+    /// and SwiftUI could not tell that a new round had changed anything — the
+    /// board cleared and the keyboard kept last round's tint, which is exactly
+    /// what "the keyboard is not clearing when a new word starts" described.
+    func testTheKeyboardClearsWhenANewWordStarts() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openWordsLobby(app)
+        app.buttons["words.playSolo"].tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["words.board"].waitForExistence(timeout: 10))
+        try playFullRound(app)
+
+        let tintedBefore = tintedKeys(app)
+        XCTAssertGreaterThan(tintedBefore, 0, "the guesses should have tinted the keyboard")
+
+        let playAgain = app.buttons["words.playAgain"]
+        XCTAssertTrue(playAgain.waitForExistence(timeout: 5), "the round should be over")
+        playAgain.tap()
+
+        let cleared = expectation(for: NSPredicate(format: "value == %@", "not tried"),
+                                  evaluatedWith: app.buttons["words.key.Q"])
+        wait(for: [cleared], timeout: 5)
+        XCTAssertEqual(tintedKeys(app), 0, "a new word starts with a clean keyboard")
+        XCTAssertEqual(app.descendants(matching: .any)["words.board"].value as? String,
+                       "0 of 6 guesses used")
+    }
+
+    /// Six guesses, all of them real words, so the round ends however it ends.
+    private func playFullRound(_ app: XCUIApplication) throws {
+        for word in ["crane", "slate", "audio", "pious", "mound", "fiery"] {
+            for letter in word.uppercased() {
+                app.buttons["words.key.\(letter)"].tap()
+            }
+            app.buttons["words.key.enter"].tap()
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+    }
+
+    /// Keys whose colour says something has been learned about that letter.
+    private func tintedKeys(_ app: XCUIApplication) -> Int {
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".reduce(0) { total, letter in
+            let key = app.buttons["words.key.\(letter)"]
+            guard key.exists, let value = key.value as? String else { return total }
+            return value == "not tried" ? total : total + 1
+        }
+    }
+
     // MARK: - Shared play
 
     /// The only test that talks to the real backend. It skips itself when

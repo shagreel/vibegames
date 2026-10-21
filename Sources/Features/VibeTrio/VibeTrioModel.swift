@@ -57,6 +57,8 @@ final class VibeTrioModel: ObservableObject {
     /// are replayed on top of the confirmed takes so the board does not flicker
     /// back while the write is in flight.
     private var pendingTakes: [[Int]] = []
+    /// Claims already retried once in this round, so a refusal cannot loop.
+    private var retriedClaims: Set<String> = []
 
     private enum StoredKey {
         static let hostedGame = "vibetrio.hostedGameID"
@@ -273,6 +275,7 @@ final class VibeTrioModel: ObservableObject {
             // A fresh round — the board, the selection and the clock all restart.
             currentSeed = seed
             pendingTakes = []
+            retriedClaims = []
             isResolving = false
             selected = []
             rejected = []
@@ -340,6 +343,7 @@ final class VibeTrioModel: ObservableObject {
         selected = []
         rejected = []
         pendingTakes = []
+        retriedClaims = []
         isResolving = false
         conflictNotice = nil
         startClock()
@@ -422,6 +426,32 @@ final class VibeTrioModel: ObservableObject {
 
         case .takenBySomeoneElse:
             pendingTakes.removeAll { $0 == ids }
+
+            // A refusal is only believable if the cards are actually gone. The
+            // claim was judged on the server's copy of the table, and the two can
+            // disagree for a moment — a reconnect, or a room that changed while
+            // this phone was looking away. If our board still has all three, ask
+            // once more before telling the player somebody beat them to it.
+            if let table, ids.allSatisfy({ id in table.visible.contains { $0.id == id } }),
+               case let attempt = ids.sorted().map(String.init).joined(separator: ","),
+               !retriedClaims.contains(attempt),
+               let gameID = sharedGameID, let seed = currentSeed {
+                retriedClaims.insert(attempt)
+                pendingTakes.append(ids)
+                rebuildTable()
+                isResolving = true
+                Task { [weak self] in
+                    guard let self else { return }
+                    let second = await self.service.claimTrio(gameID: gameID,
+                                                              seed: seed,
+                                                              cardIDs: ids,
+                                                              playerID: PlayerIdentity.id,
+                                                              name: self.playerName)
+                    self.finishClaim(ids, outcome: second)
+                }
+                return
+            }
+
             rebuildTable()
             showConflict()
 

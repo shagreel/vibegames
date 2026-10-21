@@ -455,14 +455,11 @@ function VibeSudoku() {
             ? subtitle(gameId, snapshot, filled, elapsed, difficulty)
             : undefined
         }
+        onBack={screen === 'game' && gameId ? leave : undefined}
+        backLabel={screen === 'game' && gameId ? 'Leave game' : undefined}
       >
         <SupportButton game="sudoku" />
         <SettingsButton prefix="sudoku" onClick={() => setSettingsOpen(true)} />
-        {screen === 'game' && gameId && (
-          <button type="button" className="sudoku__leave" onClick={leave}>
-            Leave
-          </button>
-        )}
       </GameHeader>
 
       <GameMessage text={notice || null} tone={notice ? 'warn' : 'info'} />

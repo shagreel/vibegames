@@ -599,3 +599,17 @@
 /* The code, in the lobby, where every other game puts it. It used to exist only
    inside the link the copy button puts on the clipboard, so whoever created the
    game had nothing to read out to the room. */
+
+/* Somebody else won the round: said as it happens, and left on screen while this
+   player finishes their own word. */
+.words__winner {
+  margin: 0.2rem 0 0.6rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(201, 180, 88, 0.5);
+  border-radius: 0.75rem;
+  background: rgba(201, 180, 88, 0.12);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
