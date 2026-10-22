@@ -382,9 +382,9 @@ struct VibeSudokuView: View {
             waitingPanel
         } else if model.someoneElseWon, !model.solved {
             // Said the moment it happens, and kept on screen while this player
-            // finishes: the grid is still theirs to complete, so the notice is
-            // news rather than the end of the round.
-            banner("\(model.snapshot.winner?.name ?? "Somebody") solved it first — finish yours if you like.",
+            // finishes: the notice is news, not the end of the round. It states
+            // the win and leaves the board to explain itself.
+            banner("\(model.snapshot.winner?.name ?? "Somebody") solved it first.",
                    symbol: "trophy.fill",
                    tint: VibeTheme.tilePresent)
                 .accessibilityIdentifier("sudoku.winner")

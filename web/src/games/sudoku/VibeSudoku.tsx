@@ -502,7 +502,7 @@ function VibeSudoku() {
                 finishes their own grid: the round is over, the board is not. */}
             {someoneElseWon && !solved && (
               <p className="game-winner" role="status">
-                🏆 {snapshot.winner?.name} solved it first — finish yours if you like.
+                🏆 {snapshot.winner?.name} solved it first.
               </p>
             )}
 

@@ -312,9 +312,9 @@ struct VibeWordsView: View {
             waitingPanel
         } else if model.someoneElseWon {
             // Said as soon as it happens, and kept on screen while this player
-            // finishes their own word — the win is theirs whoever is first, so
-            // there is no race left to lose, but the board is still playable.
-            banner("\(model.snapshot.winner?.name ?? "Somebody") solved it first — finish yours if you like.",
+            // finishes their own word. Nothing more is promised: the board is
+            // still playable, and saying so reads like a second rule.
+            banner("\(model.snapshot.winner?.name ?? "Somebody") solved it first.",
                    symbol: "trophy.fill",
                    tint: VibeTheme.tilePresent)
                 .accessibilityIdentifier("words.winner")
