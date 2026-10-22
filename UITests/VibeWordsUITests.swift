@@ -253,6 +253,51 @@ final class VibeWordsUITests: XCTestCase {
         attach(app, named: "25-words-someone-else-won")
     }
 
+    /// Solving a shared word in the app has to land in the room, because that is
+    /// the only way the browsers watching it can be told.
+    ///
+    /// Reported after a real game: the phone finished the word and the two web
+    /// players got nothing. Reading the room back is the assertion the screen
+    /// cannot make — "Solved!" on this phone says nothing about what was written.
+    func testSolvingASharedWordRecordsTheWinInTheRoom() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openWordsLobby(app)
+
+        let create = app.buttons["words.createGame"]
+        try XCTSkipUnless(create.exists && create.isEnabled,
+                          "Multiplayer needs a configured Firebase project")
+        create.tap()
+
+        let badge = app.descendants(matching: .any)["words.gameCode"].firstMatch
+        XCTAssertTrue(badge.waitForExistence(timeout: backendTimeout),
+                      "Should land in the waiting room after creating a game")
+        let room = try XCTUnwrap(RoomSetup.code(from: badge.label),
+                                 "Could not read a room code from: \(badge.label)")
+
+        app.buttons["words.startShared"].tap()
+
+        let board = app.descendants(matching: .any)["words.board"].firstMatch
+        XCTAssertTrue(board.waitForExistence(timeout: backendTimeout), "The board should appear")
+
+        let word = try XCTUnwrap(RoomSetup.read(path: "games/\(room)/word") as? String,
+                                 "The room should have a word to solve")
+
+        type(word, in: app)
+        app.buttons["words.key.enter"].tap()
+
+        let board2 = app.descendants(matching: .any)["words.board"].firstMatch
+        let scored = expectation(for: NSPredicate(format: "value == %@", "1 of 6 guesses used"),
+                                 evaluatedWith: board2)
+        wait(for: [scored], timeout: 10)
+
+        let recorded = RoomSetup.waitFor(path: "games/\(room)/winner",
+                                         until: { ($0 as? [String: Any])?["name"] != nil })
+        XCTAssertEqual((recorded as? [String: Any])?["name"] as? String, "Tester",
+                       "The room should record this player as the winner, got: \(String(describing: recorded))")
+        attach(app, named: "26-words-shared-solved")
+    }
+
     // MARK: - Helpers
 
     /// Walks from launch to the Word Vibe lobby, dealing with the name prompt

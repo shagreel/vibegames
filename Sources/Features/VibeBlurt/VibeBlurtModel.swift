@@ -524,7 +524,14 @@ final class VibeBlurtModel: ObservableObject {
         if newSnapshot.started, myTeam == nil, !askedForTeam, let gameID = sharedGameID {
             askedForTeam = true
             Task { [weak self] in
-                try? await self?.service.assignTeam(gameID: gameID, playerID: PlayerIdentity.id)
+                do {
+                    try await self?.service.assignTeam(gameID: gameID, playerID: PlayerIdentity.id)
+                } catch {
+                    // Asking is what the read is for, and it can fail on the way
+                    // in. Clearing the flag lets the next snapshot try again,
+                    // rather than leaving somebody teamless for the whole game.
+                    self?.askedForTeam = false
+                }
             }
         }
     }

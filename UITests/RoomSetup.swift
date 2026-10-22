@@ -41,4 +41,36 @@ enum RoomSetup {
         _ = finished.wait(timeout: .now() + 15)
         return accepted
     }
+
+    /// Reads one node of the room, so a test can see what the app wrote — the
+    /// word to type, the winner it recorded, the roster it left behind.
+    static func read(path: String) -> Any? {
+        let url = URL(string: "https://vibe-words-party-default-rtdb.firebaseio.com"
+                      + "/\(path).json")!
+        let finished = DispatchSemaphore(value: 0)
+        var value: Any?
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            if let data, !data.isEmpty {
+                // `.fragmentsAllowed`: a bare `"ASSET"` is a whole JSON document
+                // here, and without it every scalar read fails to parse.
+                value = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
+            }
+            finished.signal()
+        }.resume()
+        _ = finished.wait(timeout: .now() + 15)
+        return value
+    }
+
+    /// Waits for a node to hold what the test expects, and returns it.
+    static func waitFor(path: String, seconds: TimeInterval = 15,
+                        until matches: (Any?) -> Bool) -> Any? {
+        let deadline = Date().addingTimeInterval(seconds)
+        var value: Any?
+        while Date() < deadline {
+            value = read(path: path)
+            if matches(value) { return value }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return value
+    }
 }

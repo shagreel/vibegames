@@ -177,15 +177,24 @@ final class VibeWordsService {
     }
 
     /// Only records a winner if nobody has won yet, so the first solver keeps it.
+    ///
+    /// A transaction, not a read followed by a write. The read was the whole
+    /// problem: when the phone is between networks — a tunnel, a lift, the
+    /// handover from Wi-Fi — `getData` throws, the error was swallowed, and the
+    /// solve never reached the room, so the browsers watching it were never told
+    /// anybody had won. A transaction is queued by the SDK and lands when the
+    /// connection comes back.
     func recordWinnerIfAbsent(gameID: String, name: String) async throws {
         guard let reference = gameReference(gameID)?.child("winner") else { return }
-        let existing = try await reference.getData()
-        guard !existing.exists() else { return }
-
-        try await reference.setValue([
-            "name": name,
-            "timestamp": Self.milliseconds(Date())
-        ])
+        _ = try await reference.runTransactionBlock { current in
+            // A missing node reads as `NSNull`, not nil, so ask what is there.
+            if let existing = current.value, !(existing is NSNull) { return .abort() }
+            current.value = [
+                "name": name,
+                "timestamp": Self.milliseconds(Date())
+            ]
+            return .success(withValue: current)
+        }
     }
 
     func beginRestart(gameID: String, word: String, after seconds: TimeInterval = 10) async throws {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ref, onValue, set, get, onDisconnect, remove } from 'firebase/database';
+import { ref, onValue, set, get, onDisconnect, remove, runTransaction } from 'firebase/database';
 import { database } from '../../firebase';
 import { VALID_WORDS, ANSWER_WORDS } from './wordList';
 import { SupportButton } from '../../hub/Support';
@@ -66,6 +66,9 @@ function VibeWords() {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [message, setMessage] = useState('');
+  // Set when the room could not be told about this player's win, so the panel
+  // can say so rather than implying the win was shared.
+  const [recordFailed, setRecordFailed] = useState(false);
   const [shake, setShake] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
   const [playerName, setPlayerName] = useState(() => savedName());
@@ -154,6 +157,7 @@ function VibeWords() {
           setShareMessage('');
           setGameOver(false);
           setWon(false);
+          setRecordFailed(false);
         }
 
         if (previousAnswerRef.current !== newWord) {
@@ -430,18 +434,18 @@ function VibeWords() {
         setGameOver(true);
         setMessage('Congratulations! 🎉');
 
-        // Record winner in Firebase if in a shared game
+        // Record winner in Firebase if in a shared game.
+        //
+        // A transaction, not a read and then a write: a browser between networks
+        // fails the read, and that failure was silent — the win never reached the
+        // room, so nobody else was told. A transaction is queued and lands when
+        // the connection comes back.
         if (gameId && playerName) {
           const winnerRef = ref(database, `games/${gameId}/winner`);
-          // Only set if no winner exists yet
-          get(winnerRef).then((snapshot) => {
-            if (!snapshot.exists()) {
-              set(winnerRef, {
-                name: playerName,
-                timestamp: Date.now()
-              });
-            }
-          });
+          runTransaction(winnerRef, (current: { name?: string } | null) => {
+            if (current) return undefined; // Aborts: somebody got there first.
+            return { name: playerName, timestamp: Date.now() };
+          }).catch(() => setRecordFailed(true));
         }
       } else if (newGuesses.length === MAX_GUESSES) {
         setGameOver(true);
@@ -845,11 +849,13 @@ function VibeWords() {
                   : `The word was ${answer}`
             }
             detail={
-              won
-                ? someoneElseWon
-                  ? `${winner?.name} got there first, mind. The next one is a new word.`
-                  : `In ${guesses.length} ${guesses.length === 1 ? 'guess' : 'guesses'}`
-                : 'The next one is a new word.'
+              won && recordFailed
+                ? 'Solved — but the room could not be told.'
+                : won
+                  ? someoneElseWon
+                    ? `${winner?.name} got there first, mind. The next one is a new word.`
+                    : `In ${guesses.length} ${guesses.length === 1 ? 'guess' : 'guesses'}`
+                  : 'The next one is a new word.'
             }
             onPrimary={() => void handlePlayAgain()}
           />

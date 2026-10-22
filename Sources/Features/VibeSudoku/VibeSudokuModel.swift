@@ -369,10 +369,27 @@ final class VibeSudokuModel: ObservableObject {
         recordWinIfShared()
     }
 
+    /// Tells the room, or says that it could not — the other players only learn
+    /// about a finished board from this write. One retry, because the usual
+    /// failure is a connection turning over; after that, say so.
     private func recordWinIfShared() {
         guard let gameID = sharedGameID else { return }
         let name = playerName
-        Task { try? await service.recordWinnerIfAbsent(gameID: gameID, name: name) }
+        Task {
+            for attempt in 0..<2 {
+                do {
+                    try await service.recordWinnerIfAbsent(gameID: gameID, name: name)
+                    return
+                } catch {
+                    FirebaseBootstrapper.record(error, during: "Could not record the win")
+                    if attempt == 1 {
+                        errorMessage = "Solved — but the room could not be told."
+                    } else {
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    }
+                }
+            }
+        }
     }
 
     /// Starts the next round. Solo reloads immediately; a shared game writes a

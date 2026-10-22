@@ -323,11 +323,31 @@ final class VibeWordsModel: ObservableObject {
         }
     }
 
+    /// Tells the room, or says that it could not.
+    ///
+    /// This write is the only way the browsers watching the game learn that
+    /// somebody has won, so a failure here is not cosmetic: the error used to be
+    /// swallowed, and two web players were left looking at an unsolved word
+    /// while the phone had finished it. The usual failure is a connection
+    /// turning over, so it is worth one retry; after that the player is told
+    /// rather than left believing the win was shared.
     private func recordWin() {
         guard let gameID = sharedGameID else { return }
         let name = playerName
         Task {
-            try? await service.recordWinnerIfAbsent(gameID: gameID, name: name)
+            for attempt in 0..<2 {
+                do {
+                    try await service.recordWinnerIfAbsent(gameID: gameID, name: name)
+                    return
+                } catch {
+                    FirebaseBootstrapper.record(error, during: "Could not record the win")
+                    if attempt == 1 {
+                        message = "Solved — but the room could not be told."
+                    } else {
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    }
+                }
+            }
         }
     }
 

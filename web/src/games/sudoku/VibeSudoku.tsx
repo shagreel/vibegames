@@ -109,6 +109,9 @@ function VibeSudoku() {
     return (NOTE_LIMITS as readonly number[]).includes(saved) ? (saved as NoteLimit) : 4;
   });
   const [solved, setSolved] = useState(false);
+  // Set when the room could not be told about this board, so the panel says so
+  // rather than implying the win was shared.
+  const [recordFailed, setRecordFailed] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
@@ -135,6 +138,7 @@ function VibeSudoku() {
     setNotes(Array.from({ length: CELL_COUNT }, () => new Set<number>()));
     setSelected(null);
     setSolved(false);
+    setRecordFailed(false);
     setElapsed(0);
 
     // The seed is the round. A solo game, a shared game starting and a rematch
@@ -320,7 +324,7 @@ function VibeSudoku() {
     (next: number[]) => {
       if (!isComplete(next)) return;
       setSolved(true);
-      if (gameId) void recordWinner(gameId, name).catch(() => undefined);
+      if (gameId) void recordWinner(gameId, name).catch(() => setRecordFailed(true));
     },
     [gameId, name],
   );
@@ -532,9 +536,11 @@ function VibeSudoku() {
         <RoundOver
           title={gameId ? 'You finished it!' : 'Solved!'}
           detail={
-            someoneElseWon
-              ? `${snapshot.winner?.name ?? 'Somebody'} got there first, mind. The next board is a new one.`
-              : `${filled} of ${CELL_COUNT} · ${formatElapsed(elapsed)}`
+            recordFailed
+              ? 'Solved — but the room could not be told.'
+              : someoneElseWon
+                ? `${snapshot.winner?.name ?? 'Somebody'} got there first, mind. The next board is a new one.`
+                : `${filled} of ${CELL_COUNT} · ${formatElapsed(elapsed)}`
           }
           onPrimary={playAgain}
         >

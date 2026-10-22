@@ -171,15 +171,22 @@ final class VibeSudokuService {
         try await gameReference(gameID)?.child("started").setValue(true)
     }
 
+    /// Only records a winner if nobody has won yet, so the first solver keeps it.
+    ///
+    /// A transaction, not a read followed by a write: a read can fail while the
+    /// phone is between networks, and a swallowed error there meant a solved
+    /// board never reached the room, so the other players were never told.
     func recordWinnerIfAbsent(gameID: String, name: String) async throws {
         guard let reference = gameReference(gameID)?.child("winner") else { return }
-        let existing = try await reference.getData()
-        guard !existing.exists() else { return }
-
-        try await reference.setValue([
-            "name": name,
-            "timestamp": Self.milliseconds(Date())
-        ])
+        _ = try await reference.runTransactionBlock { current in
+            // A missing node reads as `NSNull`, not nil, so ask what is there.
+            if let existing = current.value, !(existing is NSNull) { return .abort() }
+            current.value = [
+                "name": name,
+                "timestamp": Self.milliseconds(Date())
+            ]
+            return .success(withValue: current)
+        }
     }
 
     func beginRestart(gameID: String,

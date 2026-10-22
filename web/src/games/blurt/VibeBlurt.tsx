@@ -288,7 +288,11 @@ function VibeBlurt() {
     if (!gameId || !snapshot.started || !myShortId) return;
     if (snapshot.teams[myShortId] || askedForTeam.current) return;
     askedForTeam.current = true;
-    void assignTeam(gameId, id);
+    // Clear it again if the write did not land, so the next snapshot asks once
+    // more instead of leaving this player without a team for the whole game.
+    void assignTeam(gameId, id).catch(() => {
+      askedForTeam.current = false;
+    });
   }, [gameId, snapshot.started, snapshot.teams, myShortId, id]);
 
   // MARK: - The clock
