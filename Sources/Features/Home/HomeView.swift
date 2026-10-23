@@ -21,6 +21,9 @@ struct HomeView: View {
                     GameCard(entry: entry)
                 }
 
+                UtilitiesButton()
+                    .padding(.top, 4)
+
                 footer
             }
             .padding(.horizontal, 20)
@@ -132,89 +135,31 @@ struct HomeView: View {
     }
 }
 
-/// A single game tile.
+/// A game's row on the hub: the shared tile, wrapped in the navigation that
+/// opens it. The look itself lives in `HubTile`.
 struct GameCard: View {
     let entry: GameEntry
 
     var body: some View {
         if let route = entry.route {
             NavigationLink(value: route) {
-                card
+                tile(hint: "Opens the game")
             }
             .buttonStyle(PressableCardStyle())
         } else {
-            card
+            tile(hint: "")
                 .opacity(0.5)
                 .accessibilityLabel("\(entry.title), coming soon")
         }
     }
 
-    private var card: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(entry.gradient)
-                    .frame(width: 68, height: 68)
-                    .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-
-                Image(systemName: entry.symbol)
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 8) {
-                    Text(entry.title)
-                        .font(.system(size: 22, weight: .heavy, design: .rounded))
-                        .foregroundStyle(VibeTheme.primaryText)
-
-                    if !entry.isAvailable {
-                        Text("SOON")
-                            .font(.system(size: 10, weight: .black, design: .rounded))
-                            .kerning(1)
-                            .foregroundStyle(VibeTheme.primaryText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(VibeTheme.surfaceStrong))
-                    }
-                }
-
-                Text(entry.tagline)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(VibeTheme.secondaryText)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-
-            if entry.isAvailable {
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(VibeTheme.primaryText.opacity(0.85))
-            }
-        }
-        .padding(16)
-        .background {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(VibeTheme.surface)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(VibeTheme.hairline, lineWidth: 1)
-                }
-        }
-        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("game.\(entry.id)")
-        .accessibilityHint(entry.isAvailable ? "Opens the game" : "")
-    }
-}
-
-private struct PressableCardStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.975 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.75),
-                       value: configuration.isPressed)
+    private func tile(hint: String) -> HubTile {
+        HubTile(title: entry.title,
+                tagline: entry.tagline,
+                symbol: entry.symbol,
+                gradient: entry.gradient,
+                identifier: "game.\(entry.id)",
+                hint: hint,
+                isAvailable: entry.isAvailable)
     }
 }

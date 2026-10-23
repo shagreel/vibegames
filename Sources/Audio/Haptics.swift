@@ -32,6 +32,10 @@ final class Haptics {
     private var coreHapticsSupported: Bool?
     /// The fallback's generator, held so it stays primed.
     private let heavy = UIImpactFeedbackGenerator(style: .heavy)
+    /// The small confirmations get their own generator: priming the heavy one
+    /// for a light tap leaves the first tap waiting on a generator built for
+    /// something else.
+    private let light = UIImpactFeedbackGenerator(style: .light)
 
     private init() {}
 
@@ -41,6 +45,7 @@ final class Haptics {
     /// that arrives late is a buzz that arrives after somebody has already
     /// started arguing about whether time was up.
     func prepare() {
+        light.prepare()
         guard supportsCoreHaptics else {
             heavy.prepare()
             return
@@ -64,6 +69,12 @@ final class Haptics {
             teardown()
             buzzWithoutCoreHaptics()
         }
+    }
+
+    /// One light tap, for the small confirmations: dealing a die, adding it to
+    /// the table. The heavy generator is for being caught out, which this is not.
+    func tap() {
+        light.impactOccurred(intensity: 0.8)
     }
 
     // MARK: - Core Haptics

@@ -84,6 +84,14 @@ struct RootView: View {
                         VibeBlurtView()
                     }
                 }
+                .navigationDestination(for: UtilityRoute.self) { route in
+                    switch route {
+                    case .list:
+                        UtilitiesView()
+                    case .dice:
+                        DiceView()
+                    }
+                }
         }
         // Not forced: the palette resolves per appearance, so the suite follows
         // the device unless the player overrides it from the hub.

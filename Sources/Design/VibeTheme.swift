@@ -124,6 +124,38 @@ enum VibeTheme {
     static let trioCardEdge = adaptive(light: Color.black.opacity(0.14),
                                        dark: Color.black.opacity(0.35))
 
+    // MARK: Utilities
+
+    /// The tool colour. Utilities are not a sixth game, so this is deliberately
+    /// the calmest accent in the suite: slate, not a party.
+    static let vibeUtility = LinearGradient(
+        colors: [Color(red: 0.42, green: 0.47, blue: 0.56),
+                 Color(red: 0.26, green: 0.31, blue: 0.42)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// One colour per die, in the order of `DiceModel.sidesOptions`. Six dice on
+    /// the table are read at a glance — "the purple one" is quicker than
+    /// counting which d10 that was.
+    static let diceColours: [Color] = [
+        Color(red: 0.95, green: 0.36, blue: 0.44),   // d4
+        Color(red: 0.20, green: 0.72, blue: 0.66),   // d6
+        Color(red: 0.55, green: 0.40, blue: 0.96),   // d8
+        Color(red: 0.94, green: 0.68, blue: 0.20),   // d10
+        Color(red: 0.36, green: 0.58, blue: 0.98),   // d12
+        Color(red: 0.36, green: 0.80, blue: 0.94)    // d20
+    ]
+
+    /// The colour of a die by how many sides it has, falling back to the utility
+    /// accent for anything not in the bag.
+    static func diceColour(sides: Int) -> Color {
+        guard let index = [4, 6, 8, 10, 12, 20].firstIndex(of: sides) else {
+            return Color(red: 0.42, green: 0.47, blue: 0.56)
+        }
+        return diceColours[index % diceColours.count]
+    }
+
     // MARK: Similar Vibe
 
     /// Fifth accent. Warm and loud on purpose — this is the game where somebody
