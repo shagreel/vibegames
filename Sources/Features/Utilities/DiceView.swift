@@ -30,6 +30,8 @@ struct DiceView: View {
 
             table
 
+            results
+
             controls
         }
         .vibeCanvas()
@@ -116,6 +118,52 @@ struct DiceView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 36)
         .accessibilityIdentifier("dice.empty")
+    }
+
+    // MARK: - The results
+
+    /// What each die came up, under the table.
+    ///
+    /// A number appears here only once the die has actually stopped: a die that
+    /// lands on another and rolls off it would otherwise be read while it was
+    /// still on its way down.
+    private var results: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 8)], spacing: 8) {
+            ForEach(model.dice) { die in
+                resultPill(die)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity)
+        .opacity(model.isEmpty ? 0 : 1)
+        .accessibilityIdentifier("dice.results")
+    }
+
+    private func resultPill(_ die: Die) -> some View {
+        let stopped = diceTable.settled.contains(die.id)
+        let colour = VibeTheme.diceColour(sides: die.sides)
+
+        return HStack(spacing: 6) {
+            Text("d\(die.sides)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+
+            Text(stopped ? "\(die.value)" : "–")
+                .font(.system(size: 17, weight: .black, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(VibeTheme.primaryText)
+                .contentTransition(.numericText())
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background {
+            Capsule().fill(colour.opacity(0.18))
+                .overlay { Capsule().stroke(colour.opacity(0.55), lineWidth: 1) }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(stopped ? "d\(die.sides): \(die.value)" : "d\(die.sides): rolling")
+        .accessibilityIdentifier("dice.result")
     }
 
     // MARK: - The two buttons

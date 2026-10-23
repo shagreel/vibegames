@@ -194,9 +194,22 @@ enum DiceSolid {
                 .strokeWidth: -3
             ]
             let bounds = text.size(withAttributes: attributes)
-            text.draw(at: CGPoint(x: (side - bounds.width) / 2,
-                                  y: (side - bounds.height) / 2),
-                      withAttributes: attributes)
+            let origin = CGPoint(x: (side - bounds.width) / 2,
+                                 y: (side - bounds.height) / 2)
+            text.draw(at: origin, withAttributes: attributes)
+
+            // A six and a nine are the same shape upside down. Underlining them
+            // is how a printed die settles it, and it has to be done here because
+            // the number is part of the face.
+            if value == 6 || value == 9 {
+                let bar = UIBezierPath(roundedRect: CGRect(x: origin.x + bounds.width * 0.12,
+                                                           y: origin.y + bounds.height + 6,
+                                                           width: bounds.width * 0.76,
+                                                           height: 10),
+                                       cornerRadius: 5)
+                UIColor.white.setFill()
+                bar.fill()
+            }
         }
 
         faceImages[key] = image
@@ -250,9 +263,9 @@ enum DiceSolid {
                 let vertex = mesh.faces[face][corner]
                 let number = numbers.indices.contains(vertex) ? numbers[vertex] : vertex + 1
 
-                // The image runs the other way vertically, so the angle that
-                // turns a number towards its corner flips with it.
-                let angle = atan2(direction.x, direction.y)
+                // The top of the number goes to the point: the number is turned
+                // to look out of its own corner, with its upright towards it.
+                let angle = atan2(direction.x, direction.y) + .pi
                 context.cgContext.saveGState()
                 context.cgContext.translateBy(x: spot.x, y: spot.y)
                 context.cgContext.rotate(by: angle)

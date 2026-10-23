@@ -19,7 +19,6 @@ final class DiceTable: NSObject, ObservableObject {
     let cameraNode = SCNNode()
     private let tableNode = SCNNode()
     private let diceHolder = SCNNode()
-    private let chipsHolder = SCNNode()
 
     /// Called when a die has come to rest and the face looking up has been read.
     var onSettled: ((UUID, Int) -> Void)?
@@ -29,8 +28,12 @@ final class DiceTable: NSObject, ObservableObject {
     weak var view: DiceTableSceneView?
 
     private var dice: [UUID: SCNNode] = [:]
-    private var chips: [UUID: SCNNode] = [:]
     private(set) var sides: [UUID: Int] = [:]
+
+    /// The dice that have been read since the last throw. The app shows a
+    /// placeholder for the rest, so a number never appears before the die has
+    /// stopped — which happens when one lands on another and rolls off it.
+    @Published private(set) var settled: Set<UUID> = []
 
     var isEmpty: Bool { dice.isEmpty }
     var count: Int { dice.count }
@@ -95,7 +98,6 @@ final class DiceTable: NSObject, ObservableObject {
         addWall(at: SCNVector3(Self.halfWidth, 0, 0), half: (0.06, 1.2, Self.halfDepth))
 
         scene.rootNode.addChildNode(diceHolder)
-        scene.rootNode.addChildNode(chipsHolder)
 
         let camera = SCNCamera()
         camera.fieldOfView = 45
@@ -156,14 +158,22 @@ final class DiceTable: NSObject, ObservableObject {
         let node = DiceSolid.node(sides: sides, value: value)
         // Somewhere random on the table, dropped from a little way up, so the
         // die is already rolling by the time it lands.
-        node.position = SCNVector3(slotX(), 2.0 + Float.random(in: 0...0.8), slotZ())
+        node.position = SCNVector3(slotX(), 2.1 + Float.random(in: 0...0.7), slotZ())
         node.eulerAngles = SCNVector3(Float.random(in: 0...(2 * .pi)),
                                       Float.random(in: 0...(2 * .pi)),
                                       Float.random(in: 0...(2 * .pi)))
+        // Thrown rather than dropped: a die that falls straight down never rolls,
+        // which is not what a die does when it is put on a table.
+        node.physicsBody?.velocity = SCNVector3(Float.random(in: -1.4...1.4),
+                                                -0.6,
+                                                Float.random(in: -1.4...1.4))
+        node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -6...6),
+                                                       Float.random(in: -6...6),
+                                                       Float.random(in: -6...6),
+                                                       9)
         diceHolder.addChildNode(node)
         dice[id] = node
-        chips[id]?.removeFromParentNode()
-        chips[id] = nil
+        settled.remove(id)
         nextSlot += 1
 
         settleClock(start: true)
@@ -172,10 +182,9 @@ final class DiceTable: NSObject, ObservableObject {
 
     func removeAll() {
         diceHolder.childNodes.forEach { $0.removeFromParentNode() }
-        chipsHolder.childNodes.forEach { $0.removeFromParentNode() }
         dice = [:]
-        chips = [:]
         sides = [:]
+        settled = []
         nextSlot = 0
         quietSince = nil
     }
@@ -202,8 +211,7 @@ final class DiceTable: NSObject, ObservableObject {
                                                            Float.random(in: -3...3),
                                                            6)
         }
-        chipsHolder.childNodes.forEach { $0.removeFromParentNode() }
-        chips = [:]
+        settled = []
         settleClock(start: true)
         view?.wake()
     }
@@ -222,7 +230,7 @@ final class DiceTable: NSObject, ObservableObject {
         quietSince = nil
         lastCheck = 0
         wantsSettling = start
-        settleDeadline = start ? Date().timeIntervalSinceReferenceDate + 2.5 : 0
+        settleDeadline = start ? Date().timeIntervalSinceReferenceDate + 6 : 0
     }
 
     // MARK: - Settling
@@ -235,14 +243,10 @@ final class DiceTable: NSObject, ObservableObject {
         guard time - lastCheck > 0.12 else { return }
         lastCheck = time
 
-        let moving = dice.values.contains { node in
-            guard let body = node.physicsBody else { return false }
-            if body.isResting { return false }
-            let velocity = body.velocity
-            let spin = body.angularVelocity
-            return abs(velocity.x) + abs(velocity.y) + abs(velocity.z) > 0.6
-                || abs(spin.x) + abs(spin.y) + abs(spin.z) > 1.2
-        }
+        // SceneKit puts a body to sleep when it has actually stopped, which is a
+        // better test than a velocity threshold: a die balanced on another can be
+        // under any threshold for a moment and still be on its way down.
+        let moving = dice.values.contains { $0.physicsBody?.isResting != true }
 
         let overdue = settleDeadline > 0 && Date().timeIntervalSinceReferenceDate > settleDeadline
         if moving, !overdue {
@@ -251,7 +255,7 @@ final class DiceTable: NSObject, ObservableObject {
         }
 
         if !overdue {
-            if let quietSince, time - quietSince < 0.25 { return }
+            if let quietSince, time - quietSince < 0.5 { return }
             if quietSince == nil {
                 quietSince = time
                 return
@@ -272,35 +276,13 @@ final class DiceTable: NSObject, ObservableObject {
     private func finishSettling() {
         isFinishing = false
         wantsSettling = false
+        settled = Set(dice.keys)
         for (id, node) in dice {
             guard let sides = sides[id] else { continue }
             let value = DiceSolid.faceLookingUp(of: node, sides: sides)
             onSettled?(id, value)
-            showChip(for: id, value: value, at: node.presentation.position)
         }
         view?.rest()
-    }
-
-    /// A little tag under each die with its number, so which face is the result
-    /// is never in doubt — the face on a d20 is small, and a die at the back is
-    /// far away.
-    private func showChip(for id: UUID, value: Int, at position: SCNVector3) {
-        chips[id]?.removeFromParentNode()
-        guard let sides = sides[id] else { return }
-
-        let chip = SCNNode()
-        chip.geometry = SCNPlane(width: 1.15, height: 0.55)
-        (chip.geometry?.firstMaterial)?.diffuse.contents = DiceSolid.chipTexture(
-            sides: sides, value: value
-        )
-        (chip.geometry?.firstMaterial)?.isDoubleSided = true
-        (chip.geometry?.firstMaterial)?.lightingModel = .constant
-        // Above the die, not in front of it: the tag says what the die shows and
-        // must not cover the face that is showing it.
-        chip.position = SCNVector3(position.x, 1.6, position.z)
-        chip.constraints = [SCNBillboardConstraint()]
-        chipsHolder.addChildNode(chip)
-        chips[id] = chip
     }
 
     // MARK: - Posing

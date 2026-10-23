@@ -107,6 +107,16 @@ final class UtilitiesUITests: XCTestCase {
         }
         Thread.sleep(forTimeInterval: 6.0)
         attach(app, named: "45-dice-every-kind")
+
+        let results = app.descendants(matching: .any).matching(identifier: "dice.result")
+        XCTAssertEqual(results.count, 6, "each die should have a result under the table")
+        let pills = results.allElementsBoundByIndex.map(\.label)
+        let numbers = pills.compactMap { label -> Int? in
+            guard let tail = label.split(separator: ":").last else { return nil }
+            return Int(tail.trimmingCharacters(in: .whitespaces))
+        }
+        XCTAssertEqual(numbers.count, 6,
+                       "and each should have come to rest on a number: \(pills)")
     }
 
     // MARK: - Helpers
