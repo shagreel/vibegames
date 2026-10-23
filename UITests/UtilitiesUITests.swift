@@ -105,7 +105,7 @@ final class UtilitiesUITests: XCTestCase {
             }
             XCTAssertTrue((1...sides).contains(value), "\(label) is out of range")
         }
-        Thread.sleep(forTimeInterval: 1.0)
+        Thread.sleep(forTimeInterval: 6.0)
         attach(app, named: "45-dice-every-kind")
     }
 

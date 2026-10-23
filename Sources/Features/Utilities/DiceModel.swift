@@ -43,7 +43,21 @@ final class DiceModel: ObservableObject {
         dice.append(Die(sides: sides, value: rollWithin(1...sides)))
     }
 
+    /// Records what a die actually landed on.
+    ///
+    /// Physics decides the number, so the model is told rather than asked: a die
+    /// can come to rest on any of its faces, and the number on the one looking up
+    /// is the result. It is clamped to the die's own sides so a bad read cannot
+    /// put a 9 on a d6.
+    func record(_ value: Int, for id: UUID) {
+        guard let index = dice.firstIndex(where: { $0.id == id }) else { return }
+        dice[index].value = min(max(value, 1), dice[index].sides)
+    }
+
     /// Rolls every die on the table again, keeping the table as it is.
+    ///
+    /// Provisional: the physics throw replaces these as each die settles, but a
+    /// die always holds a number inside its own range, even mid-air.
     func rollAll() {
         for index in dice.indices {
             dice[index].value = rollWithin(1...dice[index].sides)

@@ -173,11 +173,11 @@ enum DiceMeshes {
     private static func build(sides: Int) -> DieMesh {
         var points = vertices(sides: sides)
 
-        // A d10 straight off the uniform antiprism is a flat plate. Real ones
-        // are stretched along their axis so they read as a die rather than a
-        // shard; stretching keeps the kites flat.
+        // A d10's dual comes out long and thin — a blade rather than a die. Real
+        // ones are squat, so the belt is widened and the axis left alone; an
+        // affine pull keeps the kites flat.
         if sides == 10 {
-            points = points.map { SIMD3($0.x, $0.y * 1.35, $0.z) }
+            points = points.map { SIMD3($0.x * 1.9, $0.y * 0.65, $0.z * 1.9) }
         }
 
         // One size for every die, so a d20 is not a different scale to a d6.

@@ -10,24 +10,8 @@ struct DiceView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = DiceModel()
 
-    /// How a die is falling: when it was thrown, and the spin it was given.
-    ///
-    /// The face it will land on is already decided by the model, so the spin is
-    /// a turn *down* to that resting orientation rather than a random tumble
-    /// that happens to end somewhere.
-    private struct Roll {
-        let started: Date
-        let duration: TimeInterval
-        let resting: simd_quatf
-        let axisA: SIMD3<Float>
-        let axisB: SIMD3<Float>
-        let turns: Double
-        let tilt: Double
-    }
-
-    @State private var rolls: [UUID: Roll] = [:]
-    @State private var rolling = false
-    @State private var rollTask: Task<Void, Never>?
+    /// The table itself: a physics simulation that the dice are thrown onto.
+    @StateObject private var diceTable = DiceTable()
 
     /// Three across, so d4–d20 fits two rows even on a small phone.
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
@@ -51,10 +35,14 @@ struct DiceView: View {
         .vibeCanvas()
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden()
-        .onAppear { Haptics.shared.prepare() }
+        .onAppear {
+            Haptics.shared.prepare()
+            // The physics is what decides a number, so the model is told what
+            // each die landed on rather than the other way round.
+            diceTable.onSettled = { id, value in model.record(value, for: id) }
+        }
         .onDisappear {
-            rollTask?.cancel()
-            rollTask = nil
+            diceTable.onSettled = nil
         }
     }
 
@@ -100,35 +88,15 @@ struct DiceView: View {
     // MARK: - The table
 
     private var table: some View {
-        // Only redrawn frame by frame while something is in the air: at rest the
-        // dice are a still picture, and a timeline running for nothing is a
-        // battery bug on a phone being passed round a table.
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !rolling)) { timeline in
-            ScrollView {
-                if model.isEmpty {
-                    emptyTable
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("ON THE TABLE")
-                            .font(.system(size: 11, weight: .black, design: .rounded))
-                            .kerning(1.1)
-                            .foregroundStyle(VibeTheme.tertiaryText)
-
-                        LazyVGrid(columns: columns, spacing: 14) {
-                            ForEach(model.dice) { die in
-                                dieTile(die, at: timeline.date)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 16)
-                }
+        ZStack {
+            if model.isEmpty {
+                emptyTable
+            } else {
+                DiceTableView(table: diceTable)
+                    .accessibilityIdentifier("dice.tableView")
             }
-            .frame(maxHeight: .infinity)
-            .accessibilityIdentifier("dice.tableView")
-            .accessibilityValue(model.isEmpty ? "No dice" : "\(model.dice.count) dice")
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var emptyTable: some View {
@@ -148,48 +116,6 @@ struct DiceView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 36)
         .accessibilityIdentifier("dice.empty")
-    }
-
-    private func dieTile(_ die: Die, at now: Date) -> some View {
-        let mesh = DiceMeshes.mesh(sides: die.sides)
-        let resting = DiceRenderer.restingRotation(mesh: mesh, value: die.value, yaw: yaw(for: die))
-
-        var rotation = resting
-        var lift: Float = 0
-        if let roll = rolls[die.id] {
-            let progress = now.timeIntervalSince(roll.started) / roll.duration
-            if progress < 1 {
-                rotation = DiceRenderer.rollingRotation(rest: roll.resting,
-                                                        progress: progress,
-                                                        axisA: roll.axisA,
-                                                        axisB: roll.axisB,
-                                                        turns: roll.turns,
-                                                        tilt: roll.tilt)
-                lift = Float(sin(.pi * min(max(progress, 0), 1))) * 0.35
-            }
-        }
-
-        return Canvas { context, size in
-            DiceRenderer.draw(mesh: mesh,
-                              value: die.value,
-                              colour: VibeTheme.diceColour(sides: die.sides),
-                              rotation: rotation,
-                              lift: lift,
-                              in: size,
-                              into: &context)
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .frame(height: 116)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("d\(die.sides): \(die.value)")
-        .accessibilityIdentifier("dice.die")
-    }
-
-    /// A stable twist for each die, so two d6s on the table are not twins.
-    private func yaw(for die: Die) -> Double {
-        let sum = die.id.uuidString.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
-        return Double(sum % 360) * .pi / 180
     }
 
     // MARK: - The two buttons
@@ -251,80 +177,20 @@ struct DiceView: View {
 
     private func add(sides: Int) {
         model.add(sides: sides)
-        // The new die is thrown in, so a tap reads as a roll rather than as a
-        // tile appearing.
-        if let die = model.dice.last {
-            throwDice([die], duration: 0.55)
-        }
+        guard let die = model.dice.last else { return }
+        diceTable.addDie(id: die.id, sides: die.sides, value: die.value)
     }
 
     private func rollAll() {
         guard !model.isEmpty else { return }
-        let dice = model.dice
+        // The model moves its own numbers at once so the table is never showing a
+        // result from the last throw; the physics replaces them as each die lands.
         model.rollAll()
-        throwDice(dice, duration: 0.85)
+        diceTable.tossAll()
     }
 
     private func clear() {
-        rollTask?.cancel()
-        rollTask = nil
-        rolls = [:]
-        rolling = false
-        // No animation: dice drifting out of the way end up half over the empty
-        // table, which reads as a glitch rather than a sweep.
+        diceTable.removeAll()
         model.clear()
-    }
-
-    /// Throws the dice: each one gets a random spin that eases down onto the
-    /// face the model has already chosen.
-    ///
-    /// The model stays the source of truth and keeps its rules testable; this is
-    /// only what a roll *looks* like.
-    private func throwDice(_ dice: [Die], duration: TimeInterval) {
-        guard !dice.isEmpty else { return }
-
-        let now = Date()
-        var next = rolls
-        for die in dice {
-            let mesh = DiceMeshes.mesh(sides: die.sides)
-            next[die.id] = Roll(started: now,
-                                duration: duration,
-                                resting: DiceRenderer.restingRotation(mesh: mesh,
-                                                                     value: die.value,
-                                                                     yaw: yaw(for: die)),
-                                axisA: randomUnitVector(),
-                                axisB: randomUnitVector(),
-                                turns: Double.random(in: 1.4...2.6),
-                                tilt: Double.random(in: 0.6...1.6))
-        }
-        rolls = next
-        rolling = true
-
-        rollTask?.cancel()
-        rollTask = Task { @MainActor in
-            // The timeline only needs to keep running while something is still
-            // in the air; this brings it back to a still picture afterwards.
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 50_000_000)
-                guard !Task.isCancelled else { return }
-                let time = Date()
-                let live = rolls.filter { time.timeIntervalSince($0.value.started) < $0.value.duration }
-                if live.count != rolls.count { rolls = live }
-                if live.isEmpty {
-                    rolling = false
-                    return
-                }
-            }
-        }
-    }
-
-    private func randomUnitVector() -> SIMD3<Float> {
-        while true {
-            let candidate = SIMD3<Float>(Float.random(in: -1...1),
-                                         Float.random(in: -1...1),
-                                         Float.random(in: -1...1))
-            let length = simd_length(candidate)
-            if length > 0.2 { return candidate / length }
-        }
     }
 }
