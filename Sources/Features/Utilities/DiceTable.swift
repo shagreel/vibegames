@@ -92,6 +92,22 @@ final class DiceTable: NSObject, ObservableObject {
         tableNode.physicsBody?.restitution = 0.1
         scene.rootNode.addChildNode(tableNode)
 
+        // The name on the baize: a picture laid flat on the table, just above the
+        // felt, so the table is the same colour and texture it was and the mark
+        // is only a mark. `constant` lighting keeps it from being blown out by
+        // the key light.
+        let wordmark = SCNNode()
+        wordmark.geometry = SCNPlane(width: CGFloat(Self.halfWidth * 2),
+                                     height: CGFloat(Self.halfDepth * 2))
+        let mark = SCNMaterial()
+        mark.diffuse.contents = Self.wordmarkTexture()
+        mark.lightingModel = .constant
+        mark.isDoubleSided = true
+        wordmark.geometry?.materials = [mark]
+        wordmark.eulerAngles = SCNVector3(-CGFloat.pi / 2, 0, 0)
+        wordmark.position = SCNVector3(0, 0.012, 0)
+        scene.rootNode.addChildNode(wordmark)
+
         // Tall enough that a die dropped or thrown from head height cannot clear
         // it, and reaching below the table so nothing squeezes underneath.
         let wallHeight: Float = 4.4
@@ -107,7 +123,9 @@ final class DiceTable: NSObject, ObservableObject {
         camera.fieldOfView = 45
         camera.zNear = 0.1
         camera.zFar = 100
-        camera.wantsHDR = true
+        // No tone mapping: with it on, the dice were washed out against the dark
+        // table and their own colours stopped reading.
+        camera.wantsHDR = false
         cameraNode.camera = camera
         // Looking down at the table from the near side, so a die that lands
         // towards the back is not hidden behind one at the front.
@@ -127,7 +145,6 @@ final class DiceTable: NSObject, ObservableObject {
         key.light?.type = .directional
         key.light?.intensity = 600
         key.light?.castsShadow = true
-        key.light?.shadowMode = .deferred
         key.light?.shadowSampleCount = 16
         key.light?.shadowRadius = 4
         key.light?.shadowColor = UIColor.black.withAlphaComponent(0.35)
@@ -135,6 +152,55 @@ final class DiceTable: NSObject, ObservableObject {
         key.eulerAngles = SCNVector3(-CGFloat.pi / 2.6, -CGFloat.pi / 5, 0)
         scene.rootNode.addChildNode(key)
     }
+
+    /// The table's cloth: the Vibe Games name, faint enough to read as a mark on
+    /// the felt rather than a label stuck to the table.
+    ///
+    /// One mid-grey at low opacity, because the table is light in light mode and
+    /// dark in dark mode and a fixed colour has to work on both — a mid-grey is
+    /// lighter than one and darker than the other.
+    private static func wordmarkTexture() -> UIImage {
+        if let cached = wordmarkImage { return cached }
+
+        let size = CGSize(width: 1024, height: 1024 * CGFloat(halfDepth / halfWidth))
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let ink = UIColor(white: 0.5, alpha: 0.30)
+
+            let name = "VIBE GAMES" as NSString
+            let nameFont = UIFont.systemFont(ofSize: 150, weight: .black)
+            let nameAttributes: [NSAttributedString.Key: Any] = [
+                .font: nameFont,
+                .foregroundColor: ink,
+                .kern: 10
+            ]
+            let nameBounds = name.size(withAttributes: nameAttributes)
+            name.draw(at: CGPoint(x: (size.width - nameBounds.width) / 2,
+                                  y: size.height * 0.42 - nameBounds.height / 2),
+                      withAttributes: nameAttributes)
+
+            let site = "vibegames.party" as NSString
+            let siteAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 52, weight: .semibold),
+                .foregroundColor: UIColor(white: 0.5, alpha: 0.22),
+                .kern: 6
+            ]
+            let siteBounds = site.size(withAttributes: siteAttributes)
+            site.draw(at: CGPoint(x: (size.width - siteBounds.width) / 2,
+                                  y: size.height * 0.56),
+                      withAttributes: siteAttributes)
+
+            // A hairline round the edge, so the table has an edge to look at.
+            let border = UIBezierPath(rect: CGRect(origin: .zero, size: size).insetBy(dx: 18, dy: 18))
+            UIColor(white: 0.5, alpha: 0.14).setStroke()
+            border.lineWidth = 10
+            border.stroke()
+        }
+
+        wordmarkImage = image
+        return image
+    }
+
+    private static var wordmarkImage: UIImage?
 
     /// The lip around the table is a physics body with nothing to draw: a die
     /// near the edge bounces back, and the table looks like a table.

@@ -119,6 +119,27 @@ final class UtilitiesUITests: XCTestCase {
                        "and each should have come to rest on a number: \(pills)")
     }
 
+    /// The dice screen is part of the suite, so it carries the same header: the
+    /// heart for feedback and the settings button, opening the shared settings.
+    func testTheDiceScreenUsesTheSharedHeaderAndSettings() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openDice(app)
+
+        XCTAssertTrue(app.descendants(matching: .any)["hub.support"].firstMatch.exists,
+                      "the feedback heart belongs on the dice screen too")
+        let settings = app.buttons["dice.settings"]
+        XCTAssertTrue(settings.exists, "and the settings button")
+
+        settings.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["gameSettings.nameField"].firstMatch
+                        .waitForExistence(timeout: 5),
+                      "the shared settings sheet should open")
+        XCTAssertTrue(app.buttons["diceSettings.done"].exists)
+        app.buttons["diceSettings.done"].tap()
+        attach(app, named: "46-dice-settings")
+    }
+
     // MARK: - Helpers
 
     private func openDice(_ app: XCUIApplication) {

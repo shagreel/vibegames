@@ -17,6 +17,8 @@ struct DiceView: View {
     /// so the body being rebuilt does not start a second sensor.
     @State private var shake = ShakeMonitor()
 
+    @State private var showingSettings = false
+
     /// Three across, so d4–d20 fits two rows even on a small phone.
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
@@ -27,7 +29,8 @@ struct DiceView: View {
                           backIdentifier: "dice.back",
                           backLabel: "Back to utilities",
                           onBack: { dismiss() }) {
-                EmptyView()
+                SupportButton()
+                GameSettingsButton(prefix: "dice") { showingSettings = true }
             }
 
             picker
@@ -47,6 +50,11 @@ struct DiceView: View {
             // The physics is what decides a number, so the model is told what
             // each die landed on rather than the other way round.
             diceTable.onSettled = { id, value in model.record(value, for: id) }
+        }
+        .sheet(isPresented: $showingSettings) {
+            DiceSettingsView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .onDisappear {
             diceTable.onSettled = nil
@@ -139,8 +147,9 @@ struct DiceView: View {
     /// lands on another and rolls off it would otherwise be read while it was
     /// still on its way down.
     private var results: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 10) {
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 10) {
                 ForEach(groupedResults, id: \.sides) { column in
                     VStack(spacing: 6) {
                         Text("d\(column.sides)")
@@ -148,7 +157,7 @@ struct DiceView: View {
                             .kerning(0.5)
                             .foregroundStyle(VibeTheme.secondaryText)
 
-                        // Three to a column, then the next column of the same
+                        // Five to a column, then the next column of the same
                         // kind: twenty dice in one column would be taller than the
                         // screen.
                         ForEach(Array(column.chunks.enumerated()), id: \.offset) { _, chunk in
@@ -159,14 +168,27 @@ struct DiceView: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 4)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                // At least the width of the screen, so a few columns spread out
+                // across it instead of huddling on the left; more than fits
+                // scrolls, column by column.
+                .frame(minWidth: geo.size.width, alignment: .leading)
+            }
         }
-        .frame(maxWidth: .infinity)
+        .frame(height: resultsHeight)
         .opacity(model.isEmpty ? 0 : 1)
         .accessibilityIdentifier("dice.results")
+    }
+
+    /// As tall as the fullest column needs, so the table gives up no more room
+    /// than the numbers take.
+    private var resultsHeight: CGFloat {
+        let rows = groupedResults.map { min($0.dice.count, ResultColumn.rows) }.max() ?? 0
+        return CGFloat(rows) * 28 + 26
     }
 
     /// The dice grouped by kind, smallest first.
@@ -177,10 +199,12 @@ struct DiceView: View {
     private struct ResultColumn: Identifiable {
         let sides: Int
         let dice: [Die]
-        /// Three rows at most, so a column cannot run off the bottom.
+        /// At most this many, so a column cannot run off the bottom of its space.
+        static let rows = 5
+
         var chunks: [[Die]] {
-            stride(from: 0, to: dice.count, by: 3).map { start in
-                Array(dice[start..<min(start + 3, dice.count)])
+            stride(from: 0, to: dice.count, by: Self.rows).map { start in
+                Array(dice[start..<min(start + Self.rows, dice.count)])
             }
         }
         var id: Int { sides }
@@ -287,5 +311,34 @@ struct DiceView: View {
     private func clear() {
         diceTable.removeAll()
         model.clear()
+    }
+}
+
+/// The settings sheet for the dice table: the shared ones, which are the player's
+/// name and the appearance, because a table of dice has nothing else to choose.
+private struct DiceSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 26) {
+                    GameSettingsSections()
+                }
+                .padding(20)
+            }
+            .vibeCanvas()
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .accessibilityIdentifier("diceSettings.done")
+                }
+            }
+            .toolbarBackground(VibeTheme.canvasTop, for: .navigationBar)
+        }
+        .followingAppearance()
     }
 }
