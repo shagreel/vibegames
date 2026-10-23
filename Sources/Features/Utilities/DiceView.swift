@@ -51,8 +51,11 @@ struct DiceView: View {
     private var subtitle: String {
         if model.isEmpty { return "Tap a die to roll it." }
         let count = model.dice.count
+        if isFull { return "\(count) dice — the table is full" }
         return "\(count) \(count == 1 ? "die" : "dice") on the table"
     }
+
+    private var isFull: Bool { model.dice.count >= DiceModel.maximum }
 
     // MARK: - The bag
 
@@ -79,6 +82,8 @@ struct DiceView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
+                .disabled(isFull)
+                .opacity(isFull ? 0.4 : 1)
                 .accessibilityLabel("Roll a d\(sides)")
                 .accessibilityIdentifier("dice.add.\(sides)")
             }
@@ -224,8 +229,7 @@ struct DiceView: View {
     // MARK: - Rolling
 
     private func add(sides: Int) {
-        model.add(sides: sides)
-        guard let die = model.dice.last else { return }
+        guard let die = model.add(sides: sides) else { return }
         diceTable.addDie(id: die.id, sides: die.sides, value: die.value)
     }
 

@@ -92,10 +92,14 @@ final class DiceTable: NSObject, ObservableObject {
         tableNode.physicsBody?.restitution = 0.1
         scene.rootNode.addChildNode(tableNode)
 
-        addWall(at: SCNVector3(0, 0, -Self.halfDepth), half: (Self.halfWidth, 1.2, 0.06))
-        addWall(at: SCNVector3(0, 0, Self.halfDepth), half: (Self.halfWidth, 1.2, 0.06))
-        addWall(at: SCNVector3(-Self.halfWidth, 0, 0), half: (0.06, 1.2, Self.halfDepth))
-        addWall(at: SCNVector3(Self.halfWidth, 0, 0), half: (0.06, 1.2, Self.halfDepth))
+        // Tall enough that a die dropped or thrown from head height cannot clear
+        // it, and reaching below the table so nothing squeezes underneath.
+        let wallHeight: Float = 4.4
+        let wallCentre: Float = 1.2
+        addWall(at: SCNVector3(0, wallCentre, -Self.halfDepth), half: (Self.halfWidth, wallHeight, 0.06))
+        addWall(at: SCNVector3(0, wallCentre, Self.halfDepth), half: (Self.halfWidth, wallHeight, 0.06))
+        addWall(at: SCNVector3(-Self.halfWidth, wallCentre, 0), half: (0.06, wallHeight, Self.halfDepth))
+        addWall(at: SCNVector3(Self.halfWidth, wallCentre, 0), half: (0.06, wallHeight, Self.halfDepth))
 
         scene.rootNode.addChildNode(diceHolder)
 
@@ -158,15 +162,15 @@ final class DiceTable: NSObject, ObservableObject {
         let node = DiceSolid.node(sides: sides, value: value)
         // Somewhere random on the table, dropped from a little way up, so the
         // die is already rolling by the time it lands.
-        node.position = SCNVector3(slotX(), 2.1 + Float.random(in: 0...0.7), slotZ())
+        node.position = SCNVector3(slotX(), 1.1 + Float.random(in: 0...0.4), slotZ())
         node.eulerAngles = SCNVector3(Float.random(in: 0...(2 * .pi)),
                                       Float.random(in: 0...(2 * .pi)),
                                       Float.random(in: 0...(2 * .pi)))
         // Thrown rather than dropped: a die that falls straight down never rolls,
         // which is not what a die does when it is put on a table.
-        node.physicsBody?.velocity = SCNVector3(Float.random(in: -1.4...1.4),
-                                                -0.6,
-                                                Float.random(in: -1.4...1.4))
+        node.physicsBody?.velocity = SCNVector3(Float.random(in: -1.1...1.1),
+                                                -0.4,
+                                                Float.random(in: -1.1...1.1))
         node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -6...6),
                                                        Float.random(in: -6...6),
                                                        Float.random(in: -6...6),
@@ -187,6 +191,8 @@ final class DiceTable: NSObject, ObservableObject {
         settled = []
         nextSlot = 0
         quietSince = nil
+        lastSample = [:]
+        stillSamples = 0
     }
 
     /// Throws every die on the table again.
@@ -196,16 +202,16 @@ final class DiceTable: NSObject, ObservableObject {
             // edge does not climb the lip and bounce back on the spot.
             node.physicsBody?.resetTransform()
             var transform = node.simdTransform
-            transform.columns.3.y = 1.5 + Float.random(in: 0...0.9)
+            transform.columns.3.y = 1.1 + Float.random(in: 0...0.6)
             transform.columns.3.x *= 0.75
             transform.columns.3.z *= 0.75
             node.simdTransform = transform
             node.physicsBody?.clearAllForces()
             // Velocities rather than impulses: an impulse is divided by the die's
             // mass and a handful of newtons sent dice clean off the table.
-            node.physicsBody?.velocity = SCNVector3(Float.random(in: -0.9...0.9),
-                                                    1.1,
-                                                    Float.random(in: -0.9...0.9))
+            node.physicsBody?.velocity = SCNVector3(Float.random(in: -0.8...0.8),
+                                                    0.8,
+                                                    Float.random(in: -0.8...0.8))
             node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -3...3),
                                                            Float.random(in: -3...3),
                                                            Float.random(in: -3...3),
@@ -226,8 +232,15 @@ final class DiceTable: NSObject, ObservableObject {
         return row * (Self.halfDepth * 1.1) + .random(in: -0.3...0.3)
     }
 
+    /// Three quiet samples, or the deadline.
+    private func oddStill(still: Bool, overdue: Bool) -> Bool {
+        (still && stillSamples >= 2) || overdue
+    }
+
     private func settleClock(start: Bool) {
         quietSince = nil
+        lastSample = [:]
+        stillSamples = 0
         lastCheck = 0
         wantsSettling = start
         settleDeadline = start ? Date().timeIntervalSinceReferenceDate + 6 : 0
@@ -240,32 +253,29 @@ final class DiceTable: NSObject, ObservableObject {
     /// the table reads the faces that are up.
     func settleIfQuiet(atTime time: TimeInterval) {
         guard wantsSettling, !dice.isEmpty, !isFinishing else { return }
-        guard time - lastCheck > 0.12 else { return }
+        guard time - lastCheck > 0.1 else { return }
         lastCheck = time
 
-        // SceneKit puts a body to sleep when it has actually stopped, which is a
-        // better test than a velocity threshold: a die balanced on another can be
-        // under any threshold for a moment and still be on its way down.
-        let moving = dice.values.contains { $0.physicsBody?.isResting != true }
-
+        // Stillness is judged by watching the dice, not by trusting a velocity
+        // threshold or waiting for the solver to declare them asleep: three
+        // samples in a row with no die moving a millimetre or a fraction of a
+        // degree, which is direct evidence and arrives much sooner.
+        let asleep = dice.values.allSatisfy { $0.physicsBody?.isResting == true }
+        let still = sampleMovement()
         let overdue = settleDeadline > 0 && Date().timeIntervalSinceReferenceDate > settleDeadline
-        if moving, !overdue {
-            quietSince = nil
-            return
+
+        if !still {
+            stillSamples = 0
+        } else {
+            stillSamples += 1
         }
 
-        if !overdue {
-            if let quietSince, time - quietSince < 0.5 { return }
-            if quietSince == nil {
-                quietSince = time
-                return
-            }
-        }
+        guard asleep || oddStill(still: still, overdue: overdue) else { return }
 
-        // Still. Nothing happens inside the render callback itself — not even
+        // Nothing happens inside the render callback itself — not even
         // stopping the loop, which deadlocks when it is done from in here. The
         // work goes to the next runloop pass, and the callback just returns.
-        quietSince = nil
+        stillSamples = 0
         isFinishing = true
         DispatchQueue.main.async { [weak self] in
             self?.finishSettling()
@@ -273,6 +283,32 @@ final class DiceTable: NSObject, ObservableObject {
     }
 
     /// Reads the faces, tags the dice, tells the app, and stops drawing.
+    /// The last place each die was, so "has it stopped?" can be answered by
+    /// looking: SceneKit puts a body to sleep only after its own quiet timer, and
+    /// that timer is a good half second of the pause the table had after a throw.
+    private var lastSample: [UUID: (position: SIMD3<Float>, orientation: simd_quatf)] = [:]
+    private var stillSamples = 0
+
+    private func sampleMovement() -> Bool {
+        var still = true
+        var next: [UUID: (position: SIMD3<Float>, orientation: simd_quatf)] = [:]
+        for (id, node) in dice {
+            let position = node.presentation.simdPosition
+            let orientation = node.presentation.simdOrientation
+            next[id] = (position, orientation)
+
+            if let previous = lastSample[id] {
+                let moved = simd_length(position - previous.position)
+                let angle = abs(simd_angle(simd_normalize(previous.orientation.conjugate * orientation)))
+                if moved > 0.015 || angle > 0.03 { still = false }
+            } else {
+                still = false
+            }
+        }
+        lastSample = next
+        return still
+    }
+
     private func finishSettling() {
         isFinishing = false
         wantsSettling = false

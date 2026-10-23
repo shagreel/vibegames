@@ -88,11 +88,13 @@ enum DiceSolid {
                                     options: [SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.convexHull])
         let body = SCNPhysicsBody(type: .dynamic, shape: shape)
         body.mass = 0.12
-        body.restitution = 0.28
-        body.friction = 0.85
-        body.rollingFriction = 0.35
-        body.damping = 0.12
-        body.angularDamping = 0.18
+        body.restitution = 0.12
+        body.friction = 0.9
+        body.rollingFriction = 0.45
+        // A little more damping than a real die: it still bounces and rolls, but
+        // it stops in about a second instead of rattling round the table.
+        body.damping = 0.4
+        body.angularDamping = 0.55
         body.allowsResting = true
         node.physicsBody = body
         return node

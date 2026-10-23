@@ -22,6 +22,11 @@ final class DiceModel: ObservableObject {
     /// needs, and d20 is the loudest one.
     static let sidesOptions = [4, 6, 8, 10, 12, 20]
 
+    /// How many dice the table takes. Past this the table is a mess, the results
+    /// list stops being readable, and the physics has more bodies than a phone
+    /// screen can usefully show.
+    static let maximum = 20
+
     @Published private(set) var dice: [Die] = []
 
     /// Held as a closure rather than as a generator so a seeded one can be
@@ -38,9 +43,12 @@ final class DiceModel: ObservableObject {
 
     /// Adds a die of that many sides, already rolled — tapping d12 and getting
     /// an unrolled die would be a second tap for no reason.
-    func add(sides: Int) {
-        guard sides > 0 else { return }
-        dice.append(Die(sides: sides, value: rollWithin(1...sides)))
+    @discardableResult
+    func add(sides: Int) -> Die? {
+        guard sides > 0, dice.count < Self.maximum else { return nil }
+        let die = Die(sides: sides, value: rollWithin(1...sides))
+        dice.append(die)
+        return die
     }
 
     /// Records what a die actually landed on.

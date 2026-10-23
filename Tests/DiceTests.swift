@@ -209,3 +209,26 @@ final class DiceCornerTests: XCTestCase {
         }
     }
 }
+
+/// The table holds twenty dice and no more.
+@MainActor
+final class DiceLimitTests: XCTestCase {
+
+    func testTheTableStopsAtTwenty() {
+        let model = DiceModel()
+        for _ in 0..<25 {
+            model.add(sides: 6)
+        }
+        XCTAssertEqual(model.dice.count, 20, "the twentieth die is the last one it takes")
+        XCTAssertEqual(DiceModel.maximum, 20)
+    }
+
+    func testClearingTheTableMakesRoomAgain() {
+        let model = DiceModel()
+        for _ in 0..<20 { model.add(sides: 8) }
+        XCTAssertNil(model.add(sides: 8), "a full table refuses another die")
+
+        model.clear()
+        XCTAssertNotNil(model.add(sides: 8), "and takes one again once it is swept")
+    }
+}
