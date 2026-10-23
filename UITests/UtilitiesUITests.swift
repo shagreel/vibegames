@@ -47,11 +47,16 @@ final class UtilitiesUITests: XCTestCase {
         XCTAssertEqual(dieCount(app), 3, "three taps should put three dice on the table")
         XCTAssertEqual(dieLabels(app).map(sidesOf).sorted(), ["d4", "d4", "d8"],
                        "each tap puts the die that was tapped on the table")
+        Thread.sleep(forTimeInterval: 0.6)
         attach(app, named: "43-dice-three")
 
         // Rolling rerolls those same dice: same number of them, same sides.
         let before = dieLabels(app)
         app.buttons["dice.roll"].tap()
+        Thread.sleep(forTimeInterval: 0.18)
+        attach(app, named: "43b-dice-rolling")
+        Thread.sleep(forTimeInterval: 1.2)
+        attach(app, named: "43c-dice-settled")
         let after = dieLabels(app)
         XCTAssertEqual(dieCount(app), 3, "rolling must not deal new dice")
         XCTAssertEqual(after.map(sidesOf).sorted(), before.map(sidesOf).sorted(),

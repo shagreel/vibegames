@@ -13,6 +13,18 @@ final class DiceTests: XCTestCase {
         XCTAssertEqual(DiceModel.sidesOptions, [4, 6, 8, 10, 12, 20])
     }
 
+    /// The buttons are the shape of one face of each die: triangles for the
+    /// tetrahedron, octahedron and icosahedron, a square for the cube, a pentagon
+    /// for the dodecahedron, a kite for the d10's trapezohedron.
+    func testEachDieWearsTheShapeOfItsOwnFace() {
+        XCTAssertEqual(DieFace.of(sides: 4), .triangle)
+        XCTAssertEqual(DieFace.of(sides: 6), .square)
+        XCTAssertEqual(DieFace.of(sides: 8), .triangle)
+        XCTAssertEqual(DieFace.of(sides: 10), .kite)
+        XCTAssertEqual(DieFace.of(sides: 12), .pentagon)
+        XCTAssertEqual(DieFace.of(sides: 20), .triangle)
+    }
+
     func testADieLandsBetweenOneAndItsSides() {
         let model = DiceModel(generator: SeededGenerator(seed: 7))
         for sides in DiceModel.sidesOptions {
