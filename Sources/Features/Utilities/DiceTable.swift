@@ -183,14 +183,15 @@ final class DiceTable: NSObject, ObservableObject {
             transform.columns.3.z *= 0.75
             node.simdTransform = transform
             node.physicsBody?.clearAllForces()
-            node.physicsBody?.applyForce(SCNVector3(Float.random(in: -3.5...3.5), 5,
-                                                   Float.random(in: -3.5...3.5)),
-                                        asImpulse: true)
-            node.physicsBody?.applyTorque(SCNVector4(Float.random(in: -1...1),
-                                                    Float.random(in: -1...1),
-                                                    Float.random(in: -1...1),
-                                                    1.6),
-                                          asImpulse: true)
+            // Velocities rather than impulses: an impulse is divided by the die's
+            // mass and a handful of newtons sent dice clean off the table.
+            node.physicsBody?.velocity = SCNVector3(Float.random(in: -0.9...0.9),
+                                                    1.1,
+                                                    Float.random(in: -0.9...0.9))
+            node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -3...3),
+                                                           Float.random(in: -3...3),
+                                                           Float.random(in: -3...3),
+                                                           6)
         }
         chipsHolder.childNodes.forEach { $0.removeFromParentNode() }
         chips = [:]
@@ -255,7 +256,14 @@ final class DiceTable: NSObject, ObservableObject {
             onSettled?(id, value)
             showChip(for: id, value: value, at: node.presentation.position)
         }
-        view?.rest()
+        // Doing this inside the render callback — projecting points, rebuilding
+        // VoiceOver elements — is what made the screen stop responding after the
+        // first die landed: the main thread was still inside a frame. Stop
+        // drawing now and let the queue finish the rest.
+        view?.isPlaying = false
+        DispatchQueue.main.async { [weak self] in
+            self?.view?.refreshAccessibility()
+        }
     }
 
     /// A little tag under each die with its number, so which face is the result

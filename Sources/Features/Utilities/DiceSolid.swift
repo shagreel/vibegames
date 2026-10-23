@@ -49,13 +49,18 @@ enum DiceSolid {
             let spanY = max(maxY - minY, 0.0001)
 
             let start = vertices.count
+            var cornerUVs: [CGPoint] = []
             for (corner, point) in points.enumerated() {
                 vertices.append(SCNVector3(point.x, point.y, point.z))
                 normals.append(SCNVector3(normal.x, normal.y, normal.z))
                 // A little inset so a number does not run off the edge of its face.
-                let u = 0.5 + (flat[corner].x - (minX + maxX) / 2) / spanX * 0.82
+                // SceneKit's texture coordinates run the other way across the
+                // image from the face's own x, which printed every numeral
+                // backwards until this was flipped.
+                let u = 0.5 - (flat[corner].x - (minX + maxX) / 2) / spanX * 0.82
                 let v = 0.5 + (flat[corner].y - (minY + maxY) / 2) / spanY * 0.82
                 textureCoordinates.append(CGPoint(x: CGFloat(u), y: CGFloat(v)))
+                cornerUVs.append(CGPoint(x: CGFloat(u), y: CGFloat(v)))
             }
 
             var indices: [Int32] = []
@@ -65,7 +70,7 @@ enum DiceSolid {
             // Elements take the material at their own index, so the order here
             // and in `materials` has to stay the same.
             elements.append(SCNGeometryElement(indices: indices, primitiveType: .triangles))
-            materials.append(faceMaterial(sides: sides, value: mesh.value(on: index)))
+            materials.append(faceMaterial(sides: sides, face: index, mesh: mesh, cornerUVs: cornerUVs))
         }
 
         let geometry = SCNGeometry(
@@ -107,18 +112,31 @@ enum DiceSolid {
     static func faceLookingUp(of node: SCNNode, sides: Int) -> Int {
         let mesh = DiceMeshes.mesh(sides: sides)
         let transform = node.presentation.simdWorldTransform
-        let towards: SIMD3<Float> = sides == 4
-            ? simd_normalize(SIMD3<Float>(0, 1.1, 1))     // the camera's corner
-            : SIMD3<Float>(0, 1, 0)
+
+        // A d4 is numbered by its corners: the one pointing at the ceiling is the
+        // result, and the three faces round it all show that number.
+        if let corners = mesh.cornerNumbers {
+            var best: Float = -.greatestFiniteMagnitude
+            var bestValue = corners.first ?? 1
+            for (index, vertex) in mesh.vertices.enumerated() {
+                let world = transform * SIMD4<Float>(vertex, 0)
+                let up = simd_normalize(SIMD3<Float>(world.x, world.y, world.z)).y
+                if up > best {
+                    best = up
+                    bestValue = corners[index]
+                }
+            }
+            return bestValue
+        }
 
         var best: Float = -.greatestFiniteMagnitude
         var bestValue = 1
         for face in mesh.faces.indices {
             let local = mesh.normal(of: face)
             let world = transform * SIMD4<Float>(local, 0)
-            let facing = simd_dot(simd_normalize(SIMD3<Float>(world.x, world.y, world.z)), towards)
-            if facing > best {
-                best = facing
+            let up = simd_normalize(SIMD3<Float>(world.x, world.y, world.z)).y
+            if up > best {
+                best = up
                 bestValue = mesh.value(on: face)
             }
         }
@@ -130,16 +148,23 @@ enum DiceSolid {
     private static var faceImages: [String: UIImage] = [:]
     private static var chipImages: [String: UIImage] = [:]
 
-    private static func faceMaterial(sides: Int, value: Int) -> SCNMaterial {
+    private static func faceMaterial(sides: Int, face: Int, mesh: DieMesh,
+                                     cornerUVs: [CGPoint]) -> SCNMaterial {
         let material = SCNMaterial()
         material.lightingModel = .physicallyBased
         material.roughness.contents = 0.55
         material.metalness.contents = 0.0
-        material.diffuse.contents = faceImage(sides: sides, value: value)
+        material.diffuse.contents = faceImage(sides: sides, face: face, mesh: mesh, cornerUVs: cornerUVs)
         return material
     }
 
-    private static func faceImage(sides: Int, value: Int) -> UIImage {
+    private static func faceImage(sides: Int, face: Int, mesh: DieMesh,
+                                  cornerUVs: [CGPoint]) -> UIImage {
+        if let cornerNumbers = mesh.cornerNumbers {
+            return cornerImage(sides: sides, face: face, numbers: cornerNumbers, cornerUVs: cornerUVs)
+        }
+
+        let value = mesh.value(on: face)
         let key = "\(sides)-\(value)"
         if let cached = faceImages[key] { return cached }
 
@@ -176,6 +201,68 @@ enum DiceSolid {
 
         faceImages[key] = image
         return image
+    }
+
+    /// A tetrahedron's face: three numbers, one at each corner, so the number at
+    /// the top point is the result whichever way the die has landed.
+    ///
+    /// The numbers are shared by the faces that meet at that corner — every face
+    /// round a corner carries the same number there — which is why this is keyed
+    /// by the face but drawn from the mesh's corner numbers.
+    private static func cornerImage(sides: Int, face: Int, numbers: [Int],
+                                    cornerUVs: [CGPoint]) -> UIImage {
+        let side: CGFloat = 256
+        let size = CGSize(width: side, height: side)
+        let colour = UIColor(VibeTheme.diceColour(sides: sides))
+        let centre = CGPoint(x: 0.5, y: 0.5)
+        return UIGraphicsImageRenderer(size: size).image { context in
+            colour.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+
+            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                      colors: [UIColor.white.withAlphaComponent(0.20).cgColor,
+                                               UIColor.black.withAlphaComponent(0.13).cgColor] as CFArray,
+                                      locations: [0, 1])!
+            context.cgContext.drawLinearGradient(gradient,
+                                                 start: .zero,
+                                                 end: CGPoint(x: side, y: side),
+                                                 options: [])
+
+            let mesh = DiceMeshes.mesh(sides: sides)
+            for (corner, uv) in cornerUVs.enumerated() {
+                // Towards the corner, so the number sits in its own point of the
+                // triangle and turns to face it.
+                let direction = CGPoint(x: uv.x - centre.x, y: uv.y - centre.y)
+                let length = max(hypot(direction.x, direction.y), 0.0001)
+                let spotUV = CGPoint(x: centre.x + direction.x / length * 0.27,
+                                     y: centre.y + direction.y / length * 0.27)
+                let spot = CGPoint(x: spotUV.x * side, y: (1 - spotUV.y) * side)
+
+                // A triangle's corners are not all on the same vertex: the number
+                // belongs to the mesh's corner, which the face names.
+                let vertex = mesh.faces[face][corner]
+                let number = numbers.indices.contains(vertex) ? numbers[vertex] : vertex + 1
+
+                // The image runs the other way vertically, so the angle that
+                // turns a number towards its corner flips with it.
+                let angle = atan2(direction.x, direction.y)
+                context.cgContext.saveGState()
+                context.cgContext.translateBy(x: spot.x, y: spot.y)
+                context.cgContext.rotate(by: angle)
+
+                let text = "\(number)" as NSString
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 62, weight: .black),
+                    .foregroundColor: UIColor.white,
+                    .strokeColor: UIColor.black.withAlphaComponent(0.28),
+                    .strokeWidth: -3
+                ]
+                let bounds = text.size(withAttributes: attributes)
+                text.draw(at: CGPoint(x: -bounds.width / 2, y: -bounds.height / 2),
+                          withAttributes: attributes)
+                context.cgContext.restoreGState()
+            }
+        }
     }
 
     /// The little tag beside a resting die: its number, large, so nobody has to

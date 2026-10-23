@@ -21,6 +21,15 @@ struct DieMesh {
         numbers.firstIndex(of: value) ?? 0
     }
 
+    /// A d4 is numbered by its corners instead of its faces.
+    ///
+    /// It rests on a face, so there is no face looking up to read; what is up is
+    /// a corner, and the three faces round that corner all carry its number —
+    /// exactly like a real tetrahedron. `nil` for the dice that read a face.
+    var cornerNumbers: [Int]? {
+        sides == 4 ? Array(1...vertices.count) : nil
+    }
+
     func centroid(of face: Int) -> SIMD3<Float> {
         let points = faces[face].map { vertices[$0] }
         return points.reduce(.zero, +) / Float(points.count)

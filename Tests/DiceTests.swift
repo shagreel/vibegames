@@ -179,3 +179,33 @@ final class DiceMeshTests: XCTestCase {
         }
     }
 }
+
+/// The d4 is the odd one out: its numbers are on its corners.
+@MainActor
+final class DiceCornerTests: XCTestCase {
+
+    func testATetrahedronIsNumberedByItsCorners() {
+        let d4 = DiceMeshes.mesh(sides: 4)
+        XCTAssertEqual(d4.cornerNumbers, [1, 2, 3, 4], "one number per corner")
+        for sides in [6, 8, 10, 12, 20] {
+            XCTAssertNil(DiceMeshes.mesh(sides: sides).cornerNumbers,
+                         "a d\(sides) is read from a face")
+        }
+    }
+
+    /// Every face shows the numbers of the three corners it has, so whichever
+    /// point is at the top, the face under it carries that number.
+    func testEveryFaceCarriesItsThreeCornerNumbers() {
+        let d4 = DiceMeshes.mesh(sides: 4)
+        for face in d4.faces {
+            XCTAssertEqual(face.count, 3)
+            XCTAssertEqual(Set(face).count, 3, "the corners of a face are distinct")
+        }
+        // Every corner belongs to three faces, and the numbers round a corner
+        // are that corner's number on each of them.
+        for corner in 0..<d4.vertices.count {
+            let facesAtCorner = d4.faces.filter { $0.contains(corner) }
+            XCTAssertEqual(facesAtCorner.count, 3, "three faces meet at each corner")
+        }
+    }
+}
