@@ -1,4 +1,5 @@
 import SwiftUI
+import simd
 
 /// The dice bag, on screen.
 ///
@@ -9,19 +10,22 @@ struct DiceView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = DiceModel()
 
-    /// A die's pose while it is tumbling: two rotations in degrees, a roll
-    /// around the face, and how far off the table it has been thrown.
-    private struct Pose: Equatable {
-        var x: Double = 0
-        var y: Double = 0
-        var z: Double = 0
-        var lift: Double = 0
+    /// How a die is falling: when it was thrown, and the spin it was given.
+    ///
+    /// The face it will land on is already decided by the model, so the spin is
+    /// a turn *down* to that resting orientation rather than a random tumble
+    /// that happens to end somewhere.
+    private struct Roll {
+        let started: Date
+        let duration: TimeInterval
+        let resting: simd_quatf
+        let axisA: SIMD3<Float>
+        let axisB: SIMD3<Float>
+        let turns: Double
+        let tilt: Double
     }
 
-    /// What a die shows while it is rolling — random faces settling onto the
-    /// model's answer — and the lean it is drawn at while it does.
-    @State private var tumbling: [UUID: Int] = [:]
-    @State private var poses: [UUID: Pose] = [:]
+    @State private var rolls: [UUID: Roll] = [:]
     @State private var rolling = false
     @State private var rollTask: Task<Void, Never>?
 
@@ -96,30 +100,35 @@ struct DiceView: View {
     // MARK: - The table
 
     private var table: some View {
-        ScrollView {
-            if model.isEmpty {
-                emptyTable
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ON THE TABLE")
-                        .font(.system(size: 11, weight: .black, design: .rounded))
-                        .kerning(1.1)
-                        .foregroundStyle(VibeTheme.tertiaryText)
+        // Only redrawn frame by frame while something is in the air: at rest the
+        // dice are a still picture, and a timeline running for nothing is a
+        // battery bug on a phone being passed round a table.
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !rolling)) { timeline in
+            ScrollView {
+                if model.isEmpty {
+                    emptyTable
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ON THE TABLE")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .kerning(1.1)
+                            .foregroundStyle(VibeTheme.tertiaryText)
 
-                    LazyVGrid(columns: columns, spacing: 14) {
-                        ForEach(model.dice) { die in
-                            dieTile(die)
+                        LazyVGrid(columns: columns, spacing: 14) {
+                            ForEach(model.dice) { die in
+                                dieTile(die, at: timeline.date)
+                            }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 16)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 16)
             }
+            .frame(maxHeight: .infinity)
+            .accessibilityIdentifier("dice.tableView")
+            .accessibilityValue(model.isEmpty ? "No dice" : "\(model.dice.count) dice")
         }
-        .frame(maxHeight: .infinity)
-        .accessibilityIdentifier("dice.tableView")
-        .accessibilityValue(model.isEmpty ? "No dice" : "\(model.dice.count) dice")
     }
 
     private var emptyTable: some View {
@@ -141,33 +150,46 @@ struct DiceView: View {
         .accessibilityIdentifier("dice.empty")
     }
 
-    private func dieTile(_ die: Die) -> some View {
-        let pose = poses[die.id] ?? Pose()
-        let value = tumbling[die.id] ?? die.value
+    private func dieTile(_ die: Die, at now: Date) -> some View {
+        let mesh = DiceMeshes.mesh(sides: die.sides)
+        let resting = DiceRenderer.restingRotation(mesh: mesh, value: die.value, yaw: yaw(for: die))
 
-        return ZStack {
-            DieBody(sides: die.sides, depth: 9, cornerRadius: 11)
-
-            VStack(spacing: 0) {
-                DieValue(text: "\(value)", size: die.sides >= 10 ? 32 : 38)
-                Text("d\(die.sides)")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.85))
+        var rotation = resting
+        var lift: Float = 0
+        if let roll = rolls[die.id] {
+            let progress = now.timeIntervalSince(roll.started) / roll.duration
+            if progress < 1 {
+                rotation = DiceRenderer.rollingRotation(rest: roll.resting,
+                                                        progress: progress,
+                                                        axisA: roll.axisA,
+                                                        axisB: roll.axisB,
+                                                        turns: roll.turns,
+                                                        tilt: roll.tilt)
+                lift = Float(sin(.pi * min(max(progress, 0), 1))) * 0.35
             }
         }
+
+        return Canvas { context, size in
+            DiceRenderer.draw(mesh: mesh,
+                              value: die.value,
+                              colour: VibeTheme.diceColour(sides: die.sides),
+                              rotation: rotation,
+                              lift: lift,
+                              in: size,
+                              into: &context)
+        }
         .aspectRatio(1, contentMode: .fit)
-        .frame(height: 108)
+        .frame(height: 116)
         .frame(maxWidth: .infinity)
-        .rotation3DEffect(.degrees(pose.x), axis: (x: 1, y: 0, z: 0), perspective: 0.45)
-        .rotation3DEffect(.degrees(pose.y), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
-        .rotationEffect(.degrees(pose.z))
-        .offset(y: -pose.lift)
-        .scaleEffect(rolling ? 1.06 : 1)
-        .animation(.linear(duration: 0.08), value: pose)
-        .animation(.spring(response: 0.32, dampingFraction: 0.62), value: rolling)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("d\(die.sides): \(value)")
+        .accessibilityLabel("d\(die.sides): \(die.value)")
         .accessibilityIdentifier("dice.die")
+    }
+
+    /// A stable twist for each die, so two d6s on the table are not twins.
+    private func yaw(for die: Die) -> Double {
+        let sum = die.id.uuidString.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
+        return Double(sum % 360) * .pi / 180
     }
 
     // MARK: - The two buttons
@@ -228,13 +250,11 @@ struct DiceView: View {
     // MARK: - Rolling
 
     private func add(sides: Int) {
-        withAnimation(.spring(response: 0.34, dampingFraction: 0.7)) {
-            model.add(sides: sides)
-        }
-        // The new die tumbles into place, so a tap reads as a roll rather than
-        // as a tile appearing.
+        model.add(sides: sides)
+        // The new die is thrown in, so a tap reads as a roll rather than as a
+        // tile appearing.
         if let die = model.dice.last {
-            tumble([die], duration: 0.34)
+            throwDice([die], duration: 0.55)
         }
     }
 
@@ -242,56 +262,69 @@ struct DiceView: View {
         guard !model.isEmpty else { return }
         let dice = model.dice
         model.rollAll()
-        tumble(dice, duration: 0.7)
+        throwDice(dice, duration: 0.85)
     }
 
     private func clear() {
         rollTask?.cancel()
         rollTask = nil
-        tumbling = [:]
-        poses = [:]
+        rolls = [:]
         rolling = false
         // No animation: dice drifting out of the way end up half over the empty
         // table, which reads as a glitch rather than a sweep.
         model.clear()
     }
 
-    /// Shows random faces and random leans for a moment, then settles onto the
-    /// values the model already decided.
+    /// Throws the dice: each one gets a random spin that eases down onto the
+    /// face the model has already chosen.
     ///
     /// The model stays the source of truth and keeps its rules testable; this is
-    /// only what a roll *looks* like. In the air it can show anything; where it
-    /// comes to rest is the model's answer.
-    private func tumble(_ dice: [Die], duration: TimeInterval) {
+    /// only what a roll *looks* like.
+    private func throwDice(_ dice: [Die], duration: TimeInterval) {
         guard !dice.isEmpty else { return }
-        rollTask?.cancel()
 
-        let frame = 0.06
-        let frames = max(1, Int(duration / frame))
-        let sides = Dictionary(uniqueKeysWithValues: dice.map { ($0.id, $0.sides) })
-        let ids = dice.map(\.id)
-
+        let now = Date()
+        var next = rolls
+        for die in dice {
+            let mesh = DiceMeshes.mesh(sides: die.sides)
+            next[die.id] = Roll(started: now,
+                                duration: duration,
+                                resting: DiceRenderer.restingRotation(mesh: mesh,
+                                                                     value: die.value,
+                                                                     yaw: yaw(for: die)),
+                                axisA: randomUnitVector(),
+                                axisB: randomUnitVector(),
+                                turns: Double.random(in: 1.4...2.6),
+                                tilt: Double.random(in: 0.6...1.6))
+        }
+        rolls = next
         rolling = true
-        rollTask = Task { @MainActor in
-            for _ in 0..<frames {
-                guard !Task.isCancelled else { return }
-                for id in ids {
-                    guard let sideCount = sides[id] else { continue }
-                    tumbling[id] = Int.random(in: 1...sideCount)
-                    poses[id] = Pose(x: Double.random(in: -60...60),
-                                     y: Double.random(in: -75...75),
-                                     z: Double.random(in: -25...25),
-                                     lift: Double.random(in: 0...10))
-                }
-                try? await Task.sleep(nanoseconds: UInt64(frame * 1_000_000_000))
-            }
 
-            guard !Task.isCancelled else { return }
-            tumbling = [:]
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.6)) {
-                poses = [:]
+        rollTask?.cancel()
+        rollTask = Task { @MainActor in
+            // The timeline only needs to keep running while something is still
+            // in the air; this brings it back to a still picture afterwards.
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard !Task.isCancelled else { return }
+                let time = Date()
+                let live = rolls.filter { time.timeIntervalSince($0.value.started) < $0.value.duration }
+                if live.count != rolls.count { rolls = live }
+                if live.isEmpty {
+                    rolling = false
+                    return
+                }
             }
-            rolling = false
+        }
+    }
+
+    private func randomUnitVector() -> SIMD3<Float> {
+        while true {
+            let candidate = SIMD3<Float>(Float.random(in: -1...1),
+                                         Float.random(in: -1...1),
+                                         Float.random(in: -1...1))
+            let length = simd_length(candidate)
+            if length > 0.2 { return candidate / length }
         }
     }
 }

@@ -137,17 +137,3 @@ struct DieBody: View {
         }
     }
 }
-
-/// The value on a face, sized to the die rather than to the screen.
-struct DieValue: View {
-    let text: String
-    var size: CGFloat = 34
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: size, weight: .black, design: .rounded))
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
-            .contentTransition(.numericText())
-    }
-}

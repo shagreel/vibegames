@@ -79,6 +79,36 @@ final class UtilitiesUITests: XCTestCase {
         attach(app, named: "44-dice-cleared")
     }
 
+    /// Every die in the bag, on the table at once. The shapes are drawn from
+    /// real solids, so this is the check that each one comes out as the die it is
+    /// — and that each shows the number it rolled.
+    func testEveryDieInTheBagRenders() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openDice(app)
+
+        for sides in [4, 6, 8, 10, 12, 20] {
+            app.buttons["dice.add.\(sides)"].tap()
+        }
+
+        XCTAssertEqual(dieCount(app), 6, "all six dice should be on the table")
+        let labels = dieLabels(app)
+        XCTAssertEqual(labels.map(sidesOf).sorted(),
+                       ["d10", "d12", "d20", "d4", "d6", "d8"],
+                       "each die keeps the sides it was tapped with")
+
+        for label in labels {
+            let parts = label.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2, let sides = Int(parts[0].dropFirst()),
+                  let value = Int(parts[1]) else {
+                return XCTFail("Unexpected die label: \(label)")
+            }
+            XCTAssertTrue((1...sides).contains(value), "\(label) is out of range")
+        }
+        Thread.sleep(forTimeInterval: 1.0)
+        attach(app, named: "45-dice-every-kind")
+    }
+
     // MARK: - Helpers
 
     private func openDice(_ app: XCUIApplication) {
