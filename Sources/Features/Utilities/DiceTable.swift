@@ -43,6 +43,15 @@ final class DiceTable: NSObject, ObservableObject {
 
     private var quietSince: TimeInterval?
     private var lastCheck: TimeInterval = 0
+    /// True while a settle is already queued for the next runloop pass.
+    private var isFinishing = false
+    /// True from a throw until the dice have been read.
+    ///
+    /// Without this the table settles again every time it looks at a table that
+    /// is still at rest — reading every die, rebuilding every tag and rewriting
+    /// the model two or three times a second for ever, which is what made the
+    /// screen stop taking taps after the first die landed.
+    private var wantsSettling = false
     /// When to read the faces whether or not the simulation has stopped. A die
     /// can wedge on an edge and jitter forever; the player still wants an answer.
     private var settleDeadline: TimeInterval = 0
@@ -212,6 +221,7 @@ final class DiceTable: NSObject, ObservableObject {
     private func settleClock(start: Bool) {
         quietSince = nil
         lastCheck = 0
+        wantsSettling = start
         settleDeadline = start ? Date().timeIntervalSinceReferenceDate + 2.5 : 0
     }
 
@@ -221,7 +231,7 @@ final class DiceTable: NSObject, ObservableObject {
     /// says its body has stopped; when every die has been still for a moment,
     /// the table reads the faces that are up.
     func settleIfQuiet(atTime time: TimeInterval) {
-        guard !dice.isEmpty else { return }
+        guard wantsSettling, !dice.isEmpty, !isFinishing else { return }
         guard time - lastCheck > 0.12 else { return }
         lastCheck = time
 
@@ -248,22 +258,27 @@ final class DiceTable: NSObject, ObservableObject {
             }
         }
 
-        // Still: read the numbers and stop the clock until the next throw.
+        // Still. Nothing happens inside the render callback itself — not even
+        // stopping the loop, which deadlocks when it is done from in here. The
+        // work goes to the next runloop pass, and the callback just returns.
         quietSince = nil
+        isFinishing = true
+        DispatchQueue.main.async { [weak self] in
+            self?.finishSettling()
+        }
+    }
+
+    /// Reads the faces, tags the dice, tells the app, and stops drawing.
+    private func finishSettling() {
+        isFinishing = false
+        wantsSettling = false
         for (id, node) in dice {
             guard let sides = sides[id] else { continue }
             let value = DiceSolid.faceLookingUp(of: node, sides: sides)
             onSettled?(id, value)
             showChip(for: id, value: value, at: node.presentation.position)
         }
-        // Doing this inside the render callback — projecting points, rebuilding
-        // VoiceOver elements — is what made the screen stop responding after the
-        // first die landed: the main thread was still inside a frame. Stop
-        // drawing now and let the queue finish the rest.
-        view?.isPlaying = false
-        DispatchQueue.main.async { [weak self] in
-            self?.view?.refreshAccessibility()
-        }
+        view?.rest()
     }
 
     /// A little tag under each die with its number, so which face is the result
@@ -292,18 +307,23 @@ final class DiceTable: NSObject, ObservableObject {
 
     /// Where each die is, as the view sees it, for the accessibility elements.
     func makeAccessibilityElements(in view: SCNView) -> [UIAccessibilityElement] {
-        dice.compactMap { id, node in
+        let bounds = view.bounds
+        return dice.compactMap { id, node in
             guard let sides = sides[id] else { return nil }
-            let world = node.presentation.worldPosition
-            let projected = view.projectPoint(world)
+            let position = node.presentation.position
             let value = DiceSolid.faceLookingUp(of: node, sides: sides)
+
+            // Mapped by hand rather than through `projectPoint`: asking the
+            // renderer for a screen point while it is stopped is what froze the
+            // screen, and for finding a die with a finger a linear map over the
+            // table is close enough.
+            let x = bounds.midX + CGFloat(position.x / Self.halfWidth) * bounds.width * 0.42
+            let y = bounds.midY - CGFloat(position.z / Self.halfDepth) * bounds.height * 0.30
             let element = UIAccessibilityElement(accessibilityContainer: view)
             element.accessibilityIdentifier = "dice.die"
             element.accessibilityLabel = "d\(sides): \(value)"
-            element.accessibilityFrameInContainerSpace = CGRect(
-                x: CGFloat(projected.x) - 22, y: CGFloat(projected.y) - 22,
-                width: 44, height: 44
-            )
+            element.accessibilityFrameInContainerSpace = CGRect(x: x - 22, y: y - 22,
+                                                                width: 44, height: 44)
             return element
         }
     }

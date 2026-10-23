@@ -214,7 +214,10 @@ enum DiceSolid {
         let side: CGFloat = 256
         let size = CGSize(width: side, height: side)
         let colour = UIColor(VibeTheme.diceColour(sides: sides))
-        let centre = CGPoint(x: 0.5, y: 0.5)
+        // The middle of the face, which is not the middle of the square: a
+        // triangle's texture sits somewhere inside it.
+        let centre = CGPoint(x: cornerUVs.map(\.x).reduce(0, +) / CGFloat(cornerUVs.count),
+                             y: cornerUVs.map(\.y).reduce(0, +) / CGFloat(cornerUVs.count))
         return UIGraphicsImageRenderer(size: size).image { context in
             colour.setFill()
             context.fill(CGRect(origin: .zero, size: size))
@@ -234,9 +237,13 @@ enum DiceSolid {
                 // triangle and turns to face it.
                 let direction = CGPoint(x: uv.x - centre.x, y: uv.y - centre.y)
                 let length = max(hypot(direction.x, direction.y), 0.0001)
-                let spotUV = CGPoint(x: centre.x + direction.x / length * 0.27,
-                                     y: centre.y + direction.y / length * 0.27)
-                let spot = CGPoint(x: spotUV.x * side, y: (1 - spotUV.y) * side)
+                // Two thirds of the way to the corner: clear of the middle, and
+                // clear of the edge where the next face starts.
+                let spotUV = CGPoint(x: centre.x + direction.x * 0.62,
+                                     y: centre.y + direction.y * 0.62)
+                // SceneKit samples this image with v running down the picture, so
+                // the number goes where the corner's v says, not its mirror.
+                let spot = CGPoint(x: spotUV.x * side, y: spotUV.y * side)
 
                 // A triangle's corners are not all on the same vertex: the number
                 // belongs to the mesh's corner, which the face names.
