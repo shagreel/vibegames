@@ -232,3 +232,61 @@ final class DiceLimitTests: XCTestCase {
         XCTAssertNotNil(model.add(sides: 8), "and takes one again once it is swept")
     }
 }
+
+/// Shaking the phone is a roll.
+@MainActor
+final class ShakeToRollTests: XCTestCase {
+
+    /// A back-and-forth: three swings the other way inside a second.
+    func testAShakeIsRecognised() {
+        var recogniser = ShakeRecogniser()
+        var time: TimeInterval = 0
+        // The first swing only starts the measurement; it is the third change of
+        // direction that makes it a shake.
+        let readings: [(Double, Bool)] = [
+            (2.0, false),  // right
+            (-2.0, false), // left
+            (2.0, true),   // right again - that is a shake
+        ]
+        for (x, expected) in readings {
+            time += 0.18
+            XCTAssertEqual(recogniser.ingest(x: x, y: 0, z: 0, at: time), expected)
+        }
+    }
+
+    func testASingleJoltIsNotAShake() {
+        var recogniser = ShakeRecogniser()
+        XCTAssertFalse(recogniser.ingest(x: 3, y: 0, z: 0, at: 0.1))
+        XCTAssertFalse(recogniser.ingest(x: 3, y: 0, z: 0, at: 0.2),
+                       "two pushes the same way are not a back-and-forth")
+    }
+
+    func testASlowSwayIsNotAShake() {
+        var recogniser = ShakeRecogniser()
+        // Big enough, but so slow that each swing is outside the window.
+        XCTAssertFalse(recogniser.ingest(x: 2, y: 0, z: 0, at: 0))
+        XCTAssertFalse(recogniser.ingest(x: -2, y: 0, z: 0, at: 3))
+        XCTAssertFalse(recogniser.ingest(x: 2, y: 0, z: 0, at: 6))
+    }
+
+    func testAGentleTiltIsNotAShake() {
+        var recogniser = ShakeRecogniser()
+        XCTAssertFalse(recogniser.ingest(x: 0.3, y: 0, z: 0, at: 0.1))
+        XCTAssertFalse(recogniser.ingest(x: -0.3, y: 0, z: 0, at: 0.2))
+        XCTAssertFalse(recogniser.ingest(x: 0.3, y: 0, z: 0, at: 0.3))
+    }
+
+    func testItDoesNotRollTwiceForOneShake() {
+        var recogniser = ShakeRecogniser()
+        var time: TimeInterval = 0
+        var triggers = 0
+        // A long shake: ten swings, which would trigger several times without the
+        // quiet period after a roll.
+        for index in 0..<10 {
+            time += 0.12
+            let x = index % 2 == 0 ? 2.2 : -2.2
+            if recogniser.ingest(x: x, y: 0, z: 0, at: time) { triggers += 1 }
+        }
+        XCTAssertEqual(triggers, 1, "one shake, one roll")
+    }
+}

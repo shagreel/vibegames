@@ -13,6 +13,10 @@ struct DiceView: View {
     /// The table itself: a physics simulation that the dice are thrown onto.
     @StateObject private var diceTable = DiceTable()
 
+    /// Shaking the phone rolls the dice, the same as the button. Held in `@State`
+    /// so the body being rebuilt does not start a second sensor.
+    @State private var shake = ShakeMonitor()
+
     /// Three across, so d4–d20 fits two rows even on a small phone.
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
@@ -39,12 +43,14 @@ struct DiceView: View {
         .navigationBarBackButtonHidden()
         .onAppear {
             Haptics.shared.prepare()
+            shake.start { rollAll() }
             // The physics is what decides a number, so the model is told what
             // each die landed on rather than the other way round.
             diceTable.onSettled = { id, value in model.record(value, for: id) }
         }
         .onDisappear {
             diceTable.onSettled = nil
+            shake.stop()
         }
     }
 
@@ -133,42 +139,79 @@ struct DiceView: View {
     /// lands on another and rolls off it would otherwise be read while it was
     /// still on its way down.
     private var results: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 8)], spacing: 8) {
-            ForEach(model.dice) { die in
-                resultPill(die)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(groupedResults, id: \.sides) { column in
+                    VStack(spacing: 6) {
+                        Text("d\(column.sides)")
+                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .kerning(0.5)
+                            .foregroundStyle(VibeTheme.secondaryText)
+
+                        // Three to a column, then the next column of the same
+                        // kind: twenty dice in one column would be taller than the
+                        // screen.
+                        ForEach(Array(column.chunks.enumerated()), id: \.offset) { _, chunk in
+                            VStack(spacing: 4) {
+                                ForEach(chunk) { die in
+                                    resultPill(die)
+                                }
+                            }
+                        }
+                    }
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 4)
         .frame(maxWidth: .infinity)
         .opacity(model.isEmpty ? 0 : 1)
         .accessibilityIdentifier("dice.results")
+    }
+
+    /// The dice grouped by kind, smallest first.
+    ///
+    /// A column per kind, so two d4s are stacked in the first column and the d12s
+    /// follow — reading down a column is how a table of results is read, and it
+    /// keeps the same die in the same place as more are thrown.
+    private struct ResultColumn: Identifiable {
+        let sides: Int
+        let dice: [Die]
+        /// Three rows at most, so a column cannot run off the bottom.
+        var chunks: [[Die]] {
+            stride(from: 0, to: dice.count, by: 3).map { start in
+                Array(dice[start..<min(start + 3, dice.count)])
+            }
+        }
+        var id: Int { sides }
+    }
+
+    private var groupedResults: [ResultColumn] {
+        let grouped = Dictionary(grouping: model.dice, by: \.sides)
+        return grouped.keys.sorted().map { ResultColumn(sides: $0, dice: grouped[$0] ?? []) }
     }
 
     private func resultPill(_ die: Die) -> some View {
         let stopped = diceTable.settled.contains(die.id)
         let colour = VibeTheme.diceColour(sides: die.sides)
 
-        return HStack(spacing: 6) {
-            Text("d\(die.sides)")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
-
-            Text(stopped ? "\(die.value)" : "–")
-                .font(.system(size: 17, weight: .black, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(VibeTheme.primaryText)
-                .contentTransition(.numericText())
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background {
-            Capsule().fill(colour.opacity(0.18))
-                .overlay { Capsule().stroke(colour.opacity(0.55), lineWidth: 1) }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(stopped ? "d\(die.sides): \(die.value)" : "d\(die.sides): rolling")
-        .accessibilityIdentifier("dice.result")
+        return Text(stopped ? "\(die.value)" : "–")
+            .font(.system(size: 15, weight: .black, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(VibeTheme.primaryText)
+            .frame(width: 34, height: 24)
+            .contentTransition(.numericText())
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(colour.opacity(0.18))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(colour.opacity(0.55), lineWidth: 1)
+                    }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(stopped ? "d\(die.sides): \(die.value)" : "d\(die.sides): rolling")
+            .accessibilityIdentifier("dice.result")
     }
 
     // MARK: - The two buttons

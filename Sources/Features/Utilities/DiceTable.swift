@@ -162,7 +162,7 @@ final class DiceTable: NSObject, ObservableObject {
         let node = DiceSolid.node(sides: sides, value: value)
         // Somewhere random on the table, dropped from a little way up, so the
         // die is already rolling by the time it lands.
-        node.position = SCNVector3(slotX(), 1.1 + Float.random(in: 0...0.4), slotZ())
+        node.position = SCNVector3(slotX(), 2.0 + Float.random(in: 0...0.6), slotZ())
         node.eulerAngles = SCNVector3(Float.random(in: 0...(2 * .pi)),
                                       Float.random(in: 0...(2 * .pi)),
                                       Float.random(in: 0...(2 * .pi)))
@@ -171,10 +171,10 @@ final class DiceTable: NSObject, ObservableObject {
         node.physicsBody?.velocity = SCNVector3(Float.random(in: -1.1...1.1),
                                                 -0.4,
                                                 Float.random(in: -1.1...1.1))
-        node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -6...6),
-                                                       Float.random(in: -6...6),
-                                                       Float.random(in: -6...6),
-                                                       9)
+        node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -3...3),
+                                                       Float.random(in: -3...3),
+                                                       Float.random(in: -3...3),
+                                                       4)
         diceHolder.addChildNode(node)
         dice[id] = node
         settled.remove(id)
@@ -202,7 +202,7 @@ final class DiceTable: NSObject, ObservableObject {
             // edge does not climb the lip and bounce back on the spot.
             node.physicsBody?.resetTransform()
             var transform = node.simdTransform
-            transform.columns.3.y = 1.1 + Float.random(in: 0...0.6)
+            transform.columns.3.y = 1.9 + Float.random(in: 0...0.7)
             transform.columns.3.x *= 0.75
             transform.columns.3.z *= 0.75
             node.simdTransform = transform
@@ -212,10 +212,10 @@ final class DiceTable: NSObject, ObservableObject {
             node.physicsBody?.velocity = SCNVector3(Float.random(in: -0.8...0.8),
                                                     0.8,
                                                     Float.random(in: -0.8...0.8))
-            node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -3...3),
-                                                           Float.random(in: -3...3),
-                                                           Float.random(in: -3...3),
-                                                           6)
+            node.physicsBody?.angularVelocity = SCNVector4(Float.random(in: -2...2),
+                                                           Float.random(in: -2...2),
+                                                           Float.random(in: -2...2),
+                                                           3.5)
         }
         settled = []
         settleClock(start: true)
