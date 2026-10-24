@@ -27,7 +27,7 @@ enum FirstPlayer {
         /// is handed over to read.
         var instruction: String {
             switch self {
-            case .them: return "The person in the answer goes first"
+            case .them: return "That person goes first"
             case .left: return "The person to their left goes first"
             case .right: return "The person to their right goes first"
             }

@@ -38,6 +38,8 @@ final class FirstPlayerTests: XCTestCase {
 
     func testTheThreeSeatsSayWhichDirectionToGo() {
         XCTAssertEqual(FirstPlayer.Seat.allCases.count, 3)
+        XCTAssertEqual(FirstPlayer.Seat.them.instruction, "That person goes first",
+                       "the seat itself is said plainly, not as 'the person in the answer'")
         XCTAssertTrue(FirstPlayer.Seat.them.instruction.contains("goes first"))
         for seat in FirstPlayer.Seat.allCases {
             XCTAssertTrue(seat.instruction.hasSuffix("goes first"),
