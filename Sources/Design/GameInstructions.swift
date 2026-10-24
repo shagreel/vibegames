@@ -112,6 +112,34 @@ struct GameInstructions {
             Bullet(lead: "Race", text: "Everyone gets the same board. First to fill it wins."),
         ])
 
+    static let ten = GameInstructions(
+        game: .ten,
+        name: "Vibe Ten",
+        identifier: "ten.instructions",
+        intro: "Take pairs of digits off the board until nothing pairs any more. "
+             + "Clear every digit and you have cleared the board.",
+        sections: [
+            Section(title: "What pairs",
+                    body: "Two digits pair if they are **equal**, or if they **add up to ten** — "
+                        + "1 with 9, 2 with 8, 3 with 7, 4 with 6, 5 with 5. "
+                        + "They have to be on the same row, column or diagonal, with nothing "
+                        + "in between: neighbours count, and so does a line with only gaps "
+                        + "in it."),
+            Section(title: "The board falls",
+                    body: "Taking a pair leaves a hole, and the digits above it drop into it. "
+                        + "Half the game is deciding which pair to take first, because every "
+                        + "take changes what is next to what."),
+            Section(title: "Playing as a room",
+                    body: "Everyone gets the identical board, dealt from a seed. You each take "
+                        + "pairs at your own pace on your own device. One point per pair, and "
+                        + "when everybody has run out of moves, the most pairs wins. A tie goes "
+                        + "to whoever ran out of moves first."),
+        ],
+        bullets: [
+            Bullet(lead: "Solo", text: "A fresh board whenever you want one."),
+            Bullet(lead: "Room", text: "The same board for everyone. Most pairs wins."),
+        ])
+
     static let blurt = GameInstructions(
         game: .blurt,
         name: "Similar Vibe",

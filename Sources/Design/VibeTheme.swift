@@ -156,6 +156,20 @@ enum VibeTheme {
         return diceColours[index % diceColours.count]
     }
 
+    // MARK: Vibe Ten
+
+    /// Sixth accent: a cool blue-cyan, so a board of digits reads as its own
+    /// game rather than as Number Vibe's purple.
+    static let vibeTen = LinearGradient(
+        colors: [Color(red: 0.16, green: 0.55, blue: 0.95),
+                 Color(red: 0.30, green: 0.85, blue: 0.90)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// The ring round a selected digit.
+    static let vibeTenBorder = Color(red: 0.25, green: 0.72, blue: 0.98)
+
     // MARK: Similar Vibe
 
     /// Fifth accent. Warm and loud on purpose — this is the game where somebody

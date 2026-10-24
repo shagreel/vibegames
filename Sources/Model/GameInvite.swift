@@ -23,6 +23,7 @@ enum GameInvite {
         case .sudoku: return "sudoku"
         case .trio: return "trio"
         case .blurt: return "blurt"
+        case .ten: return "ten"
         }
     }
 

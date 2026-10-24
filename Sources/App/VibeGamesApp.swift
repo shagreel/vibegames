@@ -82,6 +82,8 @@ struct RootView: View {
                         VibeTrioView()
                     case .vibeBlurt:
                         VibeBlurtView()
+                    case .vibeTen:
+                        VibeTenView()
                     }
                 }
                 .navigationDestination(for: UtilityRoute.self) { route in

@@ -30,6 +30,7 @@ enum AppAnalytics {
         case sudoku = "vibe-sudoku"
         case trio = "vibe-trio"
         case blurt = "vibe-blurt"
+        case ten = "vibe-ten"
 
         /// What the game is called on screen. Here rather than at each call
         /// site so the heart button and the note it sends cannot disagree.
@@ -40,6 +41,7 @@ enum AppAnalytics {
             case .sudoku: return "Number Vibe"
             case .trio: return "Vibe Pairings"
             case .blurt: return "Similar Vibe"
+            case .ten: return "Vibe Ten"
             }
         }
     }
