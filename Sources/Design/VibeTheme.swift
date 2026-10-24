@@ -40,6 +40,14 @@ enum VibeTheme {
     static let tertiaryText = adaptive(light: Color.black.opacity(0.45),
                                        dark: Color.white.opacity(0.38))
 
+    /// A digit that has been taken: still legible, unmistakably out of play.
+    ///
+    /// The pair used to be drawn in `tertiaryText`, which is the colour of a
+    /// caption and far too solid for a square that is finished with — the owner
+    /// read them as "too dark" and they read that way on both canvases.
+    static let dimmedText = adaptive(light: Color.black.opacity(0.22),
+                                     dark: Color.white.opacity(0.28))
+
     // MARK: Game accents
 
     static let vibeFive = LinearGradient(

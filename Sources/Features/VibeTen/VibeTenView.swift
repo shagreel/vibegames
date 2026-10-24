@@ -383,18 +383,17 @@ struct VibeTenView: View {
                 .accessibilityIdentifier("ten.cell.\(column).\(row)")
                 .accessibilityAddTraits(isSelected ? [.isSelected] : [])
             } else if let value {
-                // Taken in dim mode: still there to read, clearly out of play.
+                // Taken in dim mode: still there to read, clearly out of play —
+                // no fill and a dotted edge, so it cannot be mistaken for a
+                // square that is waiting to be pressed.
                 Text("\(value)")
                     .font(.system(size: size * 0.62, weight: .black, design: .rounded))
-                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .foregroundStyle(VibeTheme.dimmedText)
                     .frame(width: size, height: size)
-                    .background {
-                        RoundedRectangle(cornerRadius: max(4, size * 0.22), style: .continuous)
-                            .fill(VibeTheme.surface.opacity(0.5))
-                    }
                     .overlay {
                         RoundedRectangle(cornerRadius: max(4, size * 0.22), style: .continuous)
-                            .stroke(VibeTheme.hairline.opacity(0.6), lineWidth: 1)
+                            .strokeBorder(VibeTheme.hairline.opacity(0.45),
+                                          style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Column \(column + 1) row \(row + 1): \(value), taken")

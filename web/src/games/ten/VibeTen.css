@@ -125,7 +125,10 @@
   background: transparent;
   border-style: dotted;
   border-color: var(--line-soft);
-  color: var(--muted);
+  /* Faint enough to read as finished with: the owner's note was that the taken
+     digits were too dark next to the ones still in play. `--ink-muted` is the
+     grey of a caption, and then faded back again. */
+  color: var(--ink-muted);
   opacity: 0.45;
   font-weight: 700;
   cursor: default;
