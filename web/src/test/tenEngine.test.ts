@@ -3,15 +3,20 @@ import fixtures from '../games/ten/board.fixtures.json';
 import {
   COLUMNS,
   ROWS,
+  addRow,
   availableMatches,
   boardFromStacks,
+  canAddRow,
   canMatch,
   hasMoves,
   isCleared,
+  isDimmed,
   newBoard,
   remaining,
   remove,
+  take,
   valueAt,
+  values,
 } from '../games/ten/engine';
 
 /**
@@ -92,8 +97,8 @@ describe('the deal', () => {
     expect(grid.stacks).toHaveLength(COLUMNS);
     grid.stacks.forEach((column) => {
       expect(column).toHaveLength(ROWS);
-      column.forEach((value) => expect(value).toBeGreaterThanOrEqual(1));
-      column.forEach((value) => expect(value).toBeLessThanOrEqual(9));
+      column.forEach((entry) => expect(entry.value).toBeGreaterThanOrEqual(1));
+      column.forEach((entry) => expect(entry.value).toBeLessThanOrEqual(9));
     });
     expect(remaining(grid)).toBe(COLUMNS * ROWS);
   });
@@ -102,6 +107,96 @@ describe('the deal', () => {
     expect(newBoard(99).stacks).toEqual(newBoard(99).stacks);
     expect(newBoard(99).stacks).not.toEqual(newBoard(100).stacks);
     // Dumped from the Swift engine: the app and the browser must agree.
-    expect(newBoard(1234).stacks).toEqual(fixtures['1234']);
+    expect(values(newBoard(1234))).toEqual(fixtures['1234']);
+  });
+});
+
+describe('dimming', () => {
+  it('dims a pair instead of removing it', () => {
+    const grid = board([
+      [3, 1],
+      [7],
+    ]);
+    const moved = take(grid, { column: 0, row: 0 }, { column: 1, row: 0 }, 'dim');
+    expect(moved).not.toBeNull();
+    expect(moved!.move.rowsCleared).toEqual([]);
+    expect(valueAt(moved!.board, { column: 0, row: 0 })).toBe(3);
+    expect(isDimmed(moved!.board, { column: 0, row: 0 })).toBe(true);
+    expect(isDimmed(moved!.board, { column: 1, row: 0 })).toBe(true);
+    expect(remaining(moved!.board)).toBe(1);
+  });
+
+  it('lets a line pass through a dimmed digit', () => {
+    const grid = board([
+      [3, 9],
+      [9, 7],
+      [7, 1],
+    ]);
+    expect(canMatch(grid, { column: 0, row: 0 }, { column: 2, row: 0 })).toBe(false);
+    const after = take(grid, { column: 1, row: 0 }, { column: 2, row: 1 }, 'dim')!.board;
+    expect(canMatch(after, { column: 0, row: 0 }, { column: 2, row: 0 })).toBe(true);
+  });
+
+  it('clears a row once every digit in it is dimmed', () => {
+    let grid = board([
+      [1, 9],
+      [9, 8],
+      [2, 7],
+      [8, 6],
+      [3, 5],
+      [7, 4],
+      [4, 3],
+      [6, 5],
+      [5, 1],
+    ]);
+    const pairs: [number, number][] = [
+      [0, 1],
+      [2, 3],
+      [4, 5],
+      [6, 7],
+    ];
+    for (const [left, right] of pairs) {
+      grid = take(grid, { column: left, row: 0 }, { column: right, row: 0 }, 'dim')!.board;
+    }
+    expect(grid.stacks[0]).toHaveLength(2);
+
+    const moved = take(grid, { column: 8, row: 0 }, { column: 7, row: 1 }, 'dim')!;
+    expect(moved.move.rowsCleared).toEqual([0]);
+    expect(moved.board.stacks[0]).toHaveLength(1);
+    expect(valueAt(moved.board, { column: 0, row: 0 })).toBe(9);
+  });
+
+  it('empties the board when both rows finish together', () => {
+    let grid = board([
+      [1, 9],
+      [2, 8],
+      [3, 7],
+      [4, 6],
+      [5, 5],
+      [6, 4],
+      [7, 3],
+      [8, 2],
+      [9, 1],
+    ]);
+    for (let column = 0; column < COLUMNS; column += 1) {
+      grid = take(grid, { column, row: 0 }, { column, row: 1 }, 'dim')!.board;
+    }
+    expect(isCleared(grid)).toBe(true);
+    expect(remaining(grid)).toBe(0);
+  });
+});
+
+describe('adding a row', () => {
+  it('goes on the bottom and pushes everything up', () => {
+    const grid = board([[1], [2], [3], [4], [5], [6], [7], [8], [9]]);
+    expect(canAddRow(grid)).toBe(true);
+    const next = addRow(grid, [9, 8, 7, 6, 5, 4, 3, 2, 1])!;
+    expect(valueAt(next, { column: 0, row: 0 })).toBe(9);
+    expect(valueAt(next, { column: 0, row: 1 })).toBe(1);
+  });
+
+  it('is refused while a column reaches the top row', () => {
+    expect(canAddRow(newBoard(7))).toBe(false);
+    expect(addRow(newBoard(7), Array(COLUMNS).fill(1))).toBeNull();
   });
 });

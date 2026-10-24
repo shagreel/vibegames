@@ -46,6 +46,7 @@ const GAMES = [
   ["Number Vibe", "Fill the grid, solo or raced", "#8549f0"],
   ["Vibe Pairings", "Find three cards that match", "#f7b929"],
   ["Similar Vibe", "Describe it, don't say it", "#f54d6b"],
+  ["Vibe Ten", "Pair the digits, clear the board", "#2a8cf2"],
 ];
 
 /** The page, as data: one card per picture the card shows. */

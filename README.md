@@ -7,7 +7,7 @@ A native iOS party-game app plus its companion website, in one repository.
 - `site/` — the marketing landing page (static HTML/CSS)
 - `firebase/` — Realtime Database rules shared by both clients
 
-The shell is a hub with four playable games.
+The shell is a hub with six playable games.
 
 | Game | Players | Backend |
 | --- | --- | --- |
@@ -15,6 +15,8 @@ The shell is a hub with four playable games.
 | **Word Vibe** — guess the five-letter word | Everyone on their own device | Firebase Realtime Database |
 | **Number Vibe** — fill the grid | Solo, or a race on the same board | Firebase Realtime Database |
 | **Vibe Pairings** — find three cards that agree on every feature | Solo, or a race on the same table | Firebase Realtime Database |
+| **Similar Vibe** — describe the word without saying it | Two teams of two or more | Firebase Realtime Database |
+| **Vibe Ten** — pair the digits, clear the board | Solo, or a race on the same board | Firebase Realtime Database |
 
 ## Vibe Five
 
@@ -204,6 +206,8 @@ getting a word grid *was* the site. Each game now has its own path:
 | `/trio` | Vibe Pairings | live, solo and shared |
 | `/five` | Vibe Five | live — pass the phone |
 | `/sudoku` | Number Vibe | live — solo and raced |
+| `/blurt` | Similar Vibe | live — teams, on the database |
+| `/ten` | Vibe Ten | live — solo and shared |
 
 Anything the router does not recognise falls through to the menu, so an old
 bookmark to the root still lands somewhere useful rather than on a 404. The
@@ -736,6 +740,39 @@ and the browser's copy is pinned against Swift's by the fixtures, all 69 ticks o
 start rather than a chain of waits, which is what stops one phone's rhythm
 drifting from another's and what lets a phone that joins mid-round fall in with
 the table instead of starting its own.
+
+## Vibe Ten
+
+The sixth game: nine columns of digits, eighteen rows tall, packed at the
+bottom. Two digits pair when they are **equal** or **add up to ten**, on one
+line — a row, a column or a diagonal — with nothing in between. Take a pair and
+everything above it falls, so every take changes the board.
+
+Solo or a room, and the room works the way the other races do: one seed, so
+every device deals the identical 162 digits, and only each player's score
+travels. One point a pair, most pairs wins, a tie goes to whoever ran out of
+moves first. Play until nothing pairs; clear every digit and the board is done.
+
+Two properties of its own, both in the game's settings sheet:
+
+- **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
+  leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
+  digit cannot be picked again and a line can be drawn straight through it, so a
+  pair can be made across one. A row clears once *every* digit in it has been
+  dimmed — the whole row goes at once and everything above drops a single row.
+  It applies to the next pair taken rather than the next board dealt, in solo
+  and in a room alike.
+- **Offer a new row (solo only).** While no column reaches the top of the grid,
+  a button appears *in the empty top row* — no strip of its own on screen — and
+  tapping it pushes a fresh row of digits in at the bottom, moving everything up
+  one row. In a room the board is everybody's, so the offer is never there.
+
+`VibeTenBoard` is the rules and knows nothing about screens or the database;
+`VibeTenModel` holds a board, a tapped cell and a score, and deals a shared
+board from the room's seed. `web/src/games/ten/engine.ts` mirrors the board,
+including the deal, which is what makes a room's seed light up the same numbers
+in a browser — `Tests/VibeTenBoardTests.swift` and `web/src/test/tenEngine.test.ts`
+both pin themselves to `web/src/games/ten/board.fixtures.json`.
 
 ## Building
 

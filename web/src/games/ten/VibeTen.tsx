@@ -3,23 +3,32 @@ import HowToPlay, { type HowToPlayContent } from '../../hub/HowToPlay';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
 import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
-import { GameSettings, SettingsButton } from '../../hub/GameSettings';
+import {
+  GameSettings,
+  SettingsButton,
+  SettingsSection,
+  SettingsToggle,
+} from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
 import { GameCodeBadge } from '../../hub/GameCodeBadge';
 import { RoundOver } from '../../hub/RoundOver';
-import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
+import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
 import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
   COLUMNS,
+  MODE_LABELS,
   ROWS,
+  addRow,
   availableMatches,
+  canAddRow,
+  cellAt,
   isCleared,
   newBoard,
-  remove,
-  valueAt,
+  take,
   type Position,
   type TenBoard,
+  type TenMode,
 } from './engine';
 import {
   EMPTY_SNAPSHOT,
@@ -59,15 +68,36 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
       body: 'Taking a pair leaves a hole, and the digits above drop into it. Every take changes what is next to what, which is half the game.',
     },
     {
+      title: 'Dim mode',
+      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything above drops one row.',
+    },
+    {
+      title: 'A new row, solo',
+      body: 'Playing alone, you can push a fresh row in at the bottom — but only while the top row of the grid is empty. A button appears in that empty row when there is room: tap it and the new digits arrive underneath, with everything else moving up one. It is a solo-only button: in a room everybody plays the board they were dealt.',
+    },
+    {
       title: 'Playing as a room',
       body: 'Everyone gets the identical board, dealt from a seed, and plays their own copy at their own pace. One point a pair. When everybody has run out of moves the most pairs wins, and a tie goes to whoever ran out first.',
     },
   ],
   bullets: [
-    { lead: 'Solo', text: 'A fresh board whenever you want one.' },
+    { lead: 'Solo', text: 'A fresh board whenever you want one, and a new row whenever the top of the grid is free.' },
     { lead: 'Room', text: 'The same board for everyone. Most pairs wins.' },
   ],
 };
+
+/** The properties, kept per device: a room's board is everybody's, but these
+    are how this player likes to play it. */
+const MODE_KEY = 'vibegames.ten.mode';
+const ADD_ROW_KEY = 'vibegames.ten.addRow';
+
+function savedMode(): TenMode {
+  return localStorage.getItem(MODE_KEY) === 'dim' ? 'dim' : 'remove';
+}
+
+function savedAddRow(): boolean {
+  return localStorage.getItem(ADD_ROW_KEY) !== 'false';
+}
 
 function VibeTen() {
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -92,6 +122,8 @@ function VibeTen() {
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mode, setMode] = useState<TenMode>(savedMode);
+  const [addRowEnabled, setAddRowEnabled] = useState(savedAddRow);
 
   const seed = gameId ? snapshot.seed : soloSeed;
   const waitingForHost = Boolean(gameId) && !snapshot.started;
@@ -250,13 +282,14 @@ function VibeTen() {
       return;
     }
 
-    const next = remove(board, selected, position);
-    if (!next) {
+    const moved = take(board, selected, position, mode);
+    if (!moved) {
       setSelected(position);
       setNotice("Those two don't pair.");
       return;
     }
 
+    const next = moved.board;
     const taken = score + 1;
     setBoard(next);
     setScore(taken);
@@ -275,6 +308,27 @@ function VibeTen() {
         setNotice('Could not tell the room that one.'),
       );
     }
+  }
+
+  /** Pushes a fresh row in at the bottom, when the top of the grid is free. */
+  function dealRow() {
+    if (!board || !canPlay) return;
+    const digits = Array.from({ length: COLUMNS }, () => 1 + Math.floor(Math.random() * 9));
+    const next = addRow(board, digits);
+    if (!next) return;
+    setBoard(next);
+    setSelected(null);
+    setNotice('');
+  }
+
+  function chooseMode(next: TenMode) {
+    setMode(next);
+    localStorage.setItem(MODE_KEY, next);
+  }
+
+  function chooseAddRow(on: boolean) {
+    setAddRowEnabled(on);
+    localStorage.setItem(ADD_ROW_KEY, String(on));
   }
 
   function playAgain() {
@@ -303,6 +357,27 @@ function VibeTen() {
         backLabel="Leave game"
       >
         <SupportButton game={GAMES.ten} />
+        {gameId && (
+          <button
+            type="button"
+            className="ten__share game-settings-button"
+            aria-label="Share game code"
+            onClick={() => {
+              trackShare(GAMES.ten, 'game');
+              const link = `${window.location.origin}/ten?game=${gameId}`;
+              // Said only once it has worked, or with the link itself when the
+              // browser will not copy for us.
+              navigator.clipboard.writeText(link).then(
+                () => setNotice('Link copied. Anyone who taps it lands in this room.'),
+                () => setNotice(`Could not copy the link. It is ${link}`),
+              );
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 16V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" />
+            </svg>
+          </button>
+        )}
         <SettingsButton prefix="ten" onClick={() => setSettingsOpen(true)} />
       </GameHeader>
 
@@ -349,7 +424,15 @@ function VibeTen() {
             </p>
           )}
 
-          <Board board={board} selected={selected} onTap={tapCell} disabled={!canPlay} />
+          <Board
+            board={board}
+            selected={selected}
+            onTap={tapCell}
+            disabled={!canPlay}
+            onAddRow={
+              !gameId && !finished && addRowEnabled && canAddRow(board) ? dealRow : undefined
+            }
+          />
 
           {finished && (
             <RoundOver
@@ -374,7 +457,39 @@ function VibeTen() {
 
       {askingForName && <NamePrompt onSubmit={submitName} />}
 
-      {settingsOpen && <GameSettings prefix="ten" onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <GameSettings prefix="ten" onClose={() => setSettingsOpen(false)}>
+          <SettingsSection
+            title="When a pair is matched"
+            note="Applies to the pairs you take from here on."
+          >
+            <div className="game-sheet__choices" role="group" aria-label="When a pair is matched">
+              {(Object.keys(MODE_LABELS) as TenMode[]).map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={mode === choice}
+                  aria-pressed={mode === choice}
+                  onClick={() => chooseMode(choice)}
+                >
+                  {MODE_LABELS[choice].title}
+                </button>
+              ))}
+            </div>
+            <p>{MODE_LABELS[mode].blurb}</p>
+          </SettingsSection>
+
+          <SettingsSection title="Adding rows">
+            <SettingsToggle
+              label="Offer a new row"
+              note="Solo games only: a button on the empty top row pushes a fresh row in at the bottom"
+              on={addRowEnabled}
+              onChange={chooseAddRow}
+            />
+          </SettingsSection>
+        </GameSettings>
+      )}
     </div>
   );
 }
@@ -403,33 +518,60 @@ function Board(props: {
   selected: Position | null;
   onTap: (position: Position) => void;
   disabled: boolean;
+  /** Set when the empty top row should carry the new-row button. */
+  onAddRow?: () => void;
 }) {
   const rows = Array.from({ length: ROWS }, (_, index) => ROWS - 1 - index);
   return (
-    <div className="ten__board" role="grid" aria-label="Vibe Ten board">
-      {rows.map((row) =>
-        Array.from({ length: COLUMNS }, (_, column) => {
-          const position = { column, row };
-          const value = valueAt(props.board, position);
-          if (value === null) {
-            return <span key={`${column}-${row}`} className="ten__gap" aria-hidden="true" />;
-          }
-          const isSelected = props.selected?.column === column && props.selected.row === row;
-          return (
-            <button
-              key={`${column}-${row}`}
-              type="button"
-              className="ten__cell"
-              data-selected={isSelected}
-              disabled={props.disabled}
-              onClick={() => props.onTap(position)}
-              aria-label={`Column ${column + 1} row ${row + 1}: ${value}`}
-              aria-pressed={isSelected}
-            >
-              {value}
-            </button>
-          );
-        }),
+    <div className="ten__board-wrap">
+      <div className="ten__board" role="grid" aria-label="Vibe Ten board">
+        {rows.map((row) =>
+          Array.from({ length: COLUMNS }, (_, column) => {
+            const position = { column, row };
+            const entry = cellAt(props.board, position);
+            if (!entry) {
+              return <span key={`${column}-${row}`} className="ten__gap" aria-hidden="true" />;
+            }
+            const label = `Column ${column + 1} row ${row + 1}: ${entry.value}`;
+            if (entry.dimmed) {
+              // Taken in dim mode: still there to read, clearly out of play.
+              return (
+                <span
+                  key={`${column}-${row}`}
+                  className="ten__cell"
+                  data-dimmed="true"
+                  role="gridcell"
+                  aria-label={`${label}, taken`}
+                >
+                  {entry.value}
+                </span>
+              );
+            }
+            const isSelected = props.selected?.column === column && props.selected.row === row;
+            return (
+              <button
+                key={`${column}-${row}`}
+                type="button"
+                className="ten__cell"
+                data-selected={isSelected}
+                disabled={props.disabled}
+                onClick={() => props.onTap(position)}
+                aria-label={label}
+                aria-pressed={isSelected}
+              >
+                {entry.value}
+              </button>
+            );
+          }),
+        )}
+      </div>
+
+      {/* The top row is dead space while it is empty, so the offer to push a
+          fresh row in lives there rather than in a strip of its own. */}
+      {props.onAddRow && (
+        <button type="button" className="ten__add-row" onClick={props.onAddRow}>
+          <span aria-hidden="true">＋</span> Add a row
+        </button>
       )}
     </div>
   );
@@ -462,6 +604,18 @@ function Waiting(props: {
           Start
         </button>
       )}
+      <button
+        type="button"
+        className="ten__link"
+        onClick={() => {
+          trackShare(GAMES.ten, 'game');
+          void navigator.clipboard.writeText(
+            `${window.location.origin}/ten?game=${props.gameId}`,
+          );
+        }}
+      >
+        Copy the link
+      </button>
     </div>
   );
 }

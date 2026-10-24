@@ -56,6 +56,8 @@ SCREENSHOT_ONLY=(
   "VibeGamesUITests/VibeTrioUITests/testLeaderboardDark"
   "VibeGamesUITests/VibeBlurtScreenshots/testLightAppearance"
   "VibeGamesUITests/VibeBlurtScreenshots/testDarkAppearance"
+  "VibeGamesUITests/VibeTenScreenshots/testLightAppearance"
+  "VibeGamesUITests/VibeTenScreenshots/testDarkAppearance"
 )
 
 skips=()

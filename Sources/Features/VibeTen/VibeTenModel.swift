@@ -36,6 +36,29 @@ final class VibeTenModel: ObservableObject {
     @Published private(set) var boardToken = 0
     @Published private(set) var lastRoundSeconds = 0
 
+    /// How a taken pair leaves the board. A preference, not a room rule: every
+    /// player takes pairs on their own copy, so each may play the way they like.
+    @Published var mode: VibeTenMode {
+        didSet {
+            guard mode != oldValue else { return }
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeKey)
+        }
+    }
+
+    static let modeKey = "vibeten.mode"
+
+    /// Whether a solo board offers a new row once the top of the grid is free.
+    /// Another preference rather than a room rule: a room's board has to be the
+    /// same for everybody, so this one only applies when playing alone.
+    @Published var addRowEnabled: Bool {
+        didSet {
+            guard addRowEnabled != oldValue else { return }
+            UserDefaults.standard.set(addRowEnabled, forKey: Self.addRowKey)
+        }
+    }
+
+    static let addRowKey = "vibeten.addRow"
+
     @Published private(set) var snapshot = VibeTenSnapshot()
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
@@ -72,6 +95,18 @@ final class VibeTenModel: ObservableObject {
 
     var isWaitingForHost: Bool { isShared && !snapshot.started }
     var canPlay: Bool { board != nil && !finished && !isWaitingForHost }
+
+    init() {
+        let defaults = UserDefaults.standard
+        mode = VibeTenMode(rawValue: defaults.string(forKey: Self.modeKey) ?? "") ?? .remove
+        // On unless it has been turned off: a solo player who has never opened
+        // the settings should still get the extra row when the grid has room.
+        // `bool(forKey:)` rather than a cast, so `-vibeten.addRow NO` in a launch
+        // argument — a string, not a stored boolean — reads as the answer it is.
+        addRowEnabled = defaults.object(forKey: Self.addRowKey) == nil
+            ? true
+            : defaults.bool(forKey: Self.addRowKey)
+    }
 
     var remaining: Int { board?.remaining ?? 0 }
     var pairsLeft: Int { board?.availableMatches().count ?? 0 }
@@ -269,7 +304,7 @@ final class VibeTenModel: ObservableObject {
             return
         }
 
-        if board.remove(first, position) {
+        if board.take(first, position, mode: mode) != nil {
             self.board = board
             score += 1
             selected = nil
@@ -298,6 +333,29 @@ final class VibeTenModel: ObservableObject {
         }
         selected = nil
         reportScore()
+    }
+
+    /// Puts a fresh row on the bottom of a solo board.
+    ///
+    /// Only while the top row is free — the grid is 18 rows and the board cannot
+    /// grow past it — and only solo, because a room's board is the same for
+    /// everybody and one player dealing themselves new digits would be a very
+    /// different game.
+    func addRow() {
+        guard canAddRow, var board else { return }
+        var digits: [Int] = []
+        for _ in 0..<VibeTenBoard.columnCount { digits.append(Int.random(in: 1...9)) }
+        guard board.addRow(digits) else { return }
+        self.board = board
+        selected = nil
+        message = nil
+    }
+
+    /// Whether the board should offer the new-row button: the setting is on,
+    /// this is a solo game, and every column is clear of the top row.
+    var canAddRow: Bool {
+        addRowEnabled && !isShared && !finished && !isWaitingForHost
+            && (board?.canAddRow ?? false)
     }
 
     /// Tells the room the score. Shared games only — a solo board is nobody

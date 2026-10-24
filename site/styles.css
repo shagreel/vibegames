@@ -18,6 +18,7 @@
   --sudoku-a: #8549f0;  --sudoku-b: #db54c2;
   --trio-a:   #f7b929;  --trio-b:   #85d647;
   --blurt-a:  #f54d6b;  --blurt-b:  #fd8c3d;
+  --ten-a:    #2a8cf2;  --ten-b:    #4dd9e6;
 
   --radius: 26px;
   --wrap: 1120px;
@@ -319,6 +320,7 @@ a.store__item:hover {
 .game--words  .game__backdrop { background: radial-gradient(50% 50% at 50% 50%, var(--words-b),  transparent 70%); }
 .game--sudoku .game__backdrop { background: radial-gradient(50% 50% at 50% 50%, var(--sudoku-a), transparent 70%); }
 .game--trio   .game__backdrop { background: radial-gradient(50% 50% at 50% 50%, var(--trio-a),   transparent 70%); }
+.game--ten    .game__backdrop { background: radial-gradient(50% 50% at 50% 50%, var(--ten-a),    transparent 70%); }
 
 .game__inner {
   display: grid;
@@ -351,6 +353,7 @@ a.store__item:hover {
 .game--sudoku { --a: var(--sudoku-a); --b: var(--sudoku-b); }
 .game--trio   { --a: var(--trio-a);   --b: var(--trio-b); }
 .game--blurt  { --a: var(--blurt-a);  --b: var(--blurt-b); }
+.game--ten    { --a: var(--ten-a);    --b: var(--ten-b); }
 
 .game__tag {
   font-size: 1.2rem;

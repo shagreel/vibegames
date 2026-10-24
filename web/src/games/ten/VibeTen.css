@@ -18,13 +18,45 @@
 /* The board takes whatever height the header and the result leave. A row is
    square, so capping the width by the height is what keeps 18 rows on screen
    without the page scrolling under a thumb. */
+.ten__board-wrap {
+  --ten-gap: 2px;
+  position: relative;
+  width: min(100% - 1rem, calc((100svh - 15rem) * 9 / 18));
+  margin: 0 auto;
+}
+
 .ten__board {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
-  gap: 2px;
-  width: min(100% - 1rem, calc((100svh - 15rem) * 9 / 18));
-  margin: 0 auto;
-  padding: 0 0.25rem;
+  gap: var(--ten-gap);
+  width: 100%;
+}
+
+/* The offer of a new row, on the row it pushes up into: the top row is dead
+   space while it is empty, so nothing else on the screen has to move. */
+.ten__add-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc((100% - 8 * var(--ten-gap)) / 9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  padding: 0;
+  border: 1px dashed #40b4f7;
+  border-radius: 0.5rem;
+  background: rgba(64, 180, 247, 0.16);
+  color: var(--ink);
+  font: inherit;
+  font-size: clamp(0.6rem, 1.8vmin, 0.95rem);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ten__add-row:hover {
+  background: rgba(64, 180, 247, 0.26);
 }
 
 .ten__cell,
@@ -62,6 +94,18 @@
 
 .ten__gap {
   visibility: hidden;
+}
+
+/* Taken in dim mode: still there to read, clearly out of play — no fill, a
+   dotted outline, and the digit faded back. */
+.ten__cell[data-dimmed='true'] {
+  background: transparent;
+  border-style: dotted;
+  border-color: var(--line-soft);
+  color: var(--muted);
+  opacity: 0.45;
+  font-weight: 700;
+  cursor: default;
 }
 
 .ten__scoreline {

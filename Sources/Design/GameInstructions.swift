@@ -129,6 +129,18 @@ struct GameInstructions {
                     body: "Taking a pair leaves a hole, and the digits above it drop into it. "
                         + "Half the game is deciding which pair to take first, because every "
                         + "take changes what is next to what."),
+            Section(title: "Dim mode",
+                    body: "In the game settings, **Dim** leaves a taken pair on the board, "
+                        + "greyed out, instead of removing it. A dimmed digit is gone as far as "
+                        + "the rules are concerned: it cannot be picked again, and a pair can be "
+                        + "made straight across it. When every digit in a row has been dimmed, "
+                        + "the whole row clears at once and everything above drops one row."),
+            Section(title: "A new row, solo",
+                    body: "Playing alone, you can push a fresh row of digits in at the bottom. "
+                        + "It is only possible while the top row of the grid is empty — and "
+                        + "rather than taking up space of its own, the button appears in that "
+                        + "empty row. A room plays the board it was dealt, so the button is "
+                        + "never there in a shared game."),
             Section(title: "Playing as a room",
                     body: "Everyone gets the identical board, dealt from a seed. You each take "
                         + "pairs at your own pace on your own device. One point per pair, and "
@@ -136,7 +148,8 @@ struct GameInstructions {
                         + "to whoever ran out of moves first."),
         ],
         bullets: [
-            Bullet(lead: "Solo", text: "A fresh board whenever you want one."),
+            Bullet(lead: "Solo", text: "A fresh board whenever you want one, and a new row "
+                        + "whenever the top of the grid is free."),
             Bullet(lead: "Room", text: "The same board for everyone. Most pairs wins."),
         ])
 
@@ -167,8 +180,10 @@ struct GameInstructions {
             Bullet(lead: "Winning", text: "First team to \(BlurtRules.target) points wins the game."),
         ])
 
-    /// Every game that has a page, in the order the hub lists them.
-    static let all: [GameInstructions] = [.five, .words, .sudoku, .blurt]
+    /// Every game that has a prose page, in the order the hub lists them. Vibe
+    /// Pairings has one of its own — `TrioInstructionsView`, drawn from real
+    /// cards rather than written out — so it is not in this list.
+    static let all: [GameInstructions] = [.five, .words, .sudoku, .ten, .blurt]
 }
 
 // MARK: - The page

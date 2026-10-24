@@ -23,7 +23,7 @@ struct VibeTenView: View {
         .vibeCanvas()
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingSettings) {
-            VibeTenSettingsView()
+            VibeTenSettingsView(model: model)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -65,7 +65,20 @@ struct VibeTenView: View {
                       }) {
             SupportButton(game: .ten)
             GameSettingsButton(prefix: "ten") { showingSettings = true }
+
+            if model.isShared {
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .buttonStyle(VibeIconButtonStyle())
+                .accessibilityLabel("Share game code")
+                .accessibilityIdentifier("ten.share")
+            }
         }
+    }
+
+    private var shareText: String {
+        GameInvite.text(game: .ten, code: model.sharedGameID ?? "")
     }
 
     // MARK: - Lobby
@@ -250,6 +263,35 @@ struct VibeTenView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// Dealing yourself another row, on the row it pushes up into.
+    ///
+    /// The top row of the grid is dead space whenever it is empty, so the button
+    /// goes there rather than in a strip of its own: it appears exactly when
+    /// there is room for it and vanishes as soon as the row above fills.
+    private func addRowButton(width: CGFloat, height: CGFloat) -> some View {
+        Button {
+            Haptics.shared.tap()
+            model.addRow()
+        } label: {
+            Label("Add a row", systemImage: "plus")
+                .font(.system(size: max(10, height * 0.34), weight: .bold, design: .rounded))
+                .foregroundStyle(VibeTheme.primaryText)
+                .frame(width: width, height: height)
+                .background {
+                    RoundedRectangle(cornerRadius: max(4, height * 0.22), style: .continuous)
+                        .fill(VibeTheme.vibeTenBorder.opacity(0.22))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: max(4, height * 0.22), style: .continuous)
+                        .strokeBorder(VibeTheme.vibeTenBorder.opacity(0.7),
+                                      style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add a row at the bottom")
+        .accessibilityIdentifier("ten.addRow")
+    }
+
     /// A live score line for a room: everyone's pairs, in order.
     private var standingsBar: some View {
         HStack(spacing: 12) {
@@ -285,6 +327,14 @@ struct VibeTenView: View {
                     }
                 }
             }
+            .frame(width: cell * CGFloat(VibeTenBoard.columnCount) + gap * 8,
+                   height: cell * CGFloat(VibeTenBoard.rowCount) + gap * 17)
+            .overlay(alignment: .top) {
+                if model.canAddRow {
+                    addRowButton(width: cell * CGFloat(VibeTenBoard.columnCount) + gap * 8,
+                                 height: cell)
+                }
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
         .padding(.horizontal, 10)
@@ -301,8 +351,10 @@ struct VibeTenView: View {
         let value = model.board?.value(at: position)
         let isSelected = model.selected == position
 
+        let dimmed = model.board?.isDimmed(at: position) ?? true
+
         return Group {
-            if let value {
+            if let value, !dimmed {
                 // A button, not a tap on a label: a digit is the one thing you
                 // press in this game, and VoiceOver should say so.
                 Button {
@@ -326,6 +378,23 @@ struct VibeTenView: View {
                 .accessibilityLabel("Column \(column + 1) row \(row + 1): \(value)")
                 .accessibilityIdentifier("ten.cell.\(column).\(row)")
                 .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+            } else if let value {
+                // Taken in dim mode: still there to read, clearly out of play.
+                Text("\(value)")
+                    .font(.system(size: size * 0.62, weight: .black, design: .rounded))
+                    .foregroundStyle(VibeTheme.tertiaryText)
+                    .frame(width: size, height: size)
+                    .background {
+                        RoundedRectangle(cornerRadius: max(4, size * 0.22), style: .continuous)
+                            .fill(VibeTheme.surface.opacity(0.5))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: max(4, size * 0.22), style: .continuous)
+                            .stroke(VibeTheme.hairline.opacity(0.6), lineWidth: 1)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Column \(column + 1) row \(row + 1): \(value), taken")
+                    .accessibilityIdentifier("ten.cell.\(column).\(row)")
             } else {
                 Color.clear
                     .frame(width: size, height: size)
@@ -462,14 +531,63 @@ struct VibeTenView: View {
     }
 }
 
-/// The player's name and the appearance: the same two settings as every game.
+/// The player's name, the appearance, and how a matched pair is taken.
 struct VibeTenSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var model: VibeTenModel
+
+    private var modeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSectionTitle("When a pair is matched")
+
+            Picker("When a pair is matched", selection: $model.mode) {
+                ForEach(VibeTenMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("tenSettings.mode")
+
+            Text(model.mode.blurb)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Applies to the pairs you take from here on.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var addRowSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSectionTitle("Adding rows")
+
+            SettingsCard {
+                SettingsRow(symbol: "plus.rectangle.on.rectangle",
+                            title: "Offer a new row",
+                            subtitle: "Solo games only") {
+                    Toggle("", isOn: $model.addRowEnabled)
+                        .labelsHidden()
+                        .tint(VibeTheme.vibeTenBorder)
+                        .accessibilityIdentifier("tenSettings.addRow")
+                }
+            }
+
+            Text("When the top row of the grid is empty, a button appears there: tap it to push a fresh row in at the bottom.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
+                    modeSection
+                    addRowSection
                     GameSettingsSections()
                 }
                 .padding(20)

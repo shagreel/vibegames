@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Vibe Games — party games in your pocket</title>
-<meta name="description" content="Vibe Five, Word Vibe, Number Vibe, Vibe Pairings and Similar Vibe. Play solo, or share a code and play with everyone in the room. Free on any device, nothing to install." />
+<meta name="description" content="Vibe Five, Word Vibe, Number Vibe, Vibe Pairings, Similar Vibe and Vibe Ten. Play solo, or share a code and play with the room. Free on any device." />
 <meta name="theme-color" content="#0b0a17" />
 <link rel="canonical" href="https://vibegames.party/" />
 
@@ -20,7 +20,7 @@
 <meta property="og:locale" content="en_US" />
 <meta property="og:url" content="https://vibegames.party/" />
 <meta property="og:title" content="Vibe Games — party games in your pocket" />
-<meta property="og:description" content="Name three things before the buzzer. Crack a five-letter word. Find the best charcuterie pairings. Free, in any browser, on any device." />
+<meta property="og:description" content="Name three things before the buzzer. Crack a five-letter word. Find the best charcuterie pairings. Pair the digits and clear the board. Free, in any browser, on any device." />
 <meta property="og:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
 <meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="1200" />
@@ -28,7 +28,7 @@
 <meta property="og:image:alt" content="Vibe Games, with a screen showing the games" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Vibe Games — party games in your pocket" />
-<meta name="twitter:description" content="Name three things before the buzzer. Crack a five-letter word. Free, in any browser, on any device." />
+<meta name="twitter:description" content="Name three things before the buzzer. Crack a five-letter word. Pair the digits and clear the board. Free, in any browser, on any device." />
 <meta name="twitter:image" content="https://vibegames.party/assets/og/vibe-games.jpg" />
 
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -119,6 +119,19 @@
           "position": 5,
           "item": {
             "@type": "WebApplication",
+            "name": "Vibe Ten",
+            "url": "https://play.vibegames.party/ten",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any browser",
+            "description": "Pair digits that match or add up to ten, and clear the board.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 6,
+          "item": {
+            "@type": "WebApplication",
             "name": "Similar Vibe",
             "url": "https://play.vibegames.party/blurt",
             "applicationCategory": "GameApplication",
@@ -127,6 +140,7 @@
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
           }
         }
+
       ]
     }
   ]
@@ -148,7 +162,7 @@
       <p class="lede">
         Name three things before the buzzer. Crack a five-letter word.
         Find the best charcuterie pairings. Find just the right words.
-        Family fun for the whole evening.
+        Pair the digits and clear the board. Family fun for the whole evening.
       </p>
 
       <div class="store">
@@ -178,7 +192,7 @@
 
     <div class="hero__device">
       <div class="phone phone--float">
-        <picture><source srcset="assets/screens/hub-dark.jpg?v=7" media="(prefers-color-scheme: dark)" /><img src="assets/screens/hub-light.jpg?v=7" alt="The Vibe Games home screen, listing the games" width="414" height="900" loading="eager" fetchpriority="high" /></picture>
+        <picture><source srcset="assets/screens/hub-dark.jpg?v=8" media="(prefers-color-scheme: dark)" /><img src="assets/screens/hub-light.jpg?v=8" alt="The Vibe Games home screen, listing the games" width="414" height="900" loading="eager" fetchpriority="high" /></picture>
       </div>
     </div>
   </div>
@@ -356,11 +370,51 @@
   </div>
 </section>
 
-<section class="game game--blurt" id="vibe-blurt" data-accent="blurt">
+<section class="game game--ten" id="vibe-ten" data-accent="ten">
   <div class="game__backdrop" aria-hidden="true"></div>
   <div class="game__inner wrap">
     <div class="game__copy">
       <p class="game__index">Game 05</p>
+      <h2>Vibe&nbsp;Ten</h2>
+      <p class="game__tag">Match the digits. Drop the ones above. Clear the board.</p>
+      <p>
+        Nine columns and eighteen rows of digits, packed at the bottom. Two
+        digits go together when they are equal or add up to ten, and they have
+        to see each other: a straight line along a row, a column or a diagonal,
+        with nothing in the way. Take a pair and everything above it falls — so
+        the board rearranges itself under your thumb.
+      </p>
+      <ol class="steps">
+        <li>Tap two digits that pair: 3 with 7, 5 with 5, 9 with 1.</li>
+        <li>Everything above them drops into the gap, and the lines change.</li>
+        <li>Play on until nothing pairs. Solo, or a room of the same board —
+            one point a pair, and the most pairs wins.</li>
+      </ol>
+      <p class="game__meta"><strong>Two settings of its own.</strong> In
+        <em>Dim</em> mode a taken pair stays where it is, greyed out, and counts
+        as gone: a row clears once every digit in it has been dimmed, and then
+        the whole board drops one row. Playing alone you can also push a fresh
+        row in at the bottom — a button appears in the top row whenever that row
+        is empty.</p>
+      <a class="game__play" href="https://play.vibegames.party/ten">
+        Play Vibe Ten in your browser
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+
+    <div class="game__shots">
+      <div class="phone reveal-up"><picture><source srcset="assets/screens/vibeten-board-dark.jpg?v=1" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeten-board-light.jpg?v=1" alt="A part-played Vibe Ten board of digits" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="1"><picture><source srcset="assets/screens/vibeten-dim-dark.jpg?v=1" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeten-dim-light.jpg?v=1" alt="A Vibe Ten board in dim mode, with taken digits still on it, greyed out" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+      <div class="phone phone--peek reveal-up" data-delay="2"><picture><source srcset="assets/screens/vibeten-row-dark.jpg?v=1" media="(prefers-color-scheme: dark)" /><img src="assets/screens/vibeten-row-light.jpg?v=1" alt="The offer of a new row, sitting in the empty top row of a Vibe Ten board" width="414" height="900" loading="lazy" decoding="async" /></picture></div>
+    </div>
+  </div>
+</section>
+
+<section class="game game--blurt" id="vibe-blurt" data-accent="blurt">
+  <div class="game__backdrop" aria-hidden="true"></div>
+  <div class="game__inner wrap">
+    <div class="game__copy">
+      <p class="game__index">Game 06</p>
       <h2>Similar&nbsp;Vibe</h2>
       <p class="game__tag">Describe it. Don't say it. Then get rid of it.</p>
       <p>
@@ -392,6 +446,7 @@
   </div>
 </section>
 
+
 <!-- ───────────────────────────── footer ───────────────────────────── -->
 </main>
 
@@ -401,7 +456,7 @@
       <p class="foot__mark">Vibe Games</p>
       <p class="fine">Name three things before the buzzer. Crack a five-letter word.
       Find the best charcuterie pairings. Find just the right words.
-      Family fun for the whole evening.</p>
+      Pair the digits and clear the board. Family fun for the whole evening.</p>
     </div>
     <p class="fine">
       <a class="help__link" href="/privacy">Privacy</a>
