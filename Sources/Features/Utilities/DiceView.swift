@@ -157,13 +157,15 @@ struct DiceView: View {
                             .kerning(0.5)
                             .foregroundStyle(VibeTheme.secondaryText)
 
-                        // Five to a column, then the next column of the same
-                        // kind: twenty dice in one column would be taller than the
-                        // screen.
-                        ForEach(Array(column.chunks.enumerated()), id: \.offset) { _, chunk in
-                            VStack(spacing: 4) {
-                                ForEach(chunk) { die in
-                                    resultPill(die)
+                        // Five to a column, then *beside* it another column of the
+                        // same kind — not below, which is what ran the numbers
+                        // down over the Roll and Clear buttons.
+                        HStack(alignment: .top, spacing: 4) {
+                            ForEach(Array(column.chunks.enumerated()), id: \.offset) { _, chunk in
+                                VStack(spacing: 4) {
+                                    ForEach(chunk) { die in
+                                        resultPill(die)
+                                    }
                                 }
                             }
                         }

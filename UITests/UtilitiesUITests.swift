@@ -140,6 +140,40 @@ final class UtilitiesUITests: XCTestCase {
         attach(app, named: "46-dice-settings")
     }
 
+    /// Seven dice of one kind make two columns of that kind, not a column that
+    /// runs down over the buttons.
+    func testMoreThanFiveOfOneKindWrapBeneathTheirOwnColumn() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+        openDice(app)
+
+        for _ in 0..<7 {
+            app.buttons["dice.add.6"].tap()
+        }
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "dice.result").count, 7,
+                       "all seven should be listed")
+
+        // Wait for them to land, so the shot shows the wrapped numbers rather
+        // than seven dashes.
+        let pills = app.descendants(matching: .any).matching(identifier: "dice.result")
+        let deadline = Date().addingTimeInterval(12)
+        while Date() < deadline {
+            let values = pills.allElementsBoundByIndex.compactMap { label -> Int? in
+                let tail = label.label.split(separator: ":").last ?? ""
+                return Int(tail.trimmingCharacters(in: .whitespaces))
+            }
+            if values.count == 7 { break }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+
+        let results = app.descendants(matching: .any)["dice.results"].firstMatch
+        let roll = app.buttons["dice.roll"]
+        XCTAssertTrue(results.exists)
+        XCTAssertLessThanOrEqual(results.frame.maxY, roll.frame.minY + 1,
+                                 "the numbers should stop above the buttons")
+        attach(app, named: "47-dice-wrapped")
+    }
+
     // MARK: - Helpers
 
     private func openDice(_ app: XCUIApplication) {
