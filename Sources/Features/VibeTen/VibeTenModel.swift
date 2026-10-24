@@ -31,6 +31,11 @@ final class VibeTenModel: ObservableObject {
     /// A refusal, said out loud for a moment.
     @Published private(set) var message: String?
 
+    /// Bumped each time a board is dealt, so the screen can report a round
+    /// starting without caring what the seed was.
+    @Published private(set) var boardToken = 0
+    @Published private(set) var lastRoundSeconds = 0
+
     @Published private(set) var snapshot = VibeTenSnapshot()
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
@@ -41,6 +46,7 @@ final class VibeTenModel: ObservableObject {
     private var observation: VibeTenObservation?
     private var previousSeed: UInt32?
     private var finishedAt: Date?
+    private var startedAt: Date?
     private var scoreTask: Task<Void, Never>?
 
     private enum StoredKey {
@@ -238,6 +244,8 @@ final class VibeTenModel: ObservableObject {
 
     private func deal(seed: UInt32) {
         board = VibeTenBoard(seed: seed)
+        boardToken += 1
+        startedAt = Date()
         selected = nil
         score = 0
         finished = false
@@ -285,6 +293,9 @@ final class VibeTenModel: ObservableObject {
         }
         guard finished else { return }
         finishedAt = Date()
+        if let startedAt {
+            lastRoundSeconds = max(0, Int(Date().timeIntervalSince(startedAt)))
+        }
         selected = nil
         reportScore()
     }

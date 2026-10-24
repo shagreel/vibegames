@@ -38,6 +38,18 @@ struct VibeTenView: View {
                 pendingNameAction = nil
             }
         }
+        .task { AppAnalytics.screen("ten") }
+        .onChange(of: model.boardToken) { _, _ in
+            guard model.board != nil else { return }
+            AppAnalytics.gameStart(.ten, mode: model.isShared ? .shared : .solo)
+        }
+        .onChange(of: model.finished) { _, isOver in
+            guard isOver else { return }
+            AppAnalytics.gameFinish(.ten,
+                                    mode: model.isShared ? .shared : .solo,
+                                    outcome: model.cleared ? .won : .completed,
+                                    seconds: model.lastRoundSeconds)
+        }
         .onDisappear { model.endSession() }
     }
 
