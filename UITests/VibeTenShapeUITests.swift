@@ -66,6 +66,7 @@ final class VibeTenShapeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["The board is set for this game. Leave it, and choose a size on the start screen before the next one."]
                         .waitForExistence(timeout: 3),
                       "and the sheet says why")
+        tenAttach(app, named: "49f-ten-shape-locked")
         // A tap that the picker refuses changes nothing.
         lockedColumns.buttons["9"].tap()
         XCTAssertEqual(app.tenCells.count, 72, "the board in play is still six by twelve")
