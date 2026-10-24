@@ -4,6 +4,7 @@ import VibeTrio from './games/trio/VibeTrio';
 import VibeFive from './games/five/VibeFive';
 import VibeSudoku from './games/sudoku/VibeSudoku';
 import VibeBlurt from './games/blurt/VibeBlurt';
+import VibeTen from './games/ten/VibeTen';
 import { usePath } from './router';
 
 /**
@@ -27,6 +28,8 @@ function App() {
       return <VibeSudoku />;
     case '/blurt':
       return <VibeBlurt />;
+    case '/ten':
+      return <VibeTen />;
     case '/':
       return <Hub />;
     default:

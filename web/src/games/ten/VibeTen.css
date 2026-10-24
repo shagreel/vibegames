@@ -1,0 +1,202 @@
+/* Vibe Ten.
+   The board is nine columns of digits, packed at the bottom. Everything here is
+   layout: the rules live in `engine.ts` and the room in `service.ts`. */
+
+.ten {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+.ten__game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-bottom: 1.5rem;
+}
+
+/* The board takes whatever height the header and the result leave. A row is
+   square, so capping the width by the height is what keeps 18 rows on screen
+   without the page scrolling under a thumb. */
+.ten__board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+  width: min(100% - 1rem, calc((100svh - 15rem) * 9 / 18));
+  margin: 0 auto;
+  padding: 0 0.25rem;
+}
+
+.ten__cell,
+.ten__gap {
+  aspect-ratio: 1;
+  min-width: 0;
+}
+
+.ten__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 22%;
+  background: var(--raise);
+  color: var(--ink);
+  font-size: clamp(0.55rem, 1.9vmin, 1.05rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.08s ease-out, border-color 0.12s ease-out;
+}
+
+.ten__cell:disabled {
+  cursor: default;
+}
+
+.ten__cell[data-selected='true'] {
+  border-color: #40b4f7;
+  box-shadow: 0 0 0 2px #40b4f7 inset;
+  transform: scale(1.06);
+}
+
+.ten__gap {
+  visibility: hidden;
+}
+
+.ten__scoreline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ten__scoreline strong {
+  color: var(--ink);
+}
+
+.ten__scoreline [data-done='true'] {
+  opacity: 0.55;
+}
+
+.ten__standings {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.ten__standings li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.ten__standings li[data-playing='true'] {
+  opacity: 0.7;
+}
+
+/* Waiting room */
+
+.ten__waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+}
+
+.ten__code {
+  margin-top: 0.25rem;
+}
+
+.ten__waiting-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ten__players {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ten__start {
+  padding: 0.8rem 1.4rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, #2a8cf2, #4dd9e6);
+  color: #08121f;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.ten__start:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Name prompt */
+
+.ten__overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 40;
+}
+
+.ten__name-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(100%, 22rem);
+  padding: 1.2rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 1.1rem;
+  background: var(--surface);
+}
+
+.ten__name-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.ten__name-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ten__name-card input {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 0.7rem;
+  background: var(--raise);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.ten__link {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}

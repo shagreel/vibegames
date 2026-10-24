@@ -45,6 +45,12 @@ const IconTrio = (
   </svg>
 );
 
+const IconTen = (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 3h6v6H4zM4 11h6v6H4zM12 3h6v6h-6zM12 11h6v6h-6zM8 19h8v2H8z" opacity="0.9" />
+  </svg>
+);
+
 const IconBlurt = (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M3 5.5h12.5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z" />
@@ -87,6 +93,15 @@ export const GAMES: GameEntry[] = [
     tagline: 'Three cards where every feature matches or differs.',
     accent: ['#f7b929', '#85d647'],
     symbol: IconTrio,
+    available: true,
+  },
+  {
+    id: 'ten',
+    path: '/ten',
+    title: 'Vibe Ten',
+    tagline: 'Pair the digits. Clear the board. Most pairs wins.',
+    accent: ['#2a8cf2', '#4dd9e6'],
+    symbol: IconTen,
     available: true,
   },
   {

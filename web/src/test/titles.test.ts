@@ -17,6 +17,7 @@ describe('the tab title', () => {
     expect(titleFor('/sudoku')).toMatch(/^Number Vibe/);
     expect(titleFor('/five')).toMatch(/^Vibe Five/);
     expect(titleFor('/blurt')).toMatch(/^Similar Vibe/);
+    expect(titleFor('/ten')).toMatch(/^Vibe Ten/);
   });
 
   it('gives the hub the suite name', () => {
@@ -29,7 +30,7 @@ describe('the tab title', () => {
   });
 
   it('says something different for every screen', () => {
-    const titles = ['/', '/five', '/words', '/sudoku', '/trio', '/blurt'].map(titleFor);
+    const titles = ['/', '/five', '/words', '/sudoku', '/trio', '/blurt', '/ten'].map(titleFor);
     expect(new Set(titles).size).toBe(titles.length);
   });
 });

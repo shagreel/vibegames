@@ -40,6 +40,7 @@ export const GAMES = {
   sudoku: 'vibe-sudoku',
   trio: 'vibe-trio',
   blurt: 'vibe-blurt',
+  ten: 'vibe-ten',
 } as const;
 
 export type GameName = (typeof GAMES)[keyof typeof GAMES];

@@ -18,6 +18,7 @@ const TITLES: Record<string, string> = {
   '/sudoku': 'Number Vibe — fill the grid',
   '/trio': 'Vibe Pairings — find three that match',
   '/blurt': 'Similar Vibe — describe it, don\u2019t say it',
+  '/ten': 'Vibe Ten — pair the digits, clear the board',
 };
 
 /** What a path is called. Unknown paths are the hub, because the app shows it. */
