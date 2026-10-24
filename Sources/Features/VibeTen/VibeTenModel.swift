@@ -112,6 +112,17 @@ final class VibeTenModel: ObservableObject {
         return false
     }
 
+    /// Whether the pair setting can still be chosen, which is the same rule the
+    /// owner asked for on the board's size: before the game starts, not during
+    /// it. A board that has been dealt is being played one way, and one board
+    /// played two ways is not the game.
+    ///
+    /// A room waiting for its host is not a game in play yet, so the choice is
+    /// still there — the board is dealt, but nobody has taken a pair.
+    var canChoosePairMode: Bool {
+        !canPlay
+    }
+
     var sharedGameID: String? {
         if case .shared(let id, _) = session { return id }
         return nil

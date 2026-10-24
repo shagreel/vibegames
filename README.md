@@ -760,8 +760,9 @@ Three properties of its own, all in the game's settings sheet:
   digit cannot be picked again and a line can be drawn straight through it, so a
   pair can be made across one. A row clears once *every* digit in it has been
   dimmed — the whole row goes at once and everything above drops a single row.
-  It applies to the next pair taken rather than the next board dealt, in solo
-  and in a room alike.
+  Like the size, it is a choice for a new game: once a board is dealt the sheet
+  shows it disabled, because one board played half one way and half the other is
+  not the game.
 - **Offer a new row (solo only).** While no column reaches the top of the grid,
   a button appears *in the empty top row* — no strip of its own on screen — and
   tapping it pushes a fresh row of digits in at the bottom, moving everything up
@@ -769,12 +770,13 @@ Three properties of its own, all in the game's settings sheet:
 - **The board's size.** Six to nine columns and twelve to eighteen rows, the
   full board by default; fewer squares means bigger digits, and the grid still
   fills the screen. It is a choice for a new game: the sheet offers it on the
-  start screen and shows it disabled once a board is in play. The digits are spread as evenly as the shape allows — nine
-  values into `columns × rows`, so a 7 × 14 board has eleven of some digits and
-  ten of the rest — and the shape is part of the deal: the seed, the columns and
-  the rows together are what both clients deal from. A room plays the shape the
-  host created it with, which is why the size is written into the room's `meta`
-  next to the seed and can never be changed after the room exists.
+  start screen and shows it disabled once a board is in play. The digits are
+  spread as evenly as the shape allows — nine values into `columns × rows`, so a
+  7 × 14 board has eleven of some digits and ten of the rest — and the shape is
+  part of the deal: the seed, the columns and the rows together are what both
+  clients deal from. A room plays the shape the host created it with, which is
+  why the size is written into the room's `meta` next to the seed and can never
+  be changed after the room exists.
 
 `VibeTenBoard` is the rules and knows nothing about screens or the database;
 `VibeTenModel` holds a board, a tapped cell and a score, and deals a shared

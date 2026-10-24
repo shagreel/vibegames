@@ -71,7 +71,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'Dim mode',
-      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything above drops one row.',
+      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything above drops one row. Choose it on the start screen: a game in play keeps the setting it started with.',
     },
     {
       title: "The board's size",
@@ -360,6 +360,12 @@ function VibeTen() {
   /** The shape is a choice for a new game, not for one under way. */
   const shapeLocked = board !== null;
 
+  /** So is the pair setting, with two differences: a room waiting for its host
+      has not begun, so the choice is still there, and a finished round counts as
+      over. The new-row switch is not locked at all — it is an offer that comes
+      and goes during play. */
+  const modeLocked = board !== null && !finished && !waitingForHost;
+
   function chooseColumns(next: number) {
     setColumns(next);
     localStorage.setItem(COLUMNS_KEY, String(next));
@@ -522,7 +528,11 @@ function VibeTen() {
 
           <SettingsSection
             title="When a pair is matched"
-            note="Applies to the pairs you take from here on."
+            note={
+              modeLocked
+                ? 'This game is using the setting it started with. Leave it to choose again.'
+                : 'Choose it before you start. Pairs taken in Dim mode stay on the board.'
+            }
           >
             <div className="game-sheet__choices" role="group" aria-label="When a pair is matched">
               {(Object.keys(MODE_LABELS) as TenMode[]).map((choice) => (
@@ -532,6 +542,7 @@ function VibeTen() {
                   className="game-sheet__choice"
                   data-on={mode === choice}
                   aria-pressed={mode === choice}
+                  disabled={modeLocked}
                   onClick={() => chooseMode(choice)}
                 >
                   {MODE_LABELS[choice].title}

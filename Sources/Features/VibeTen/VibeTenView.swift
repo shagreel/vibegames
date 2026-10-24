@@ -550,6 +550,7 @@ struct VibeTenSettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .disabled(!model.canChoosePairMode)
             .accessibilityIdentifier("tenSettings.mode")
 
             Text(model.mode.blurb)
@@ -557,7 +558,9 @@ struct VibeTenSettingsView: View {
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Applies to the pairs you take from here on.")
+            Text(model.canChoosePairMode
+                 ? "Choose it before you start. Pairs taken in Dim mode stay on the board."
+                 : "This game is using the setting it started with. Leave it to choose again.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)

@@ -141,7 +141,9 @@ struct GameInstructions {
                         + "greyed out, instead of removing it. A dimmed digit is gone as far as "
                         + "the rules are concerned: it cannot be picked again, and a pair can be "
                         + "made straight across it. When every digit in a row has been dimmed, "
-                        + "the whole row clears at once and everything above drops one row."),
+                        + "the whole row clears at once and everything above drops one row. "
+                        + "Choose it on the start screen: a game in play keeps the setting it "
+                        + "started with."),
             Section(title: "A new row, solo",
                     body: "Playing alone, you can push a fresh row of digits in at the bottom. "
                         + "It is only possible while the top row of the grid is empty — and "

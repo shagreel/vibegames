@@ -114,6 +114,40 @@ final class VibeTenUITests: XCTestCase {
         tenAttach(app, named: "49c-ten-new-row")
     }
 
+    /// The pair setting is a choice for before the game, like the board's size.
+    /// The new-row switch is not: it is an offer that comes and goes during
+    /// play, so its setting stays live.
+    func testThePairSettingIsLockedOnceTheGameStarts() throws {
+        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES", "-vibeten.mode", "remove"])
+        openLobby(app)
+
+        // On the start screen it can be changed.
+        app.buttons["ten.settings"].tap()
+        let mode = app.segmentedControls["tenSettings.mode"].firstMatch
+        XCTAssertTrue(mode.waitForExistence(timeout: 5), "the sheet should offer the pair setting")
+        XCTAssertTrue(mode.isEnabled, "before the game starts it can be chosen")
+        mode.buttons["Dim"].tap()
+        XCTAssertTrue(mode.buttons["Dim"].isSelected)
+        mode.buttons["Remove"].tap()
+        app.buttons["tenSettings.done"].tap()
+
+        // In the game it cannot, and the sheet says so.
+        app.buttons["ten.playSolo"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
+                        .waitForExistence(timeout: 10))
+        app.buttons["ten.settings"].tap()
+        let locked = app.segmentedControls["tenSettings.mode"].firstMatch
+        XCTAssertTrue(locked.waitForExistence(timeout: 5))
+        XCTAssertFalse(locked.isEnabled, "a board in play is being played one way")
+        XCTAssertTrue(app.staticTexts["This game is using the setting it started with. Leave it to choose again."]
+                        .waitForExistence(timeout: 3), "and the sheet says why")
+        // The offer of a new row is a different thing: it is for during play.
+        XCTAssertTrue(app.switches["tenSettings.addRow"].firstMatch.isEnabled,
+                      "the new-row setting stays live")
+        tenAttach(app, named: "49g-ten-pair-locked")
+        app.buttons["tenSettings.done"].tap()
+    }
+
     func testTheNewRowSettingIsInTheSettingsSheet() throws {
         let app = fullBoardApp(extra: ["-vibeten.addRow", "YES"])
         openSoloBoard(app)

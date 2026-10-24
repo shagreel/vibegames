@@ -103,25 +103,32 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertTrue(model.board?.isDimmed(at: pair.1) == true)
     }
 
-    func testTheModeInForceIsTheOneInTheSettings() {
+    func testTheModeChosenBeforeTheGameIsTheOnePlayed() {
         let model = VibeTenModel()
+        model.mode = .dim
         model.playSolo()
+
         guard let board = model.board, let pair = board.availableMatches().first else {
             return XCTFail("a full board should have a pair")
         }
         model.tap(pair.0)
         model.tap(pair.1)
-        XCTAssertEqual(model.board?.remaining, 160, "remove mode takes the digits off the board")
+        XCTAssertEqual(model.board?.remaining, 160, "in dim mode the digits stay, greyed out")
+        XCTAssertTrue(model.board?.isDimmed(at: pair.0) == true)
+    }
 
-        // Switching the property applies to the next pair, not the next board:
-        // a solo player who turns it on should see it.
-        model.mode = .dim
-        guard let board = model.board, let pair = board.availableMatches().first else {
-            return XCTFail("the board should still have moves")
-        }
-        model.tap(pair.0)
-        model.tap(pair.1)
-        XCTAssertEqual(model.board?.remaining, 158, "the digits stay, greyed out")
+    /// The pair setting is a choice for a game that has not begun, like the
+    /// board's size. A room waiting for its host has not begun yet, so it is
+    /// still there to change.
+    func testThePairModeIsChosenBeforeTheGameStarts() {
+        let model = VibeTenModel()
+        XCTAssertTrue(model.canChoosePairMode, "the start screen is where it is chosen")
+
+        model.playSolo()
+        XCTAssertFalse(model.canChoosePairMode, "a board in play is being played one way")
+
+        model.leaveGame()
+        XCTAssertTrue(model.canChoosePairMode, "and leaving the game offers it again")
     }
 
     func testANewRowIsOfferedOnlyOnceEveryColumnHasClearedTheTopRow() {
