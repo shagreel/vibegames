@@ -103,6 +103,15 @@ final class VibeTenModel: ObservableObject {
         return false
     }
 
+    /// Whether the board's size can still be chosen. It is a property of a
+    /// *new* game: once a board is in play — or a room exists — the shape is
+    /// fixed, and the settings sheet says so rather than offering a choice that
+    /// would do nothing. The start screen is the one place it is offered.
+    var canChooseBoardShape: Bool {
+        if case .lobby = session { return true }
+        return false
+    }
+
     var sharedGameID: String? {
         if case .shared(let id, _) = session { return id }
         return nil

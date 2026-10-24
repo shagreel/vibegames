@@ -133,8 +133,9 @@ struct GameInstructions {
                     body: "In the game settings the grid can be **six to nine columns** and "
                         + "**twelve to eighteen rows** — the full board unless you choose "
                         + "otherwise. Fewer squares means bigger digits, and the grid always "
-                        + "fills the screen. It applies to the next board you deal; a room "
-                        + "plays the shape the host dealt, so everybody's board matches."),
+                        + "fills the screen. Choose it on the start screen: once a game is "
+                        + "under way the board keeps its shape. A room plays the shape the "
+                        + "host dealt, so everybody's board matches."),
             Section(title: "Dim mode",
                     body: "In the game settings, **Dim** leaves a taken pair on the board, "
                         + "greyed out, instead of removing it. A dimmed digit is gone as far as "

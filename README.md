@@ -768,7 +768,8 @@ Three properties of its own, all in the game's settings sheet:
   one row. In a room the board is everybody's, so the offer is never there.
 - **The board's size.** Six to nine columns and twelve to eighteen rows, the
   full board by default; fewer squares means bigger digits, and the grid still
-  fills the screen. The digits are spread as evenly as the shape allows — nine
+  fills the screen. It is a choice for a new game: the sheet offers it on the
+  start screen and shows it disabled once a board is in play. The digits are spread as evenly as the shape allows — nine
   values into `columns × rows`, so a 7 × 14 board has eleven of some digits and
   ten of the rest — and the shape is part of the deal: the seed, the columns and
   the rows together are what both clients deal from. A room plays the shape the

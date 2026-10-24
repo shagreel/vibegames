@@ -600,6 +600,7 @@ struct VibeTenSettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .disabled(!model.canChooseBoardShape)
             .accessibilityIdentifier("tenSettings.columns")
 
             Text("Rows")
@@ -612,9 +613,12 @@ struct VibeTenSettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .disabled(!model.canChooseBoardShape)
             .accessibilityIdentifier("tenSettings.rows")
 
-            Text("Fewer columns and rows means bigger digits. Applies to the next board you deal; in a room everybody plays the shape the host dealt.")
+            Text(model.canChooseBoardShape
+                 ? "Fewer columns and rows means bigger digits. Choose it before you start; in a room everybody plays the shape the host dealt."
+                 : "The board is set for this game. Leave it, and choose a size on the start screen before the next one.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)

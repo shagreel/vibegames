@@ -63,6 +63,19 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertEqual(model.board?.rows, 14)
     }
 
+    /// The shape is a choice for a new game: the start screen offers it, and
+    /// once a board is in play the sheet shows it without offering it.
+    func testTheBoardShapeIsChosenBeforeTheGameStarts() {
+        let model = VibeTenModel()
+        XCTAssertTrue(model.canChooseBoardShape, "the start screen is where it is chosen")
+
+        model.playSolo()
+        XCTAssertFalse(model.canChooseBoardShape, "a dealt board keeps its shape")
+
+        model.leaveGame()
+        XCTAssertTrue(model.canChooseBoardShape, "and leaving the game offers it again")
+    }
+
     func testAShapeThatIsNotOfferedIsIgnored() {
         UserDefaults.standard.set(12, forKey: VibeTenModel.columnsKey)
         UserDefaults.standard.set(20, forKey: VibeTenModel.rowsKey)

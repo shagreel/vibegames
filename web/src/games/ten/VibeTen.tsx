@@ -75,7 +75,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: "The board's size",
-      body: 'In the settings the grid can be **six to nine columns** and **twelve to eighteen rows**, the full board by default: fewer squares means bigger digits, and the grid always fills the screen. It applies to the next board you deal, and a room plays the shape the host dealt so everybody\'s board matches.',
+      body: 'On the start screen the grid can be **six to nine columns** and **twelve to eighteen rows**, the full board by default: fewer squares means bigger digits, and the grid always fills the screen. Once a game is under way the board keeps its shape, and a room plays the shape the host dealt so everybody\'s board matches.',
     },
     {
       title: 'A new row, solo',
@@ -357,6 +357,9 @@ function VibeTen() {
     localStorage.setItem(ADD_ROW_KEY, String(on));
   }
 
+  /** The shape is a choice for a new game, not for one under way. */
+  const shapeLocked = board !== null;
+
   function chooseColumns(next: number) {
     setColumns(next);
     localStorage.setItem(COLUMNS_KEY, String(next));
@@ -477,7 +480,11 @@ function VibeTen() {
         <GameSettings prefix="ten" onClose={() => setSettingsOpen(false)}>
           <SettingsSection
             title="The board"
-            note="Fewer columns and rows means bigger digits. Applies to the next board you deal; in a room everybody plays the shape the host dealt."
+            note={
+              shapeLocked
+                ? 'The board is set for this game. Leave it, and choose a size on the start screen before the next one.'
+                : 'Fewer columns and rows means bigger digits. Choose it before you start; in a room everybody plays the shape the host dealt.'
+            }
           >
             <p className="ten__setting-label">Columns</p>
             <div className="game-sheet__choices" role="group" aria-label="Columns">
@@ -488,6 +495,7 @@ function VibeTen() {
                   className="game-sheet__choice"
                   data-on={columns === choice}
                   aria-pressed={columns === choice}
+                  disabled={shapeLocked}
                   onClick={() => chooseColumns(choice)}
                 >
                   {choice}
@@ -503,6 +511,7 @@ function VibeTen() {
                   className="game-sheet__choice"
                   data-on={rows === choice}
                   aria-pressed={rows === choice}
+                  disabled={shapeLocked}
                   onClick={() => chooseRows(choice)}
                 >
                   {choice}
