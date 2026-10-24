@@ -79,6 +79,42 @@ final class VibeTenModel: ObservableObject {
     static let columnsKey = "vibeten.columns"
     static let rowsKey = "vibeten.rows"
 
+    /// How much of the grid a game starts with. A part-filled board is only
+    /// offered with the new-row setting on, because the rows are what fills it.
+    @Published var startFill: VibeTenStartFill {
+        didSet {
+            guard startFill != oldValue else { return }
+            UserDefaults.standard.set(startFill.rawValue, forKey: Self.startFillKey)
+        }
+    }
+
+    /// How many rows one press of the offer adds: one to four.
+    @Published var rowsPerAdd: Int {
+        didSet {
+            let clamped = min(max(rowsPerAdd, VibeTenBoard.minimumRowsPerAdd),
+                              VibeTenBoard.maximumRowsPerAdd)
+            guard rowsPerAdd == clamped else {
+                rowsPerAdd = clamped
+                return
+            }
+            guard rowsPerAdd != oldValue else { return }
+            UserDefaults.standard.set(rowsPerAdd, forKey: Self.rowsPerAddKey)
+        }
+    }
+
+    /// Whether the rows read end to end: the last square of one row is next to
+    /// the first of the row below it.
+    @Published var wrapRows: Bool {
+        didSet {
+            guard wrapRows != oldValue else { return }
+            UserDefaults.standard.set(wrapRows, forKey: Self.wrapRowsKey)
+        }
+    }
+
+    static let startFillKey = "vibeten.startFill"
+    static let rowsPerAddKey = "vibeten.rowsPerAdd"
+    static let wrapRowsKey = "vibeten.wrapRows"
+
     @Published private(set) var snapshot = VibeTenSnapshot()
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
@@ -123,6 +159,14 @@ final class VibeTenModel: ObservableObject {
         !canPlay
     }
 
+    /// Whether the board's fill and the rows a press adds can still be chosen:
+    /// solo games only (a room starts full for everybody), before the game
+    /// begins, and only while the new-row offer is on — the rows are what fills
+    /// a part-filled board.
+    var canChooseRowSupply: Bool {
+        !isShared && canChoosePairMode && addRowEnabled
+    }
+
     var sharedGameID: String? {
         if case .shared(let id, _) = session { return id }
         return nil
@@ -154,6 +198,12 @@ final class VibeTenModel: ObservableObject {
             : VibeTenBoard.defaultColumns
         let savedRows = defaults.integer(forKey: Self.rowsKey)
         rows = VibeTenBoard.rowOptions.contains(savedRows) ? savedRows : VibeTenBoard.defaultRows
+        startFill = VibeTenStartFill(rawValue: defaults.string(forKey: Self.startFillKey) ?? "")
+            ?? .full
+        let savedPerAdd = defaults.integer(forKey: Self.rowsPerAddKey)
+        rowsPerAdd = (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
+            .contains(savedPerAdd) ? savedPerAdd : VibeTenBoard.minimumRowsPerAdd
+        wrapRows = defaults.bool(forKey: Self.wrapRowsKey)
     }
 
     var remaining: Int { board?.remaining ?? 0 }
@@ -337,9 +387,25 @@ final class VibeTenModel: ObservableObject {
         return (columns, rows)
     }
 
+    /// How many rows a board of this shape starts with.
+    ///
+    /// A part-filled board goes with the new-row setting — the rows are what
+    /// fills it — and a room always starts full, so that everybody's board is
+    /// the same shape and the same size.
+    func startRows(for shape: (columns: Int, rows: Int)) -> Int {
+        guard !isShared, addRowEnabled, startFill == .third else { return shape.rows }
+        return max(1, shape.rows / 3)
+    }
+
+    var startingRows: Int { startRows(for: boardShape) }
+
     private func deal(seed: UInt32, shape: (columns: Int, rows: Int)? = nil) {
         let shape = shape ?? boardShape
-        board = VibeTenBoard(seed: seed, columns: shape.columns, rows: shape.rows)
+        board = VibeTenBoard(seed: seed,
+                             columns: shape.columns,
+                             rows: shape.rows,
+                             startRows: startRows(for: shape),
+                             wrapRows: wrapRows)
         boardToken += 1
         startedAt = Date()
         selected = nil
@@ -396,17 +462,21 @@ final class VibeTenModel: ObservableObject {
         reportScore()
     }
 
-    /// Puts a fresh row on the bottom of a solo board.
+    /// Hangs fresh rows under a solo board: as many as one press deals, or as
+    /// many as the grid still has room for.
     ///
-    /// Only while the top row is free — the grid is 18 rows and the board cannot
-    /// grow past it — and only solo, because a room's board is the same for
-    /// everybody and one player dealing themselves new digits would be a very
-    /// different game.
-    func addRow() {
+    /// Only while the bottom row is free — the grid has a fixed number of rows
+    /// and the board hangs from the top — and only solo, because a room's board
+    /// is the same for everybody and one player dealing themselves new digits
+    /// would be a very different game.
+    func addRows() {
         guard canAddRow, var board else { return }
-        var digits: [Int] = []
-        for _ in 0..<board.columns { digits.append(Int.random(in: 1...9)) }
-        guard board.addRow(digits) else { return }
+        let wanted = min(rowsPerAdd, board.roomForRows)
+        for _ in 0..<max(0, wanted) {
+            var digits: [Int] = []
+            for _ in 0..<board.columns { digits.append(Int.random(in: 1...9)) }
+            guard board.addRow(digits) else { break }
+        }
         self.board = board
         selected = nil
         message = nil

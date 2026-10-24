@@ -35,12 +35,17 @@ final class VibeTenUITests: XCTestCase {
         app.tenTap(pair.0)
         app.tenTap(pair.1)
 
-        // The score in the header is the report of a pair taken.
-        // Two digits gone, and nothing else moved: the pair really was taken.
+        // The score in the header is the report of a pair taken. The digits
+        // below rise into the gaps, so what proves the pair went is the count
+        // and the two columns being a square shorter.
         let after = app.tenCells
         XCTAssertEqual(after.count, 160, "taking a pair should remove exactly two digits")
-        XCTAssertFalse(after.contains { $0.column == firstDigit.column && $0.row == firstDigit.row
-            && $0.value == firstDigit.value }, "the first digit is gone")
+        let heightsBefore = Dictionary(grouping: cells, by: \.column).mapValues { $0.count }
+        let heightsAfter = Dictionary(grouping: after, by: \.column).mapValues { $0.count }
+        for column in [firstDigit.column, pair.1.column] {
+            XCTAssertEqual(heightsAfter[column] ?? 0, (heightsBefore[column] ?? 0) - 1,
+                           "column \(column) is one square shorter")
+        }
         tenAttach(app, named: "49-ten-solo")
     }
 
@@ -83,7 +88,7 @@ final class VibeTenUITests: XCTestCase {
         tenAttach(app, named: "49b-ten-dim")
     }
 
-    func testANewRowIsOfferedInTheEmptyTopRowAndPushesOne() throws {
+    func testANewRowIsOfferedInTheEmptyBottomRowAndHangsOne() throws {
         // Stated rather than inherited: the settings outlive the app, and one
         // earlier test turning the new row off, or dealing itself a smaller
         // board, would make this one fail for no reason.
@@ -97,19 +102,24 @@ final class VibeTenUITests: XCTestCase {
         // is free, so the takes are worked out from one look at the board and
         // then replayed — reading all 162 cells between takes is what makes this
         // test slow, and what made it flaky when a deal had no pair worth taking.
-        let takes = try XCTUnwrap(TenPlan.takesFreeingTheTopRow(startingFrom: app.tenCells),
-                                  "this deal offers no way to clear the top row")
+        let takes = try XCTUnwrap(TenPlan.takesFreeingTheBottomRow(startingFrom: app.tenCells),
+                                  "this deal offers no way to clear the bottom row")
         for pair in takes {
             app.tenTap(pair.0)
             app.tenTap(pair.1)
         }
 
         XCTAssertTrue(addRow.waitForExistence(timeout: 3),
-                      "the offer belongs on the row it pushes into")
+                      "the offer belongs on the row the new rows drop into")
+
+        // It sits on the bottom edge of the grid, under the digits.
+        let board = app.descendants(matching: .any)["ten.board"].firstMatch
+        XCTAssertLessThan(board.frame.maxY - addRow.frame.maxY, 12,
+                          "the offer is at the bottom of the board")
 
         let before = app.tenCells.count
         addRow.tap()
-        XCTAssertEqual(app.tenCells.count, before + 9, "nine new digits arrive at the bottom")
+        XCTAssertEqual(app.tenCells.count, before + 9, "nine new digits arrive underneath")
         XCTAssertFalse(addRow.exists, "the grid is full again, so the offer goes")
         tenAttach(app, named: "49c-ten-new-row")
     }
@@ -145,6 +155,75 @@ final class VibeTenUITests: XCTestCase {
         XCTAssertTrue(app.switches["tenSettings.addRow"].firstMatch.isEnabled,
                       "the new-row setting stays live")
         tenAttach(app, named: "49g-ten-pair-locked")
+        app.buttons["tenSettings.done"].tap()
+    }
+
+    /// The owner's new rules: a board that starts a third full hangs from the
+    /// top, and one press of the offer adds as many rows as the setting says.
+    func testAPartFilledBoardHangsFromTheTopAndGrowsByTheChosenRows() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-vibeten.columns", "9", "-vibeten.rows", "18",
+                                "-vibeten.addRow", "YES",
+                                "-vibeten.startFill", "third",
+                                "-vibeten.rowsPerAdd", "2",
+                                "-vibeten.mode", "remove"]
+        app.launch(withName: "Tester")
+        openSoloBoard(app)
+
+        let cells = app.tenCells
+        XCTAssertEqual(cells.count, 54, "a third of the board: six rows of nine")
+        XCTAssertEqual(cells.map(\.row).min(), 0, "the top row is the first row")
+        XCTAssertEqual(cells.map(\.row).max(), 5, "six rows, hanging from the top")
+        tenAttach(app, named: "49h-ten-third-full")
+
+        let addRow = app.buttons["ten.addRow"]
+        XCTAssertTrue(addRow.exists, "the bottom of the grid is free, so the offer is there")
+        XCTAssertEqual(addRow.label, "Add 2 rows at the bottom",
+                       "the offer says how many rows a press deals")
+        addRow.tap()
+        XCTAssertEqual(app.tenCells.count, 72, "two rows more: eight rows of nine")
+        XCTAssertEqual(app.tenCells.map(\.row).max(), 7)
+        tenAttach(app, named: "49i-ten-two-rows-more")
+    }
+
+    /// The new rules are the sheet's, and they are for a game that has not begun.
+    func testTheNewRulesAreOnTheSheetAndLockedInAGame() throws {
+        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES", "-vibeten.startFill", "full",
+                                       "-vibeten.rowsPerAdd", "1", "-vibeten.wrapRows", "NO"])
+        openLobby(app)
+        app.buttons["ten.settings"].tap()
+
+        let fill = app.segmentedControls["tenSettings.startFill"].firstMatch
+        XCTAssertTrue(fill.waitForExistence(timeout: 5), "the sheet offers the starting board")
+        XCTAssertTrue(fill.isEnabled, "and on the start screen it can be chosen")
+        XCTAssertTrue(fill.buttons["Full"].exists)
+        XCTAssertTrue(fill.buttons["One third"].exists)
+
+        let perPress = app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
+        XCTAssertTrue(perPress.exists, "and how many rows a press deals")
+        for count in [1, 2, 3, 4] {
+            XCTAssertTrue(perPress.buttons["\(count)"].exists, "\(count) rows should be on offer")
+        }
+
+        let wrap = app.switches["tenSettings.wrapRows"].firstMatch
+        XCTAssertTrue(wrap.exists, "and whether the rows join end to end")
+        XCTAssertEqual(wrap.value as? String, "0", "off until it is turned on")
+        wrap.tap()
+        XCTAssertEqual(wrap.value as? String, "1")
+        wrap.tap()
+        app.buttons["tenSettings.done"].tap()
+
+        app.buttons["ten.playSolo"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
+                        .waitForExistence(timeout: 10))
+        app.buttons["ten.settings"].tap()
+        XCTAssertTrue(app.segmentedControls["tenSettings.startFill"].firstMatch
+                        .waitForExistence(timeout: 5))
+        XCTAssertFalse(app.segmentedControls["tenSettings.startFill"].firstMatch.isEnabled,
+                       "a game in play keeps the board it started with")
+        XCTAssertFalse(app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch.isEnabled)
+        XCTAssertFalse(app.switches["tenSettings.wrapRows"].firstMatch.isEnabled,
+                       "and how pairs are found is part of the game")
         app.buttons["tenSettings.done"].tap()
     }
 

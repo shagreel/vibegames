@@ -187,11 +187,14 @@ export function SettingsToggle({
   note,
   on,
   onChange,
+  disabled = false,
 }: {
   label: string;
   note?: string;
   on: boolean;
   onChange: (on: boolean) => void;
+  /** A setting that belongs to a game that has not started yet. */
+  disabled?: boolean;
 }) {
   return (
     <div className="game-sheet__row">
@@ -206,6 +209,7 @@ export function SettingsToggle({
         aria-checked={on}
         aria-label={label}
         data-on={on}
+        disabled={disabled}
         onClick={() => onChange(!on)}
       >
         <span className="game-sheet__knob" aria-hidden="true" />

@@ -18,6 +18,19 @@ export const COLUMNS = 9;
 export const ROWS = 18;
 export const COLUMN_OPTIONS = [6, 7, 8, 9] as const;
 export const ROW_OPTIONS = [12, 14, 16, 18] as const;
+/** One press of the new-row offer adds this many rows, at most. */
+export const ROWS_PER_ADD_OPTIONS = [1, 2, 3, 4] as const;
+
+/** How much of the grid a game starts with. */
+export type TenStartFill = 'full' | 'third';
+
+export const START_FILL_LABELS: Record<TenStartFill, { title: string; blurb: string }> = {
+  full: { title: 'Full', blurb: 'The whole grid, as it has always been.' },
+  third: {
+    title: 'One third',
+    blurb: 'A third of the rows to start with, and room below for the new rows to fill.',
+  },
+};
 
 export interface Position {
   readonly column: number;
@@ -27,9 +40,9 @@ export interface Position {
 /**
  * How a taken pair leaves the board.
  *
- * `remove`: the two digits go and everything above drops into the gap.
+ * `remove`: the two digits go and everything below rises into the gap.
  * `dim`: the digits stay, greyed out, and count as gone for the rules — a row
- * whose every digit is dimmed clears at once and the board drops one row.
+ * whose every digit is dimmed clears at once and everything below rises a row.
  */
 export type TenMode = 'remove' | 'dim';
 
@@ -41,7 +54,7 @@ export const MODE_LABELS: Record<TenMode, { title: string; blurb: string }> = {
   dim: {
     title: 'Dim',
     blurb:
-      'A matched pair dims and stays put. Dimmed digits are treated as empty, so a pair can be made across them. When every digit in a row is dimmed the row clears and everything above drops one row.',
+      'A matched pair dims and stays put. Dimmed digits are treated as empty, so a pair can be made across them. When every digit in a row is dimmed the row clears and everything below it rises one row.',
   },
 };
 
@@ -57,7 +70,9 @@ export interface TenBoard {
   /** How many columns and rows: a room is dealt from the seed *and* these. */
   readonly columns: number;
   readonly rows: number;
-  /** The columns, each bottom-first. */
+  /** Whether the end of a row joins the start of the next. */
+  readonly wrapRows: boolean;
+  /** The columns, each top-first: the board hangs from the top. */
   readonly stacks: readonly (readonly TenCell[])[];
 }
 
@@ -75,8 +90,18 @@ const cell = (value: number): TenCell => ({ value, dimmed: false });
  * values one more time — for nine by eighteen that is eighteen of each. The
  * recipe has to match `VibeTenBoard.deal` exactly, or a room's seed deals two
  * different boards.
+ *
+ * `startRows` then keeps that many rows off the top of each column, so a
+ * part-filled board is the top of the same deal hanging from the top of the
+ * grid.
  */
-export function newBoard(seed: number, columns = COLUMNS, rows = ROWS): TenBoard {
+export function newBoard(
+  seed: number,
+  columns = COLUMNS,
+  rows = ROWS,
+  startRows = rows,
+  wrapRows = false,
+): TenBoard {
   const total = columns * rows;
   const base = Math.floor(total / 9);
   const extra = total % 9;
@@ -88,13 +113,14 @@ export function newBoard(seed: number, columns = COLUMNS, rows = ROWS): TenBoard
   }
   shuffle(digits, generator);
 
+  const kept = Math.max(1, Math.min(rows, startRows));
   const stacks: TenCell[][] = [];
   let index = 0;
   for (let column = 0; column < columns; column += 1) {
-    stacks.push(digits.slice(index, index + rows).map(cell));
+    stacks.push(digits.slice(index, index + kept).map(cell));
     index += rows;
   }
-  return { seed, columns, rows, stacks };
+  return { seed, columns, rows, wrapRows, stacks };
 }
 
 /**
@@ -105,13 +131,13 @@ export function newBoard(seed: number, columns = COLUMNS, rows = ROWS): TenBoard
 export function boardFromStacks(
   stacks: number[][],
   seed = 0,
-  shape: { columns?: number; rows?: number } = {},
+  shape: { columns?: number; rows?: number; wrapRows?: boolean } = {},
 ): TenBoard {
   const columns = shape.columns ?? COLUMNS;
   const rows = shape.rows ?? ROWS;
   const filled = stacks.slice(0, columns).map((column) => column.slice(0, rows).map(cell));
   while (filled.length < columns) filled.push([]);
-  return { seed, columns, rows, stacks: filled };
+  return { seed, columns, rows, wrapRows: shape.wrapRows ?? false, stacks: filled };
 }
 
 /** The digits in the shape the fixture and the app use. */
@@ -183,7 +209,32 @@ export function canMatch(board: TenBoard, a: Position, b: Position): boolean {
   const second = cellAt(board, b);
   if (!first || !second || first.dimmed || second.dimmed) return false;
   if (!valuesPair(first.value, second.value)) return false;
-  return hasClearLine(board, a, b);
+  if (hasClearLine(board, a, b)) return true;
+  if (!board.wrapRows) return false;
+  return hasClearWrapLine(board, a, b);
+}
+
+/**
+ * The rows read end to end: from a square in one row the line runs to the end
+ * of that row, wraps round to the start of the next, and carries on. Everything
+ * it passes through has to be empty or already taken, which is what lets the
+ * last square of a row pair with the first of the next — or, past a taken
+ * square, with the second of the next.
+ */
+export function hasClearWrapLine(board: TenBoard, a: Position, b: Position): boolean {
+  const upper = a.row < b.row ? a : b;
+  const lower = a.row < b.row ? b : a;
+  if (lower.row !== upper.row + 1) return false;
+
+  for (let column = upper.column + 1; column < board.columns; column += 1) {
+    const entry = cellAt(board, { column, row: upper.row });
+    if (entry && !entry.dimmed) return false;
+  }
+  for (let column = 0; column < lower.column; column += 1) {
+    const entry = cellAt(board, { column, row: lower.row });
+    if (entry && !entry.dimmed) return false;
+  }
+  return true;
 }
 
 export function hasClearLine(board: TenBoard, a: Position, b: Position): boolean {
@@ -276,14 +327,23 @@ export function remove(board: TenBoard, a: Position, b: Position): TenBoard | nu
   return take(board, a, b, 'remove')?.board ?? null;
 }
 
-/** A new row can go on the bottom only while the top of the grid is free. */
+/**
+ * Rows can be added only while the bottom of the grid is free: the board hangs
+ * from the top, so the empty space is underneath it.
+ */
 export function canAddRow(board: TenBoard): boolean {
   return board.stacks.every((column) => column.length < board.rows);
 }
 
-/** Puts a fresh row on the bottom, pushing everything else up one row. */
+/** How many rows would fit under the digits as they are. */
+export function roomForRows(board: TenBoard): number {
+  const tallest = board.stacks.reduce((most, column) => Math.max(most, column.length), 0);
+  return Math.max(0, board.rows - tallest);
+}
+
+/** Hangs a fresh row under the digits. Nothing else moves. */
 export function addRow(board: TenBoard, digits: number[]): TenBoard | null {
   if (!canAddRow(board) || digits.length < board.columns) return null;
-  const stacks = board.stacks.map((column, index) => [cell(digits[index]), ...column]);
+  const stacks = board.stacks.map((column, index) => [...column, cell(digits[index])]);
   return { ...board, stacks };
 }

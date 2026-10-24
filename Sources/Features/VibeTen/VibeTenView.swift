@@ -263,17 +263,18 @@ struct VibeTenView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Dealing yourself another row, on the row it pushes up into.
+    /// Dealing yourself another row, on the empty row it drops into.
     ///
-    /// The top row of the grid is dead space whenever it is empty, so the button
-    /// goes there rather than in a strip of its own: it appears exactly when
-    /// there is room for it and vanishes as soon as the row above fills.
+    /// The bottom row of the grid is dead space whenever it is empty, so the
+    /// button goes there rather than in a strip of its own: the board hangs from
+    /// the top, and the offer appears on the edge the new rows extend.
     private func addRowButton(width: CGFloat, height: CGFloat) -> some View {
         Button {
             Haptics.shared.tap()
-            model.addRow()
+            model.addRows()
         } label: {
-            Label("Add a row", systemImage: "plus")
+            Label(model.rowsPerAdd == 1 ? "Add a row" : "Add \(model.rowsPerAdd) rows",
+                  systemImage: "plus")
                 .font(.system(size: max(10, height * 0.34), weight: .bold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
                 .frame(width: width, height: height)
@@ -288,7 +289,9 @@ struct VibeTenView: View {
                 }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Add a row at the bottom")
+        .accessibilityLabel(model.rowsPerAdd == 1
+                            ? "Add a row at the bottom"
+                            : "Add \(model.rowsPerAdd) rows at the bottom")
         .accessibilityIdentifier("ten.addRow")
     }
 
@@ -324,17 +327,19 @@ struct VibeTenView: View {
             let gridWidth = cell * CGFloat(columns) + gap * CGFloat(columns - 1)
             let gridHeight = cell * CGFloat(rows) + gap * CGFloat(rows - 1)
 
-            HStack(alignment: .bottom, spacing: gap) {
+            HStack(alignment: .top, spacing: gap) {
                 ForEach(0..<columns, id: \.self) { column in
                     VStack(spacing: gap) {
-                        ForEach(Array((0..<rows).reversed()), id: \.self) { row in
+                        // Row 0 is the top row: the board hangs from the top, so
+                        // the rows below it rise into a gap.
+                        ForEach(0..<rows, id: \.self) { row in
                             cellView(column: column, row: row, size: cell)
                         }
                     }
                 }
             }
             .frame(width: gridWidth, height: gridHeight)
-            .overlay(alignment: .top) {
+            .overlay(alignment: .bottom) {
                 if model.canAddRow {
                     addRowButton(width: gridWidth, height: cell)
                 }
@@ -563,6 +568,18 @@ struct VibeTenSettingsView: View {
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
+
+            SettingsCard {
+                SettingsRow(symbol: "arrow.turn.down.right",
+                            title: "Rows join end to end",
+                            subtitle: "The last square of a row is next to the first of the row below") {
+                    Toggle("", isOn: $model.wrapRows)
+                        .labelsHidden()
+                        .tint(VibeTheme.vibeTenBorder)
+                        .disabled(!model.canChoosePairMode)
+                        .accessibilityIdentifier("tenSettings.wrapRows")
+                }
+            }
         }
     }
 
@@ -581,7 +598,7 @@ struct VibeTenSettingsView: View {
                 }
             }
 
-            Text("When the top row of the grid is empty, a button appears there: tap it to push a fresh row in at the bottom.")
+            Text("When the bottom row of the grid is empty, a button appears there: tap it to hang fresh rows underneath, and the board grows down into the space.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -624,6 +641,42 @@ struct VibeTenSettingsView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
+
+            Divider().padding(.vertical, 2)
+
+            Text("Start with")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+
+            Picker("Start with", selection: $model.startFill) {
+                ForEach(VibeTenStartFill.allCases) { fill in
+                    Text(fill.title).tag(fill)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(!model.canChooseRowSupply)
+            .accessibilityIdentifier("tenSettings.startFill")
+
+            Text(model.canChooseRowSupply
+                 ? "A third of the rows to start with leaves room for the new rows to fill."
+                 : "Solo games with the new-row offer turned on can start with a third of the board.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Rows per press")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+                .padding(.top, 4)
+
+            Picker("Rows per press", selection: $model.rowsPerAdd) {
+                ForEach(VibeTenBoard.rowsPerAddOptions, id: \.self) { count in
+                    Text("\(count)").tag(count)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(!model.canChooseRowSupply)
+            .accessibilityIdentifier("tenSettings.rowsPerAdd")
         }
     }
 

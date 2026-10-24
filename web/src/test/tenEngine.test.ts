@@ -3,6 +3,7 @@ import fixtures from '../games/ten/board.fixtures.json';
 import {
   COLUMNS,
   COLUMN_OPTIONS,
+  type TenCell,
   ROWS,
   ROW_OPTIONS,
   addRow,
@@ -10,6 +11,7 @@ import {
   boardFromStacks,
   canAddRow,
   canMatch,
+  heightOf,
   hasMoves,
   isCleared,
   isDimmed,
@@ -193,12 +195,12 @@ describe('dimming', () => {
 });
 
 describe('adding a row', () => {
-  it('goes on the bottom and pushes everything up', () => {
+  it('hangs the new row under the digits without moving them', () => {
     const grid = board([[1], [2], [3], [4], [5], [6], [7], [8], [9]]);
     expect(canAddRow(grid)).toBe(true);
     const next = addRow(grid, [9, 8, 7, 6, 5, 4, 3, 2, 1])!;
-    expect(valueAt(next, { column: 0, row: 0 })).toBe(9);
-    expect(valueAt(next, { column: 0, row: 1 })).toBe(1);
+    expect(valueAt(next, { column: 0, row: 0 })).toBe(1);
+    expect(valueAt(next, { column: 0, row: 1 })).toBe(9);
   });
 
   it('is refused while a column reaches the top row', () => {
@@ -260,5 +262,66 @@ describe('the shape', () => {
     expect(next.stacks[0]).toHaveLength(3);
     expect(next.columns).toBe(6);
     expect(next.rows).toBe(3);
+  });
+});
+
+const cell = (value: number): TenCell => ({ value, dimmed: false });
+
+describe('the board hangs from the top', () => {
+  it('deals a part-filled board as the top of the same deal', () => {
+    const full = newBoard(4321, 9, 18);
+    const third = newBoard(4321, 9, 18, 6);
+    expect(third.stacks[0]).toHaveLength(6);
+    for (let column = 0; column < 9; column += 1) {
+      expect(values(third)[column]).toEqual(values(full)[column].slice(0, 6));
+    }
+    expect(remaining(third)).toBe(54);
+    expect(canAddRow(third)).toBe(true);
+  });
+
+  it('closes a gap upward', () => {
+    const grid = board([[3, 1, 2], [7, 4], [2]]);
+    const after = take(grid, { column: 0, row: 0 }, { column: 1, row: 0 }, 'remove')!.board;
+    expect(valueAt(after, { column: 0, row: 0 })).toBe(1);
+    expect(valueAt(after, { column: 0, row: 1 })).toBe(2);
+    expect(heightOf(after, 1)).toBe(1);
+  });
+});
+
+describe('the rows joining end to end', () => {
+  const columns = [[7, 5], [], [], [], [], [], [], [], [5]];
+
+  it('lets the end of a row pair with the start of the next', () => {
+    const wrapped = boardFromStacks(columns, 0, { columns: 9, rows: 2, wrapRows: true });
+    expect(canMatch(wrapped, { column: 8, row: 0 }, { column: 0, row: 1 })).toBe(true);
+
+    const plain = boardFromStacks(columns, 0, { columns: 9, rows: 2 });
+    expect(canMatch(plain, { column: 8, row: 0 }, { column: 0, row: 1 })).toBe(false);
+  });
+
+  it('reaches past a taken square', () => {
+    const stacks: TenCell[][] = [
+      [cell(7), cell(9)],
+      [cell(2), cell(5)],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [cell(5)],
+    ];
+    stacks[0][1] = { value: 9, dimmed: true };
+    const wrapped = { seed: 0, columns: 9, rows: 2, wrapRows: true, stacks };
+    expect(canMatch(wrapped, { column: 8, row: 0 }, { column: 1, row: 1 })).toBe(true);
+
+    const blocked = boardFromStacks(columns, 0, { columns: 9, rows: 2, wrapRows: true });
+    // The 5 sits in column 0 row 1 there, and nothing is between it and the 5
+    // at the end of the row above.
+    expect(canMatch(blocked, { column: 8, row: 0 }, { column: 0, row: 1 })).toBe(true);
+  });
+
+  it('is off unless it is asked for', () => {
+    expect(newBoard(1).wrapRows).toBe(false);
   });
 });

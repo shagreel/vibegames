@@ -10,6 +10,9 @@ final class VibeTenModelTests: XCTestCase {
     private var savedRow: Any?
     private var savedColumns: Any?
     private var savedRows: Any?
+    private var savedFill: Any?
+    private var savedPerAdd: Any?
+    private var savedWrap: Any?
 
     override func setUp() {
         super.setUp()
@@ -18,10 +21,15 @@ final class VibeTenModelTests: XCTestCase {
         savedRow = defaults.object(forKey: VibeTenModel.addRowKey)
         savedColumns = defaults.object(forKey: VibeTenModel.columnsKey)
         savedRows = defaults.object(forKey: VibeTenModel.rowsKey)
-        defaults.removeObject(forKey: VibeTenModel.modeKey)
-        defaults.removeObject(forKey: VibeTenModel.addRowKey)
-        defaults.removeObject(forKey: VibeTenModel.columnsKey)
-        defaults.removeObject(forKey: VibeTenModel.rowsKey)
+        savedFill = defaults.object(forKey: VibeTenModel.startFillKey)
+        savedPerAdd = defaults.object(forKey: VibeTenModel.rowsPerAddKey)
+        savedWrap = defaults.object(forKey: VibeTenModel.wrapRowsKey)
+        for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
+                    VibeTenModel.columnsKey, VibeTenModel.rowsKey,
+                    VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
+                    VibeTenModel.wrapRowsKey] {
+            defaults.removeObject(forKey: key)
+        }
     }
 
     override func tearDown() {
@@ -32,6 +40,9 @@ final class VibeTenModelTests: XCTestCase {
         defaults.set(savedRow, forKey: VibeTenModel.addRowKey)
         defaults.set(savedColumns, forKey: VibeTenModel.columnsKey)
         defaults.set(savedRows, forKey: VibeTenModel.rowsKey)
+        defaults.set(savedFill, forKey: VibeTenModel.startFillKey)
+        defaults.set(savedPerAdd, forKey: VibeTenModel.rowsPerAddKey)
+        defaults.set(savedWrap, forKey: VibeTenModel.wrapRowsKey)
         super.tearDown()
     }
 
@@ -131,20 +142,20 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertTrue(model.canChoosePairMode, "and leaving the game offers it again")
     }
 
-    func testANewRowIsOfferedOnlyOnceEveryColumnHasClearedTheTopRow() {
+    func testANewRowIsOfferedOnlyOnceTheBottomRowIsFree() {
         UserDefaults.standard.set(true, forKey: VibeTenModel.addRowKey)
         let model = VibeTenModel()
         model.playSolo()
 
-        XCTAssertFalse(model.canAddRow, "the grid starts full, so there is nowhere to push")
+        XCTAssertFalse(model.canAddRow, "the grid starts full, so there is nowhere to hang a row")
 
-        XCTAssertTrue(playUntilTheTopRowIsFree(model), "taking pairs should free the top row")
+        XCTAssertTrue(playUntilTheBottomRowIsFree(model), "taking pairs should free the bottom row")
         XCTAssertTrue(model.canAddRow)
 
         let height = model.board?.height(ofColumn: 0) ?? 0
-        model.addRow()
+        model.addRows()
         XCTAssertEqual(model.board?.height(ofColumn: 0), height + 1,
-                       "a row of nine digits arrives under everything else")
+                       "a row of digits arrives underneath, and the board grows")
     }
 
     func testTheSettingOffMeansNoNewRowIsEverOffered() {
@@ -152,18 +163,18 @@ final class VibeTenModelTests: XCTestCase {
         let model = VibeTenModel()
         model.playSolo()
 
-        XCTAssertTrue(playUntilTheTopRowIsFree(model), "taking pairs should free the top row")
+        XCTAssertTrue(playUntilTheBottomRowIsFree(model), "taking pairs should free the bottom row")
         XCTAssertEqual(model.board?.canAddRow, true, "the grid itself has room")
         XCTAssertFalse(model.canAddRow, "but the player has asked for no new rows")
 
         let height = model.board?.height(ofColumn: 0) ?? 0
-        model.addRow()
+        model.addRows()
         XCTAssertEqual(model.board?.height(ofColumn: 0), height, "nothing moves")
     }
 
-    /// Takes the first pair on offer until the grid's top row is clear, or the
-    /// board runs out of moves.
-    private func playUntilTheTopRowIsFree(_ model: VibeTenModel) -> Bool {
+    /// Taking pairs until every column has lost a digit, which is what frees the
+    /// bottom row of the grid.
+    private func playUntilTheBottomRowIsFree(_ model: VibeTenModel) -> Bool {
         var takes = 0
         while !(model.board?.canAddRow ?? false), takes < 80 {
             guard let board = model.board, let pair = board.availableMatches().first else { return false }
@@ -172,5 +183,49 @@ final class VibeTenModelTests: XCTestCase {
             takes += 1
         }
         return model.board?.canAddRow ?? false
+    }
+
+    /// A press of the offer deals as many rows as the setting says, or as many
+    /// as the grid still has room for.
+    func testAPressDealsTheChosenNumberOfRows() {
+        let model = VibeTenModel()
+        model.startFill = .third
+        model.rowsPerAdd = 3
+        model.playSolo()
+
+        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3,
+                       "a third-filled board hangs from the top")
+        model.addRows()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3 + 3,
+                       "one press deals three rows")
+
+        model.rowsPerAdd = 4
+        model.addRows()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3 + 7)
+    }
+
+    /// A third-filled board is only offered with the new-row setting on, and a
+    /// room always starts full.
+    func testThePartFilledStartNeedsTheNewRowOffer() {
+        let model = VibeTenModel()
+        model.startFill = .third
+        model.addRowEnabled = false
+        model.playSolo()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows,
+                       "without the new-row offer the board starts full")
+
+        model.leaveGame()
+        model.addRowEnabled = true
+        model.playSolo()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3,
+                       "with it, the board starts a third full")
+        XCTAssertFalse(model.canChooseRowSupply, "and the choice is now for the next game")
+    }
+
+    func testTheRowsCanJoinEndToEnd() {
+        let model = VibeTenModel()
+        model.wrapRows = true
+        model.playSolo()
+        XCTAssertEqual(model.board?.wrapRows, true, "the rule reaches the board")
     }
 }

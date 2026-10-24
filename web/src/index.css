@@ -530,7 +530,8 @@ body {
 
 /* A choice that belongs to the next game rather than this one: still on the
    sheet, so it can be seen, but not pressable until there is no game on. */
-.game-sheet__choice:disabled {
+.game-sheet__choice:disabled,
+.game-sheet__switch:disabled {
   opacity: 0.4;
   cursor: default;
 }

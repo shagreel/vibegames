@@ -4,7 +4,7 @@ import XCTest
 /// The rules of Vibe Ten, without a screen.
 final class VibeTenBoardTests: XCTestCase {
 
-    /// A board with exactly the columns given, bottom-first.
+    /// A board with exactly the columns given, top-first.
     private func board(_ columns: [[Int]]) -> VibeTenBoard {
         VibeTenBoard(stacks: columns)
     }
@@ -32,8 +32,8 @@ final class VibeTenBoardTests: XCTestCase {
     }
 
     func testAGapCanBeJumpedIfItIsEmpty() {
-        // Column 1 is shorter, so the bottom row of the board has a gap at
-        // column 1 and two digits on either side of it on the same row.
+        // Column 1 is empty, so the row the other two digits are on has a gap
+        // between them.
         let board = self.board([[3], [], [7]])
         XCTAssertTrue(board.canMatch(.init(column: 0, row: 0), .init(column: 2, row: 0)),
                       "3 and 7 either side of an empty column, on the same row")
@@ -57,7 +57,9 @@ final class VibeTenBoardTests: XCTestCase {
 
     // MARK: - Gravity
 
-    func testTakingAPairDropsWhatWasAbove() {
+    /// The board hangs from the top, so a gap closes upward: the digits below
+    /// the pair rise into it.
+    func testTakingAPairLiftsTheDigitsBelow() {
         var board = self.board([
             [3, 1, 2],
             [7, 4],
@@ -65,10 +67,10 @@ final class VibeTenBoardTests: XCTestCase {
         ])
         XCTAssertNotNil(board.take(.init(column: 0, row: 0), .init(column: 1, row: 0), mode: .remove))
         XCTAssertEqual(board.value(at: .init(column: 0, row: 0)), 1,
-                       "the 1 above the 3 fell into its place")
+                       "the 1 below the 3 rose into its place")
         XCTAssertEqual(board.value(at: .init(column: 0, row: 1)), 2)
         XCTAssertEqual(board.height(ofColumn: 0), 2)
-        XCTAssertEqual(board.height(ofColumn: 1), 1, "the 4 fell too")
+        XCTAssertEqual(board.height(ofColumn: 1), 1, "the 4 rose too")
     }
 
     func testTakingTwoFromOneColumnLeavesTheRestInOrder() {
@@ -237,12 +239,14 @@ final class VibeTenDimTests: XCTestCase {
 /// Adding a row at the bottom.
 final class VibeTenAddRowTests: XCTestCase {
 
-    func testARowGoesOnTheBottomAndPushesEverythingUp() {
+    func testARowHangsUnderTheDigitsWithoutMovingThem() {
         var board = VibeTenBoard(stacks: [[1], [2], [3], [4], [5], [6], [7], [8], [9]])
         XCTAssertTrue(board.canAddRow)
         XCTAssertTrue(board.addRow([9, 8, 7, 6, 5, 4, 3, 2, 1]))
-        XCTAssertEqual(board.value(at: .init(column: 0, row: 0)), 9, "the new row is at the bottom")
-        XCTAssertEqual(board.value(at: .init(column: 0, row: 1)), 1, "the old row moved up")
+        XCTAssertEqual(board.value(at: .init(column: 0, row: 0)), 1,
+                       "the digits stay where they were: the board hangs from the top")
+        XCTAssertEqual(board.value(at: .init(column: 0, row: 1)), 9,
+                       "the new row is underneath them")
         XCTAssertEqual(board.height(ofColumn: 0), 2)
     }
 
@@ -252,14 +256,14 @@ final class VibeTenAddRowTests: XCTestCase {
         XCTAssertFalse(board.addRow(Array(repeating: 1, count: 9)))
     }
 
-    func testARowIsAvailableOnlyWhenNoColumnReachesTheTop() {
-        // Every column one short of the top row: there is room to push up.
+    func testARowIsAvailableOnlyWhenTheBottomOfTheGridIsFree() {
+        // Every column one short of the last row: there is room underneath.
         var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 17), count: 9))
         XCTAssertTrue(board.canAddRow)
         XCTAssertTrue(board.addRow(Array(repeating: 2, count: 9)))
         XCTAssertFalse(board.canAddRow, "the grid is full again")
 
-        // One column still touching the top row holds the new row back.
+        // One column still reaching the last row holds the new row back.
         let tall = VibeTenBoard(stacks: (0..<9).map {
             Array(repeating: 3, count: $0 == 4 ? 18 : 17)
         })
@@ -321,6 +325,32 @@ final class VibeTenShapeTests: XCTestCase {
                        VibeTenBoard(seed: 7, columns: 9, rows: 18).values)
     }
 
+    func testABoardCanStartPartFilled() {
+        let full = VibeTenBoard(seed: 4321)
+        let third = VibeTenBoard(seed: 4321, startRows: 6)
+
+        XCTAssertEqual(third.height(ofColumn: 0), 6, "a third of eighteen rows")
+        for column in 0..<9 {
+            XCTAssertEqual(third.values[column], Array(full.values[column].prefix(6)),
+                           "the top slice of the same deal, hanging from the top")
+        }
+        XCTAssertEqual(third.remaining, 54)
+        XCTAssertTrue(third.canAddRow, "and there is room below it")
+        XCTAssertEqual(third.roomForRows, 12)
+    }
+
+    func testRowsAreAddedUnderTheDigitsAndGrowTheBoard() {
+        var board = VibeTenBoard(seed: 77, startRows: 6)
+        let before = board.values
+        XCTAssertTrue(board.addRow([1, 2, 3, 4, 5, 6, 7, 8, 9]))
+        XCTAssertEqual(board.height(ofColumn: 0), 7)
+        for column in 0..<9 {
+            XCTAssertEqual(Array(board.values[column].prefix(6)), before[column],
+                           "nothing already on the board moved")
+        }
+        XCTAssertEqual(board.values[0].last, 1, "the new digits are the bottom row")
+    }
+
     func testASmallerBoardIsFullUntilItIsNot() {
         var board = VibeTenBoard(seed: 31, columns: 6, rows: 12)
         XCTAssertFalse(board.canAddRow, "twelve rows of six is full")
@@ -362,5 +392,84 @@ final class VibeTenShapeTests: XCTestCase {
             [7, 7, 5, 6, 6, 3, 4, 9, 3, 9, 2, 2]
         ]
         XCTAssertEqual(VibeTenBoard(seed: 1234, columns: 6, rows: 12).values, expected)
+    }
+}
+
+
+/// The rows joining end to end: the last square of a row is next to the first
+/// square of the row below it.
+final class VibeTenWrapTests: XCTestCase {
+
+    /// Nine columns of two rows, top-first. A column can only hold its second
+    /// digit if it holds its first, so the fixtures say what is above.
+    private func board(_ columns: [[Int]], wrap: Bool = true) -> VibeTenBoard {
+        var stacks = columns
+        while stacks.count < 9 { stacks.append([]) }
+        return VibeTenBoard(stacks: stacks, columns: 9, rows: 2, wrapRows: wrap)
+    }
+
+    /// Column 8 row 0 is a 5; column 0 row 1 is a 5, with a 7 above it.
+    private func endsOfTheJoin() -> [[Int]] {
+        var columns = [[Int]](repeating: [], count: 9)
+        columns[0] = [7, 5]
+        columns[8] = [5]
+        return columns
+    }
+
+    func testTheTwoEndsOfARowJoinUp() {
+        XCTAssertTrue(board(endsOfTheJoin())
+                        .canMatch(.init(column: 8, row: 0), .init(column: 0, row: 1)),
+                      "the last square of one row and the first of the next")
+        XCTAssertFalse(board(endsOfTheJoin(), wrap: false)
+                        .canMatch(.init(column: 8, row: 0), .init(column: 0, row: 1)),
+                       "without the setting the rows do not join")
+    }
+
+    /// The owner's second example: the first square of the lower row is already
+    /// taken, so the 5 at the end of the row above reaches the second square.
+    func testATakenSquareInTheWayDoesNotBlockTheJoin() {
+        var columns = [[Int]](repeating: [], count: 9)
+        columns[0] = [1, 9]
+        columns[1] = [2, 5]
+        columns[8] = [5]
+
+        let taken = VibeTenBoard(stacks: columns, columns: 9, rows: 2, wrapRows: true)
+        XCTAssertFalse(taken.canMatch(.init(column: 8, row: 0), .init(column: 1, row: 1)),
+                       "the 9 at the start of the lower row is in the way")
+
+        var dimmed = columns.map { column -> [VibeTenCell] in
+            column.enumerated().map { row, value in
+                VibeTenCell(value: value, dimmed: column == columns[0] && row == 1)
+            }
+        }
+        dimmed[8] = [VibeTenCell(value: 5)]
+        let board = VibeTenBoard(cells: dimmed, columns: 9, rows: 2, wrapRows: true)
+        XCTAssertTrue(board.canMatch(.init(column: 8, row: 0), .init(column: 1, row: 1)),
+                      "the taken 9 no longer blocks the join")
+    }
+
+    func testTheJoinIsOnlyBetweenNeighbouringRows() {
+        var columns = [[Int]](repeating: [], count: 9)
+        columns[0] = [1, 2, 5]
+        columns[8] = [5]
+        let board = VibeTenBoard(stacks: columns, columns: 9, rows: 3, wrapRows: true)
+        XCTAssertFalse(board.canMatch(.init(column: 8, row: 0), .init(column: 0, row: 2)),
+                       "two rows apart is not a join")
+    }
+
+    func testAWrappedPairCanBeTaken() {
+        var board = board(endsOfTheJoin())
+        XCTAssertNotNil(board.take(.init(column: 8, row: 0), .init(column: 0, row: 1),
+                                   mode: .remove))
+        XCTAssertEqual(board.remaining, 1, "both 5s went, and the 7 stayed")
+        XCTAssertEqual(board.value(at: .init(column: 0, row: 0)), 7)
+    }
+
+    func testTheSettingIsOffByDefault() {
+        XCTAssertFalse(VibeTenBoard(seed: 1).wrapRows)
+        let columns = endsOfTheJoin()
+        let stacks = columns.map { $0.map { VibeTenCell(value: $0) } }
+        XCTAssertFalse(VibeTenBoard(cells: stacks, columns: 9, rows: 2)
+                        .canMatch(.init(column: 8, row: 0), .init(column: 0, row: 1)))
     }
 }

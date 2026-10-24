@@ -743,10 +743,10 @@ the table instead of starting its own.
 
 ## Vibe Ten
 
-The sixth game: nine columns of digits, eighteen rows tall, packed at the
-bottom. Two digits pair when they are **equal** or **add up to ten**, on one
-line — a row, a column or a diagonal — with nothing in between. Take a pair and
-everything above it falls, so every take changes the board.
+The sixth game: nine columns of digits, eighteen rows tall, hanging from the
+top. Two digits pair when they are **equal** or **add up to ten**, on one line —
+a row, a column or a diagonal — with nothing in between. Take a pair and the
+digits below it rise into the space, so every take changes the board.
 
 Solo or a room, and the room works the way the other races do: one seed, so
 every device deals the identical 162 digits, and only each player's score
@@ -759,14 +759,20 @@ Three properties of its own, all in the game's settings sheet:
   leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
   digit cannot be picked again and a line can be drawn straight through it, so a
   pair can be made across one. A row clears once *every* digit in it has been
-  dimmed — the whole row goes at once and everything above drops a single row.
+  dimmed — the whole row goes at once and everything below it rises a row.
   Like the size, it is a choice for a new game: once a board is dealt the sheet
   shows it disabled, because one board played half one way and half the other is
   not the game.
-- **Offer a new row (solo only).** While no column reaches the top of the grid,
-  a button appears *in the empty top row* — no strip of its own on screen — and
-  tapping it pushes a fresh row of digits in at the bottom, moving everything up
-  one row. In a room the board is everybody's, so the offer is never there.
+- **New rows (solo only).** While no column reaches the bottom of the grid, a
+  button appears *on that empty bottom row* — no strip of its own on screen — and
+  a press hangs one to four fresh rows underneath, as a setting chooses. A board
+  can start full or a third full, and the part-filled start goes with this offer:
+  the rows are what fills it. In a room the board is everybody's, so the offer is
+  never there.
+- **Rows joining end to end.** One setting lets the rows read as a continuous
+  line: the last square of a row is next to the first square of the row below,
+  so a 5 at the end of a row matches a 5 at the start of the next — and, because
+  a taken digit is not in the way, the one after that too.
 - **The board's size.** Six to nine columns and twelve to eighteen rows, the
   full board by default; fewer squares means bigger digits, and the grid still
   fills the screen. It is a choice for a new game: the sheet offers it on the

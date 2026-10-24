@@ -60,11 +60,10 @@ extension XCUIApplication {
 /// from one read of the screen instead of one read per take — which, at 162
 /// accessibility elements a time, is the whole cost of the test.
 ///
-/// The shape is the app's: nine columns, bottom first, so gravity is just
-/// "delete the digit, and the ones above are already one place lower". It is a
-/// mirror, not a second opinion: if it and the app ever disagree about what is
-/// where, the taps land on the wrong cells and the test fails rather than
-/// quietly passing.
+/// The shape is the app's: nine columns, top first, so the digits hang from the
+/// top and a gap closes upward. It is a mirror, not a second opinion: if it and
+/// the app ever disagree about what is where, the taps land on the wrong cells
+/// and the test fails rather than quietly passing.
 struct TenPlan {
 
     struct Cell: Equatable {
@@ -176,10 +175,10 @@ struct TenPlan {
         return chosen
     }
 
-    /// The pair worth taking to clear the top of the grid: one that takes from a
-    /// column still reaching the top, because a digit taken anywhere in a column
-    /// lowers that column by one. Prefers a pair that lowers two of them.
-    func pairFreeingTheTopRow() -> ((column: Int, row: Int), (column: Int, row: Int))? {
+    /// The pair worth taking to free the bottom of the grid: one that takes from
+    /// a column still reaching the last row, because a digit taken anywhere in a
+    /// column shortens that column by one. Prefers a pair that shortens two.
+    func pairFreeingTheBottomRow() -> ((column: Int, row: Int), (column: Int, row: Int))? {
         let full = Set((0..<9).filter { stacks[$0].count == 18 })
         var best: ((column: Int, row: Int), (column: Int, row: Int))?
         var bestScore = 0
@@ -193,16 +192,16 @@ struct TenPlan {
         return best
     }
 
-    /// A plan of takes that empties the top row of the grid, if the board allows
-    /// it. Nil means the board has no way to shorten a column that still reaches
-    /// the top — the offer can never appear on this deal.
-    static func takesFreeingTheTopRow(startingFrom cells: [(column: Int, row: Int, value: Int)],
-                                     limit: Int = 60)
+    /// A plan of takes that frees the bottom row of the grid, if the board
+    /// allows it. Nil means the board has no way to shorten a column that still
+    /// reaches the last row — the offer can never appear on this deal.
+    static func takesFreeingTheBottomRow(startingFrom cells: [(column: Int, row: Int, value: Int)],
+                                        limit: Int = 60)
         -> [((column: Int, row: Int), (column: Int, row: Int))]? {
         var plan = TenPlan(cells: cells)
         var takes: [((column: Int, row: Int), (column: Int, row: Int))] = []
         while !plan.hasRoomForARow, takes.count < limit {
-            guard let pair = plan.pairFreeingTheTopRow(), plan.take(pair.0, pair.1) else { return nil }
+            guard let pair = plan.pairFreeingTheBottomRow(), plan.take(pair.0, pair.1) else { return nil }
             takes.append(pair)
         }
         return plan.hasRoomForARow ? takes : nil

@@ -125,10 +125,11 @@ struct GameInstructions {
                         + "They have to be on the same row, column or diagonal, with nothing "
                         + "in between: neighbours count, and so does a line with only gaps "
                         + "in it."),
-            Section(title: "The board falls",
-                    body: "Taking a pair leaves a hole, and the digits above it drop into it. "
-                        + "Half the game is deciding which pair to take first, because every "
-                        + "take changes what is next to what."),
+            Section(title: "The board hangs from the top",
+                    body: "The digits hang from the top row and a gap closes **upward**: take a "
+                        + "pair and the digits below it rise into the space. Half the game is "
+                        + "deciding which pair to take first, because every take changes what is "
+                        + "next to what."),
             Section(title: "The board's size",
                     body: "In the game settings the grid can be **six to nine columns** and "
                         + "**twelve to eighteen rows** — the full board unless you choose "
@@ -136,20 +137,27 @@ struct GameInstructions {
                         + "fills the screen. Choose it on the start screen: once a game is "
                         + "under way the board keeps its shape. A room plays the shape the "
                         + "host dealt, so everybody's board matches."),
+            Section(title: "Rows that join up",
+                    body: "One setting lets the rows read end to end: the last square of a row "
+                        + "is next to the first square of the row below it, so a 5 at the end of "
+                        + "one row matches a 5 at the start of the next — and, if the square "
+                        + "between them has already been taken, the one after that."),
             Section(title: "Dim mode",
                     body: "In the game settings, **Dim** leaves a taken pair on the board, "
                         + "greyed out, instead of removing it. A dimmed digit is gone as far as "
                         + "the rules are concerned: it cannot be picked again, and a pair can be "
                         + "made straight across it. When every digit in a row has been dimmed, "
-                        + "the whole row clears at once and everything above drops one row. "
+                        + "the whole row clears at once and everything below it rises one row. "
                         + "Choose it on the start screen: a game in play keeps the setting it "
                         + "started with."),
-            Section(title: "A new row, solo",
-                    body: "Playing alone, you can push a fresh row of digits in at the bottom. "
-                        + "It is only possible while the top row of the grid is empty — and "
-                        + "rather than taking up space of its own, the button appears in that "
-                        + "empty row. A room plays the board it was dealt, so the button is "
-                        + "never there in a shared game."),
+            Section(title: "New rows, solo",
+                    body: "Playing alone, you can hang fresh rows of digits under the board. "
+                        + "It is only possible while the bottom row of the grid is empty — and "
+                        + "rather than taking up space of its own, the button appears on that "
+                        + "empty row. A press adds one to four rows, as you choose in the "
+                        + "settings, and a board can also start a third full to leave room for "
+                        + "them. A room plays the board it was dealt, so the button is never "
+                        + "there in a shared game."),
             Section(title: "Playing as a room",
                     body: "Everyone gets the identical board, dealt from a seed. You each take "
                         + "pairs at your own pace on your own device. One point per pair, and "

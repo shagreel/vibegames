@@ -20,17 +20,21 @@ import {
   COLUMN_OPTIONS,
   MODE_LABELS,
   ROWS,
+  ROWS_PER_ADD_OPTIONS,
   ROW_OPTIONS,
+  START_FILL_LABELS,
   addRow,
   availableMatches,
   canAddRow,
   cellAt,
   isCleared,
   newBoard,
+  roomForRows,
   take,
   type Position,
   type TenBoard,
   type TenMode,
+  type TenStartFill,
 } from './engine';
 import {
   EMPTY_SNAPSHOT,
@@ -66,20 +70,24 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
       body: 'Two digits pair if they are **equal** or **add up to ten** — 1 with 9, 2 with 8, 3 with 7, 4 with 6, 5 with 5. They have to be on the same row, column or diagonal with nothing in between: neighbours count, and so does a line with only gaps in it.',
     },
     {
-      title: 'The board falls',
-      body: 'Taking a pair leaves a hole, and the digits above drop into it. Every take changes what is next to what, which is half the game.',
+      title: 'The board hangs from the top',
+      body: 'The digits hang from the top row, and a gap closes **upward**: take a pair and the digits below it rise into the space. Every take changes what is next to what, which is half the game.',
+    },
+    {
+      title: 'Rows that join up',
+      body: 'One setting lets the rows read end to end: the last square of a row is next to the first of the row below, so a 5 at the end of one row matches a 5 at the start of the next — and, if the square between them has already been taken, the one after that.',
     },
     {
       title: 'Dim mode',
-      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything above drops one row. Choose it on the start screen: a game in play keeps the setting it started with.',
+      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything below it rises one row. Choose it on the start screen: a game in play keeps the setting it started with.',
     },
     {
       title: "The board's size",
       body: 'On the start screen the grid can be **six to nine columns** and **twelve to eighteen rows**, the full board by default: fewer squares means bigger digits, and the grid always fills the screen. Once a game is under way the board keeps its shape, and a room plays the shape the host dealt so everybody\'s board matches.',
     },
     {
-      title: 'A new row, solo',
-      body: 'Playing alone, you can push a fresh row in at the bottom — but only while the top row of the grid is empty. A button appears in that empty row when there is room: tap it and the new digits arrive underneath, with everything else moving up one. It is a solo-only button: in a room everybody plays the board they were dealt.',
+      title: 'New rows, solo',
+      body: 'Playing alone, you can hang fresh rows under the board — but only while the bottom row of the grid is empty. A button appears on that empty row when there is room: a press adds one to four rows, as you choose in the settings, and a board can start a third full to leave room for them. It is a solo-only button: in a room everybody plays the board they were dealt.',
     },
     {
       title: 'Playing as a room',
@@ -98,6 +106,9 @@ const MODE_KEY = 'vibegames.ten.mode';
 const ADD_ROW_KEY = 'vibegames.ten.addRow';
 const COLUMNS_KEY = 'vibegames.ten.columns';
 const ROWS_KEY = 'vibegames.ten.rows';
+const START_FILL_KEY = 'vibegames.ten.startFill';
+const ROWS_PER_ADD_KEY = 'vibegames.ten.rowsPerAdd';
+const WRAP_ROWS_KEY = 'vibegames.ten.wrapRows';
 
 function savedMode(): TenMode {
   return localStorage.getItem(MODE_KEY) === 'dim' ? 'dim' : 'remove';
@@ -116,6 +127,21 @@ function savedColumns(): number {
 function savedRows(): number {
   const saved = Number(localStorage.getItem(ROWS_KEY));
   return (ROW_OPTIONS as readonly number[]).includes(saved) ? saved : ROWS;
+}
+
+function savedStartFill(): TenStartFill {
+  return localStorage.getItem(START_FILL_KEY) === 'third' ? 'third' : 'full';
+}
+
+function savedRowsPerAdd(): number {
+  const saved = Number(localStorage.getItem(ROWS_PER_ADD_KEY));
+  return (ROWS_PER_ADD_OPTIONS as readonly number[]).includes(saved)
+    ? saved
+    : ROWS_PER_ADD_OPTIONS[0];
+}
+
+function savedWrapRows(): boolean {
+  return localStorage.getItem(WRAP_ROWS_KEY) === 'true';
 }
 
 function VibeTen() {
@@ -145,6 +171,9 @@ function VibeTen() {
   const [addRowEnabled, setAddRowEnabled] = useState(savedAddRow);
   const [columns, setColumns] = useState(savedColumns);
   const [rows, setRows] = useState(savedRows);
+  const [startFill, setStartFill] = useState<TenStartFill>(savedStartFill);
+  const [rowsPerAdd, setRowsPerAdd] = useState(savedRowsPerAdd);
+  const [wrapRows, setWrapRows] = useState(savedWrapRows);
 
   const seed = gameId ? snapshot.seed : soloSeed;
   const waitingForHost = Boolean(gameId) && !snapshot.started;
@@ -157,8 +186,16 @@ function VibeTen() {
     if (seed == null || dealtSeed.current === seed) return;
     dealtSeed.current = seed;
     // A room's board is the shape the host dealt; a solo board is this
-    // player's choice.
-    setBoard(gameId ? newBoard(seed, snapshot.columns, snapshot.rows) : newBoard(seed, columns, rows));
+    // player's choice. A third-filled board goes with the new-row offer, and a
+    // room always starts full so everybody's board is the same size.
+    const startRows = !gameId && addRowEnabled && startFill === 'third'
+      ? Math.max(1, Math.floor(rows / 3))
+      : rows;
+    setBoard(
+      gameId
+        ? newBoard(seed, snapshot.columns, snapshot.rows, snapshot.rows, wrapRows)
+        : newBoard(seed, columns, rows, startRows, wrapRows),
+    );
     setSelected(null);
     setScore(0);
     setFinished(false);
@@ -336,12 +373,19 @@ function VibeTen() {
     }
   }
 
-  /** Pushes a fresh row in at the bottom, when the top of the grid is free. */
+  /** Hangs fresh rows under the digits: as many as a press deals, or as many
+      as the grid still has room for. */
   function dealRow() {
     if (!board || !canPlay) return;
-    const digits = Array.from({ length: board.columns }, () => 1 + Math.floor(Math.random() * 9));
-    const next = addRow(board, digits);
-    if (!next) return;
+    let next = board;
+    const wanted = Math.min(rowsPerAdd, roomForRows(next));
+    for (let index = 0; index < wanted; index += 1) {
+      const digits = Array.from({ length: next.columns }, () => 1 + Math.floor(Math.random() * 9));
+      const moved = addRow(next, digits);
+      if (!moved) break;
+      next = moved;
+    }
+    if (next === board) return;
     setBoard(next);
     setSelected(null);
     setNotice('');
@@ -360,11 +404,15 @@ function VibeTen() {
   /** The shape is a choice for a new game, not for one under way. */
   const shapeLocked = board !== null;
 
-  /** So is the pair setting, with two differences: a room waiting for its host
-      has not begun, so the choice is still there, and a finished round counts as
-      over. The new-row switch is not locked at all — it is an offer that comes
-      and goes during play. */
+  /** The pair setting is a choice for a new game too, with two differences: a
+      room waiting for its host has not begun, so the choice is still there, and
+      a finished round counts as over. The new-row switch is not locked at all —
+      it is an offer that comes and goes during play. */
   const modeLocked = board !== null && !finished && !waitingForHost;
+
+  /** The fill and the rows a press deals are solo choices, and only with the
+      new-row offer on: the rows are what fills a part-filled board. */
+  const rowSupplyEditable = !gameId && !modeLocked && addRowEnabled;
 
   function chooseColumns(next: number) {
     setColumns(next);
@@ -374,6 +422,21 @@ function VibeTen() {
   function chooseRows(next: number) {
     setRows(next);
     localStorage.setItem(ROWS_KEY, String(next));
+  }
+
+  function chooseStartFill(next: TenStartFill) {
+    setStartFill(next);
+    localStorage.setItem(START_FILL_KEY, next);
+  }
+
+  function chooseRowsPerAdd(next: number) {
+    setRowsPerAdd(next);
+    localStorage.setItem(ROWS_PER_ADD_KEY, String(next));
+  }
+
+  function chooseWrapRows(on: boolean) {
+    setWrapRows(on);
+    localStorage.setItem(WRAP_ROWS_KEY, String(on));
   }
 
   function playAgain() {
@@ -457,6 +520,7 @@ function VibeTen() {
             onAddRow={
               !gameId && !finished && addRowEnabled && canAddRow(board) ? dealRow : undefined
             }
+            rowsPerAdd={rowsPerAdd}
           />
 
           {finished && (
@@ -492,6 +556,39 @@ function VibeTen() {
                 : 'Fewer columns and rows means bigger digits. Choose it before you start; in a room everybody plays the shape the host dealt.'
             }
           >
+            <p className="ten__setting-label">Start with</p>
+            <div className="game-sheet__choices" role="group" aria-label="Start with">
+              {(['full', 'third'] as TenStartFill[]).map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={startFill === choice}
+                  aria-pressed={startFill === choice}
+                  disabled={!rowSupplyEditable}
+                  onClick={() => chooseStartFill(choice)}
+                >
+                  {START_FILL_LABELS[choice].title}
+                </button>
+              ))}
+            </div>
+            <p className="ten__setting-label">Rows per press</p>
+            <div className="game-sheet__choices" role="group" aria-label="Rows per press">
+              {ROWS_PER_ADD_OPTIONS.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={rowsPerAdd === choice}
+                  aria-pressed={rowsPerAdd === choice}
+                  disabled={!rowSupplyEditable}
+                  onClick={() => chooseRowsPerAdd(choice)}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+
             <p className="ten__setting-label">Columns</p>
             <div className="game-sheet__choices" role="group" aria-label="Columns">
               {COLUMN_OPTIONS.map((choice) => (
@@ -550,12 +647,19 @@ function VibeTen() {
               ))}
             </div>
             <p>{MODE_LABELS[mode].blurb}</p>
+            <SettingsToggle
+              label="Rows join end to end"
+              note="The last square of a row is next to the first of the row below"
+              on={wrapRows}
+              onChange={chooseWrapRows}
+              disabled={modeLocked}
+            />
           </SettingsSection>
 
           <SettingsSection title="Adding rows">
             <SettingsToggle
               label="Offer a new row"
-              note="Solo games only: a button on the empty top row pushes a fresh row in at the bottom"
+              note="Solo games only: the button on the empty bottom row hangs fresh rows underneath"
               on={addRowEnabled}
               onChange={chooseAddRow}
             />
@@ -590,11 +694,13 @@ function Board(props: {
   selected: Position | null;
   onTap: (position: Position) => void;
   disabled: boolean;
-  /** Set when the empty top row should carry the new-row button. */
+  /** Set when the empty bottom row should carry the new-row button. */
   onAddRow?: () => void;
+  /** How many rows one press deals, for the button's words. */
+  rowsPerAdd?: number;
 }) {
-  const rowNumbers = Array.from({ length: props.board.rows },
-                                 (_, index) => props.board.rows - 1 - index);
+  // Row 0 is the top row: the board hangs from the top, so a gap closes upward.
+  const rowNumbers = Array.from({ length: props.board.rows }, (_, index) => index);
   return (
     <div
       className="ten__board-wrap"
@@ -650,8 +756,18 @@ function Board(props: {
       {/* The top row is dead space while it is empty, so the offer to push a
           fresh row in lives there rather than in a strip of its own. */}
       {props.onAddRow && (
-        <button type="button" className="ten__add-row" onClick={props.onAddRow}>
-          <span aria-hidden="true">＋</span> Add a row
+        <button
+          type="button"
+          className="ten__add-row"
+          onClick={props.onAddRow}
+          aria-label={
+            (props.rowsPerAdd ?? 1) === 1
+              ? 'Add a row at the bottom'
+              : `Add ${props.rowsPerAdd} rows at the bottom`
+          }
+        >
+          <span aria-hidden="true">＋</span>{' '}
+          {(props.rowsPerAdd ?? 1) === 1 ? 'Add a row' : `Add ${props.rowsPerAdd} rows`}
         </button>
       )}
     </div>

@@ -66,11 +66,11 @@ final class VibeTenScreenshots: XCTestCase {
         openSoloBoard(app)
 
         let addRow = app.buttons["ten.addRow"]
-        let takes = try XCTUnwrap(TenPlan.takesFreeingTheTopRow(startingFrom: app.tenCells),
-                                  "this deal offers no way to clear the top row")
+        let takes = try XCTUnwrap(TenPlan.takesFreeingTheBottomRow(startingFrom: app.tenCells),
+                                  "this deal offers no way to clear the bottom row")
         for pair in takes { app.tenTap(pair) }
         XCTAssertTrue(addRow.waitForExistence(timeout: 3),
-                      "the top row should be free after \(takes.count) pairs")
+                      "the bottom row should be free after \(takes.count) pairs")
         tenAttach(app, named: "ten-new-row")
         app.terminate()
     }

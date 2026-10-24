@@ -47,7 +47,9 @@
    space while it is empty, so nothing else on the screen has to move. */
 .ten__add-row {
   position: absolute;
-  top: 0;
+  /* The bottom edge: the board hangs from the top, so the new rows arrive
+     underneath and this is the empty row they drop into. */
+  bottom: 0;
   left: 0;
   right: 0;
   height: calc((100% - (var(--ten-columns, 9) - 1) * var(--ten-gap))
