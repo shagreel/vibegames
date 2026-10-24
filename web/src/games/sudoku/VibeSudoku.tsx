@@ -473,6 +473,7 @@ function VibeSudoku() {
         }
         onBack={screen === 'game' && gameId ? leave : undefined}
         backLabel={screen === 'game' && gameId ? 'Leave game' : undefined}
+        code={gameId}
       >
         <SupportButton game="sudoku" />
         <SettingsButton prefix="sudoku" onClick={() => setSettingsOpen(true)} />

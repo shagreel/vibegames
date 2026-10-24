@@ -129,6 +129,12 @@ struct GameInstructions {
                     body: "Taking a pair leaves a hole, and the digits above it drop into it. "
                         + "Half the game is deciding which pair to take first, because every "
                         + "take changes what is next to what."),
+            Section(title: "The board's size",
+                    body: "In the game settings the grid can be **six to nine columns** and "
+                        + "**twelve to eighteen rows** — the full board unless you choose "
+                        + "otherwise. Fewer squares means bigger digits, and the grid always "
+                        + "fills the screen. It applies to the next board you deal; a room "
+                        + "plays the shape the host dealt, so everybody's board matches."),
             Section(title: "Dim mode",
                     body: "In the game settings, **Dim** leaves a taken pair on the board, "
                         + "greyed out, instead of removing it. A dimmed digit is gone as far as "
@@ -148,8 +154,8 @@ struct GameInstructions {
                         + "to whoever ran out of moves first."),
         ],
         bullets: [
-            Bullet(lead: "Solo", text: "A fresh board whenever you want one, and a new row "
-                        + "whenever the top of the grid is free."),
+            Bullet(lead: "Solo", text: "A fresh board whenever you want one, any shape you "
+                        + "like, and a new row whenever the top of the grid is free."),
             Bullet(lead: "Room", text: "The same board for everyone. Most pairs wins."),
         ])
 

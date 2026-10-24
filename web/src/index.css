@@ -175,15 +175,16 @@ body {
    component's worth of markup with five sets of class names, so the layout
    and the type live here, once, and each game keeps only what is its own.
 
-   `position: absolute` with no `top` on the back and the corner is deliberate:
-   a flex container's centred alignment places them, so nothing needs a
-   transform — and a transform anywhere around the heart is what made the
-   support panel lay itself out inside a 40x40 box (see Support.tsx). */
+   Nothing here is positioned with a transform — a transform anywhere around the
+   heart is what made the support panel lay itself out inside a 40x40 box (see
+   Support.tsx). The back button, the name and the corner are three flex
+   children, so the name gets exactly the space between the buttons and a long
+   game name shrinks instead of running underneath them. */
 .game-header {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.6rem;
   /* One height whether or not the game has a subtitle under its name: the
      board below should not move when one appears mid-game, and four headers at
      74px and one at 58px is the inconsistency this whole block exists to end. */
@@ -192,20 +193,21 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.game-header .back-to-games {
-  position: absolute;
-  left: 0.75rem;
+.game-header .back-to-games,
+.game-header .game-header__back {
+  flex: 0 0 auto;
 }
 
 .game-header .game-header__corner {
-  position: absolute;
-  right: 0.75rem;
+  margin-left: auto;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
 .game-header .game-header__title {
+  flex: 1 1 auto;
   min-width: 0;
   text-align: center;
 }
@@ -213,10 +215,17 @@ body {
 .game-header .game-header__title h1,
 .game-header .game-header__title strong {
   margin: 0;
-  font-size: 1.05rem;
+  /* Shrinks with the screen rather than running under the corner. */
+  font-size: clamp(0.82rem, 4vw, 1.05rem);
   font-weight: 800;
-  letter-spacing: 0.26em;
+  letter-spacing: clamp(0.15em, 0.6vw, 0.26em);
   text-transform: uppercase;
+  /* The safety net: a name too long for the space left is cut with an ellipsis
+     rather than drawn under the corner's buttons. */
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .game-header .game-header__title p,
@@ -226,6 +235,25 @@ body {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink-faint);
+}
+
+/* On the narrowest phones the back pill's word and a few pixels of every
+   corner button are the difference between a game name that fits and one that
+   is cut with an ellipsis. */
+@media (max-width: 380px) {
+  .game-header .back-to-games span {
+    display: none;
+  }
+
+  .game-header .back-to-games {
+    padding: 0.45rem 0.5rem;
+  }
+
+  .game-header .game-settings-button,
+  .game-header .game-header-code {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
 }
 
 /* ── the game lobby ───────────────────────────────────────────────────────
@@ -586,6 +614,63 @@ body {
 
 .game-settings-button:hover {
   background: var(--raise-2);
+}
+
+/* The room's code, in the corner of every header that has one. The same button
+   as the settings one beside it, so the pair read as one set of controls. */
+.game-header-code {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raise);
+  cursor: pointer;
+}
+
+.game-header-code svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.game-header-code:hover {
+  background: var(--raise-2);
+}
+
+/* The code itself: big enough to read across a table, with the link under it. */
+.room-code__value {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: var(--ink);
+}
+
+.room-code__hint,
+.room-code__link {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: center;
+  word-break: break-all;
+}
+
+.room-code__copy {
+  padding: 0.85rem 1.2rem;
+  border: none;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--lobby-a, #4585f5), var(--lobby-b, #21b8a8));
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 /* ── a message that does not move the board ───────────────────────────────

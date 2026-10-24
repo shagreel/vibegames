@@ -225,7 +225,7 @@ final class VibeTenDimTests: XCTestCase {
         var board = self.board([
             [1, 9], [2, 8], [3, 7], [4, 6], [5, 5], [6, 4], [7, 3], [8, 2], [9, 1]
         ])
-        for column in 0..<VibeTenBoard.columnCount {
+        for column in 0..<board.columns {
             XCTAssertNotNil(board.take(.init(column: column, row: 0),
                                        .init(column: column, row: 1), mode: .dim))
         }
@@ -264,5 +264,103 @@ final class VibeTenAddRowTests: XCTestCase {
             Array(repeating: 3, count: $0 == 4 ? 18 : 17)
         })
         XCTAssertFalse(tall.canAddRow, "a single digit on the top row is in the way")
+    }
+}
+
+/// The board's shape: how many columns and rows a game is dealt with.
+final class VibeTenShapeTests: XCTestCase {
+
+    func testEveryShapeDealsAFullGrid() {
+        for columns in VibeTenBoard.columnOptions {
+            for rows in VibeTenBoard.rowOptions {
+                let board = VibeTenBoard(seed: 12_345, columns: columns, rows: rows)
+                XCTAssertEqual(board.columns, columns)
+                XCTAssertEqual(board.rows, rows)
+                XCTAssertEqual(board.values.count, columns, "\(columns)x\(rows): columns")
+                for column in board.values {
+                    XCTAssertEqual(column.count, rows, "\(columns)x\(rows): rows")
+                    XCTAssertTrue(column.allSatisfy { (1...9).contains($0) },
+                                  "\(columns)x\(rows): digits one to nine")
+                }
+                XCTAssertEqual(board.remaining, columns * rows)
+            }
+        }
+    }
+
+    /// Nine values into a grid that is not a multiple of nine: as even as the
+    /// shape allows, so a smaller board is still the same game.
+    func testTheDigitsAreSpreadAsEvenlyAsTheShapeAllows() {
+        for columns in VibeTenBoard.columnOptions {
+            for rows in VibeTenBoard.rowOptions {
+                let total = columns * rows
+                let counts = VibeTenBoard(seed: 99, columns: columns, rows: rows)
+                    .values.flatMap { $0 }
+                    .reduce(into: [Int: Int]()) { $0[$1, default: 0] += 1 }
+
+                XCTAssertEqual(counts.count, 9, "\(columns)x\(rows): every digit is there")
+                let smallest = counts.values.min() ?? 0
+                let largest = counts.values.max() ?? 0
+                XCTAssertLessThanOrEqual(largest - smallest, 1,
+                                         "\(columns)x\(rows): counts should differ by at most one")
+                XCTAssertEqual(counts.values.reduce(0, +), total)
+            }
+        }
+    }
+
+    func testTheShapeIsPartOfTheDeal() {
+        XCTAssertEqual(VibeTenBoard(seed: 7, columns: 6, rows: 12).values,
+                       VibeTenBoard(seed: 7, columns: 6, rows: 12).values)
+        XCTAssertNotEqual(VibeTenBoard(seed: 7, columns: 6, rows: 12).values,
+                          VibeTenBoard(seed: 7, columns: 6, rows: 14).values,
+                          "two rows more is a different board")
+        XCTAssertNotEqual(VibeTenBoard(seed: 7, columns: 6, rows: 12).values,
+                          VibeTenBoard(seed: 8, columns: 6, rows: 12).values,
+                          "and so is another seed")
+        // The default is the board the game shipped with: nine by eighteen.
+        XCTAssertEqual(VibeTenBoard(seed: 7).values,
+                       VibeTenBoard(seed: 7, columns: 9, rows: 18).values)
+    }
+
+    func testASmallerBoardIsFullUntilItIsNot() {
+        var board = VibeTenBoard(seed: 31, columns: 6, rows: 12)
+        XCTAssertFalse(board.canAddRow, "twelve rows of six is full")
+
+        for _ in 0..<6 {
+            guard let pair = board.availableMatches().first else { break }
+            board.take(pair.0, pair.1, mode: .remove)
+        }
+        XCTAssertLessThan(board.height(ofColumn: 0), 12)
+    }
+
+    /// A row is complete when every column of *this* board has been dimmed in
+    /// it — six columns is a whole row on a six-column board.
+    func testARowClearsAcrossTheBoardsOwnColumns() {
+        // Six columns, so six dimmed digits in the bottom row is a whole row:
+        // 1+9, 2+8, 3+7.
+        var board = VibeTenBoard(stacks: [[1, 9], [9, 8], [2, 7], [8, 6], [3, 5], [7, 4]],
+                                 columns: 6, rows: 2)
+        for (left, right) in [(0, 1), (2, 3)] {
+            XCTAssertNotNil(board.take(.init(column: left, row: 0),
+                                       .init(column: right, row: 0), mode: .dim))
+        }
+        XCTAssertEqual(board.height(ofColumn: 0), 2, "four of six is not a row")
+
+        let result = board.take(.init(column: 4, row: 0), .init(column: 5, row: 0), mode: .dim)
+        XCTAssertEqual(result?.rowsCleared, [0], "the sixth column completes the row")
+        XCTAssertEqual(board.height(ofColumn: 0), 1)
+    }
+
+    /// The app and the browser have to deal the same small board from the same
+    /// number, or a room of six-column games is two different games.
+    func testASmallerBoardMatchesTheFixtureTheWebUses() {
+        let expected: [[Int]] = [
+            [7, 6, 3, 4, 7, 7, 5, 3, 4, 8, 1, 4],
+            [2, 7, 9, 9, 8, 9, 4, 6, 5, 1, 3, 3],
+            [6, 1, 7, 2, 1, 5, 3, 5, 1, 8, 3, 8],
+            [6, 2, 8, 4, 8, 6, 2, 2, 5, 9, 6, 1],
+            [4, 5, 4, 2, 1, 9, 9, 8, 8, 5, 7, 1],
+            [7, 7, 5, 6, 6, 3, 4, 9, 3, 9, 2, 2]
+        ]
+        XCTAssertEqual(VibeTenBoard(seed: 1234, columns: 6, rows: 12).values, expected)
     }
 }

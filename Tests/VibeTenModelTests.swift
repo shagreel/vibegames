@@ -8,14 +8,20 @@ final class VibeTenModelTests: XCTestCase {
 
     private var savedMode: Any?
     private var savedRow: Any?
+    private var savedColumns: Any?
+    private var savedRows: Any?
 
     override func setUp() {
         super.setUp()
         let defaults = UserDefaults.standard
         savedMode = defaults.object(forKey: VibeTenModel.modeKey)
         savedRow = defaults.object(forKey: VibeTenModel.addRowKey)
+        savedColumns = defaults.object(forKey: VibeTenModel.columnsKey)
+        savedRows = defaults.object(forKey: VibeTenModel.rowsKey)
         defaults.removeObject(forKey: VibeTenModel.modeKey)
         defaults.removeObject(forKey: VibeTenModel.addRowKey)
+        defaults.removeObject(forKey: VibeTenModel.columnsKey)
+        defaults.removeObject(forKey: VibeTenModel.rowsKey)
     }
 
     override func tearDown() {
@@ -24,6 +30,8 @@ final class VibeTenModelTests: XCTestCase {
         // here before" has to mean.
         defaults.set(savedMode, forKey: VibeTenModel.modeKey)
         defaults.set(savedRow, forKey: VibeTenModel.addRowKey)
+        defaults.set(savedColumns, forKey: VibeTenModel.columnsKey)
+        defaults.set(savedRows, forKey: VibeTenModel.rowsKey)
         super.tearDown()
     }
 
@@ -31,6 +39,36 @@ final class VibeTenModelTests: XCTestCase {
         let model = VibeTenModel()
         XCTAssertEqual(model.mode, .remove)
         XCTAssertTrue(model.addRowEnabled, "solo players get the extra row unless they turn it off")
+        XCTAssertEqual(model.columns, 9, "the board the game shipped with")
+        XCTAssertEqual(model.rows, 18)
+    }
+
+    /// The shape is a setting, so a solo board is dealt the size it says — and a
+    /// size that is not one of the four is not a board this game has.
+    func testASoloBoardIsDealtTheChosenShape() {
+        UserDefaults.standard.set(6, forKey: VibeTenModel.columnsKey)
+        UserDefaults.standard.set(12, forKey: VibeTenModel.rowsKey)
+        let model = VibeTenModel()
+        model.playSolo()
+
+        XCTAssertEqual(model.board?.columns, 6)
+        XCTAssertEqual(model.board?.rows, 12)
+        XCTAssertEqual(model.board?.remaining, 72)
+
+        model.columns = 7
+        model.rows = 14
+        XCTAssertEqual(model.board?.columns, 6, "the board in play keeps the shape it was dealt")
+        model.playSolo()
+        XCTAssertEqual(model.board?.columns, 7, "and the next one follows the setting")
+        XCTAssertEqual(model.board?.rows, 14)
+    }
+
+    func testAShapeThatIsNotOfferedIsIgnored() {
+        UserDefaults.standard.set(12, forKey: VibeTenModel.columnsKey)
+        UserDefaults.standard.set(20, forKey: VibeTenModel.rowsKey)
+        let model = VibeTenModel()
+        XCTAssertEqual(model.columns, 9)
+        XCTAssertEqual(model.rows, 18)
     }
 
     func testDimModeLeavesThePairOnTheBoard() {

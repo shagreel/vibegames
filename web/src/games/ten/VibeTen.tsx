@@ -17,8 +17,10 @@ import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayer
 import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
   COLUMNS,
+  COLUMN_OPTIONS,
   MODE_LABELS,
   ROWS,
+  ROW_OPTIONS,
   addRow,
   availableMatches,
   canAddRow,
@@ -72,6 +74,10 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
       body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything above drops one row.',
     },
     {
+      title: "The board's size",
+      body: 'In the settings the grid can be **six to nine columns** and **twelve to eighteen rows**, the full board by default: fewer squares means bigger digits, and the grid always fills the screen. It applies to the next board you deal, and a room plays the shape the host dealt so everybody\'s board matches.',
+    },
+    {
       title: 'A new row, solo',
       body: 'Playing alone, you can push a fresh row in at the bottom — but only while the top row of the grid is empty. A button appears in that empty row when there is room: tap it and the new digits arrive underneath, with everything else moving up one. It is a solo-only button: in a room everybody plays the board they were dealt.',
     },
@@ -90,6 +96,8 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     are how this player likes to play it. */
 const MODE_KEY = 'vibegames.ten.mode';
 const ADD_ROW_KEY = 'vibegames.ten.addRow';
+const COLUMNS_KEY = 'vibegames.ten.columns';
+const ROWS_KEY = 'vibegames.ten.rows';
 
 function savedMode(): TenMode {
   return localStorage.getItem(MODE_KEY) === 'dim' ? 'dim' : 'remove';
@@ -97,6 +105,17 @@ function savedMode(): TenMode {
 
 function savedAddRow(): boolean {
   return localStorage.getItem(ADD_ROW_KEY) !== 'false';
+}
+
+/** The board's shape: one of the four in each direction, or the full board. */
+function savedColumns(): number {
+  const saved = Number(localStorage.getItem(COLUMNS_KEY));
+  return (COLUMN_OPTIONS as readonly number[]).includes(saved) ? saved : COLUMNS;
+}
+
+function savedRows(): number {
+  const saved = Number(localStorage.getItem(ROWS_KEY));
+  return (ROW_OPTIONS as readonly number[]).includes(saved) ? saved : ROWS;
 }
 
 function VibeTen() {
@@ -124,6 +143,8 @@ function VibeTen() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<TenMode>(savedMode);
   const [addRowEnabled, setAddRowEnabled] = useState(savedAddRow);
+  const [columns, setColumns] = useState(savedColumns);
+  const [rows, setRows] = useState(savedRows);
 
   const seed = gameId ? snapshot.seed : soloSeed;
   const waitingForHost = Boolean(gameId) && !snapshot.started;
@@ -135,7 +156,9 @@ function VibeTen() {
   useEffect(() => {
     if (seed == null || dealtSeed.current === seed) return;
     dealtSeed.current = seed;
-    setBoard(newBoard(seed));
+    // A room's board is the shape the host dealt; a solo board is this
+    // player's choice.
+    setBoard(gameId ? newBoard(seed, snapshot.columns, snapshot.rows) : newBoard(seed, columns, rows));
     setSelected(null);
     setScore(0);
     setFinished(false);
@@ -143,6 +166,9 @@ function VibeTen() {
     setFinishedAt(null);
     setNotice('');
     trackGameStart(GAMES.ten, { mode: gameId ? 'shared' : 'solo' });
+    // The shape is read as the board is dealt, like the mode: changing it must
+    // not re-deal a board somebody is in the middle of.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed, gameId]);
 
   // A room's scores and roster, live. Only the seed rebuilds the board.
@@ -231,7 +257,7 @@ function VibeTen() {
     withName(() => {
       const newId = makeGameCode();
       const newSeed = randomSeed();
-      void createGame(newId, newSeed, playerName(), id)
+      void createGame(newId, newSeed, columns, rows, playerName(), id)
         .then(() => {
           hostedGame(newId);
           setIsHost(true);
@@ -313,7 +339,7 @@ function VibeTen() {
   /** Pushes a fresh row in at the bottom, when the top of the grid is free. */
   function dealRow() {
     if (!board || !canPlay) return;
-    const digits = Array.from({ length: COLUMNS }, () => 1 + Math.floor(Math.random() * 9));
+    const digits = Array.from({ length: board.columns }, () => 1 + Math.floor(Math.random() * 9));
     const next = addRow(board, digits);
     if (!next) return;
     setBoard(next);
@@ -329,6 +355,16 @@ function VibeTen() {
   function chooseAddRow(on: boolean) {
     setAddRowEnabled(on);
     localStorage.setItem(ADD_ROW_KEY, String(on));
+  }
+
+  function chooseColumns(next: number) {
+    setColumns(next);
+    localStorage.setItem(COLUMNS_KEY, String(next));
+  }
+
+  function chooseRows(next: number) {
+    setRows(next);
+    localStorage.setItem(ROWS_KEY, String(next));
   }
 
   function playAgain() {
@@ -355,29 +391,9 @@ function VibeTen() {
         subtitle={subtitle}
         onBack={gameId && !waitingForHost ? leave : undefined}
         backLabel="Leave game"
+        code={gameId}
       >
         <SupportButton game={GAMES.ten} />
-        {gameId && (
-          <button
-            type="button"
-            className="ten__share game-settings-button"
-            aria-label="Share game code"
-            onClick={() => {
-              trackShare(GAMES.ten, 'game');
-              const link = `${window.location.origin}/ten?game=${gameId}`;
-              // Said only once it has worked, or with the link itself when the
-              // browser will not copy for us.
-              navigator.clipboard.writeText(link).then(
-                () => setNotice('Link copied. Anyone who taps it lands in this room.'),
-                () => setNotice(`Could not copy the link. It is ${link}`),
-              );
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 16V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" />
-            </svg>
-          </button>
-        )}
         <SettingsButton prefix="ten" onClick={() => setSettingsOpen(true)} />
       </GameHeader>
 
@@ -460,6 +476,42 @@ function VibeTen() {
       {settingsOpen && (
         <GameSettings prefix="ten" onClose={() => setSettingsOpen(false)}>
           <SettingsSection
+            title="The board"
+            note="Fewer columns and rows means bigger digits. Applies to the next board you deal; in a room everybody plays the shape the host dealt."
+          >
+            <p className="ten__setting-label">Columns</p>
+            <div className="game-sheet__choices" role="group" aria-label="Columns">
+              {COLUMN_OPTIONS.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={columns === choice}
+                  aria-pressed={columns === choice}
+                  onClick={() => chooseColumns(choice)}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+            <p className="ten__setting-label">Rows</p>
+            <div className="game-sheet__choices" role="group" aria-label="Rows">
+              {ROW_OPTIONS.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={rows === choice}
+                  aria-pressed={rows === choice}
+                  onClick={() => chooseRows(choice)}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+          </SettingsSection>
+
+          <SettingsSection
             title="When a pair is matched"
             note="Applies to the pairs you take from here on."
           >
@@ -521,12 +573,21 @@ function Board(props: {
   /** Set when the empty top row should carry the new-row button. */
   onAddRow?: () => void;
 }) {
-  const rows = Array.from({ length: ROWS }, (_, index) => ROWS - 1 - index);
+  const rowNumbers = Array.from({ length: props.board.rows },
+                                 (_, index) => props.board.rows - 1 - index);
   return (
-    <div className="ten__board-wrap">
+    <div
+      className="ten__board-wrap"
+      style={{
+        // The grid's shape, for the CSS: fewer columns and rows means bigger
+        // squares, still filling the width it is given.
+        ['--ten-columns' as string]: props.board.columns,
+        ['--ten-rows' as string]: props.board.rows,
+      } as React.CSSProperties}
+    >
       <div className="ten__board" role="grid" aria-label="Vibe Ten board">
-        {rows.map((row) =>
-          Array.from({ length: COLUMNS }, (_, column) => {
+        {rowNumbers.map((row) =>
+          Array.from({ length: props.board.columns }, (_, column) => {
             const position = { column, row };
             const entry = cellAt(props.board, position);
             if (!entry) {

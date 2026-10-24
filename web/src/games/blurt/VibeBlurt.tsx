@@ -8,7 +8,7 @@ import { RoundOver } from '../../hub/RoundOver';
 import { MAX_NAME_LENGTH, hostedGame, isHosting, playerId, playerName, setPlayerName } from '../../identity';
 import { GAMES, trackGameFinish, trackGameStart } from '../../analytics';
 import { shortId } from '../../lib/shortId';
-import { displayGameCode, makeGameCode, normaliseGameCode } from '../../lib/gameCode';
+import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
   LONGEST_SECONDS,
   MINIMUM_PLAYERS,
@@ -194,7 +194,6 @@ function VibeBlurt() {
     </GameSettings>
   ) : null;
 
-  const [showCode, setShowCode] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [packs, setPacks] = useState<string[]>(loadPacks);
 
@@ -567,12 +566,7 @@ function VibeBlurt() {
 
   return (
     <div className="blurt">
-      <BlurtHeader
-        onLeave={leave}
-        gameId={gameId}
-        onShowCode={() => setShowCode(true)}
-        onShowSettings={() => setShowSettings(true)}
-      />
+      <BlurtHeader onLeave={leave} gameId={gameId} onShowSettings={() => setShowSettings(true)} />
 
       {/* The names matter as much as the scores: with four people passing one
           word around, the first thing anybody asks is which side they are on. */}
@@ -716,7 +710,6 @@ function VibeBlurt() {
       )}
 
       {settingsSheet}
-      {showCode && <CodeSheet gameId={gameId} onClose={() => setShowCode(false)} />}
       {askingForName && <NamePrompt onSubmit={submitName} />}
     </div>
   );
@@ -727,12 +720,10 @@ function VibeBlurt() {
 function BlurtHeader({
   onLeave,
   gameId,
-  onShowCode,
   onShowSettings,
 }: {
   onLeave: (() => void) | null;
   gameId: string | null;
-  onShowCode?: (() => void) | null;
   onShowSettings: () => void;
 }) {
   return (
@@ -742,60 +733,11 @@ function BlurtHeader({
       subtitle={gameId ? `First to ${TARGET}` : "Describe it. Don't say it."}
       onBack={onLeave ?? undefined}
       backLabel="Leave game"
+      code={gameId}
     >
       <SupportButton game="blurt" />
       <SettingsButton prefix="blurt" onClick={onShowSettings} />
-      {onShowCode && (
-        <button
-          type="button"
-          className="blurt__code-button"
-          onClick={onShowCode}
-          aria-label="Game code"
-        >
-          {/* A person with a plus, not the sliders it used to be: those mean
-              "settings" in Vibe Five, and the same glyph for two different
-              things is what made these buttons unreadable. */}
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="9" cy="8" r="3.2" />
-            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
-            <path d="M17 8v6M14 11h6" />
-          </svg>
-        </button>
-      )}
     </GameHeader>
-  );
-}
-
-/** The code on its own, for a game already in progress. */
-function CodeSheet({ gameId, onClose }: { gameId: string; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const inviteUrl = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
-
-  return (
-    <div className="blurt__overlay" role="dialog" aria-label="Game code">
-      <div className="blurt__sheet">
-        <h2>Game code</h2>
-        <p className="blurt__code-value">{displayGameCode(gameId)}</p>
-        <p className="blurt__hint">
-          Read it out. Anyone who joins now goes on the smaller team, and the game carries on.
-        </p>
-        <button
-          type="button"
-          className="blurt__primary"
-          onClick={() => {
-            void navigator.clipboard
-              .writeText(inviteUrl)
-              .then(() => setCopied(true))
-              .catch(() => setCopied(false));
-          }}
-        >
-          {copied ? 'Link copied' : 'Copy invite link'}
-        </button>
-        <button type="button" className="blurt__skip" onClick={onClose}>
-          Done
-        </button>
-      </div>
-    </div>
   );
 }
 

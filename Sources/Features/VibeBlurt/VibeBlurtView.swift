@@ -366,7 +366,7 @@ struct VibeBlurtView: View {
     @ViewBuilder
     private func turn(_ play: BlurtPlay) -> some View {
         VStack(spacing: 14) {
-            header(title: "SIMILAR VIBE", subtitle: "First to \(BlurtRules.target)")
+            header(title: "SIMILAR VIBE", subtitle: turnSubtitle)
 
             scoreboard(play)
 
@@ -790,6 +790,13 @@ struct VibeBlurtView: View {
     }
 
     // MARK: - Shared pieces
+
+    /// The score to play to, and the room's code: a code nobody can see during a
+    /// turn is a code somebody has to leave the game to find.
+    private var turnSubtitle: String {
+        guard let code = model.sharedGameID else { return "First to \(BlurtRules.target)" }
+        return "First to \(BlurtRules.target) · code \(GameCode.display(code))"
+    }
 
     private func header(title: String, subtitle: String) -> some View {
         GameHeaderBar(title: title,

@@ -33,6 +33,44 @@ final class UtilitiesUITests: XCTestCase {
         attach(app, named: "42-dice-empty")
     }
 
+    /// The decider: one question, one answer, and another with a tap.
+    ///
+    /// There is nothing else on the screen on purpose — it is passed around a
+    /// table and read out loud — so the test reads the card and taps it.
+    func testTheFirstPlayerDeciderAsksAQuestionAndAnswersIt() throws {
+        let app = XCUIApplication()
+        app.launch(withName: "Tester")
+
+        openFirstPlayer(app)
+
+        let card = app.buttons["firstPlayer.card"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "the decider should show a card")
+
+        let first = card.label
+        XCTAssertTrue(first.hasPrefix("Who") || first.hasPrefix("Whose"),
+                      "the card should ask a question: \(first)")
+        XCTAssertTrue(first.contains("goes first"), "and say who starts: \(first)")
+        attach(app, named: "41b-first-player")
+
+        // Another question, and never the same one twice in a row.
+        card.tap()
+        Thread.sleep(forTimeInterval: 0.3)
+        let second = app.buttons["firstPlayer.card"].firstMatch.label
+        XCTAssertTrue(second.hasSuffix("goes first."), "still an instruction: \(second)")
+        let firstQuestion = try XCTUnwrap(first.split(separator: "?").first)
+        XCTAssertFalse(second.hasPrefix(String(firstQuestion)),
+                       "the same question twice running: \(second)")
+
+        // The properties are the usual ones, in the usual corner.
+        app.buttons["firstPlayer.settings"].tap()
+        XCTAssertTrue(app.buttons["firstPlayer.settings"].waitForExistence(timeout: 5),
+                      "the settings button should still be there")
+        XCTAssertTrue(app.descendants(matching: .any)["gameSettings.appearance"]
+                        .firstMatch.waitForExistence(timeout: 5),
+                      "the usual settings sheet should open")
+        attach(app, named: "41c-first-player-settings")
+    }
+
     /// The three things the bag is for: add the dice you have, roll them again,
     /// sweep the table.
     func testAddingRollingAndClearingTheDice() throws {
@@ -175,6 +213,20 @@ final class UtilitiesUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private func openFirstPlayer(_ app: XCUIApplication) {
+        let utilities = app.descendants(matching: .any)["hub.utilities"].firstMatch
+        XCTAssertTrue(utilities.waitForExistence(timeout: 15))
+        utilities.tap()
+
+        let firstPlayer = app.descendants(matching: .any)["utility.firstPlayer"].firstMatch
+        XCTAssertTrue(firstPlayer.waitForExistence(timeout: 5),
+                      "The utilities screen should list the decider")
+        firstPlayer.tap()
+
+        XCTAssertTrue(app.buttons["firstPlayer.card"].waitForExistence(timeout: 5),
+                      "The decider screen should appear")
+    }
 
     private func openDice(_ app: XCUIApplication) {
         let utilities = app.descendants(matching: .any)["hub.utilities"].firstMatch

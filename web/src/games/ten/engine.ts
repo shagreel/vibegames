@@ -12,8 +12,12 @@ import { SeededGenerator, shuffle } from '../../lib/seeded';
  * clients the identical 162 digits and neither can see the other's board.
  */
 
+/** The board a game is dealt with unless another shape is asked for. Columns
+    run 6–9 and rows 12–18: every shape fills the screen with bigger digits. */
 export const COLUMNS = 9;
 export const ROWS = 18;
+export const COLUMN_OPTIONS = [6, 7, 8, 9] as const;
+export const ROW_OPTIONS = [12, 14, 16, 18] as const;
 
 export interface Position {
   readonly column: number;
@@ -50,7 +54,10 @@ export interface TenCell {
 
 export interface TenBoard {
   readonly seed: number;
-  /** Nine columns, each bottom-first, at most `ROWS` digits. */
+  /** How many columns and rows: a room is dealt from the seed *and* these. */
+  readonly columns: number;
+  readonly rows: number;
+  /** The columns, each bottom-first. */
   readonly stacks: readonly (readonly TenCell[])[];
 }
 
@@ -62,22 +69,32 @@ export interface TenMove {
 
 const cell = (value: number): TenCell => ({ value, dimmed: false });
 
-/** Deals a board. Every column starts full: 9 × 18 digits, 18 of each. */
-export function newBoard(seed: number): TenBoard {
+/**
+ * Deals a board. Every column starts full, and the digits are spread as evenly
+ * as the shape allows: `total / 9` of each value, and the first `total % 9`
+ * values one more time — for nine by eighteen that is eighteen of each. The
+ * recipe has to match `VibeTenBoard.deal` exactly, or a room's seed deals two
+ * different boards.
+ */
+export function newBoard(seed: number, columns = COLUMNS, rows = ROWS): TenBoard {
+  const total = columns * rows;
+  const base = Math.floor(total / 9);
+  const extra = total % 9;
+
   const generator = new SeededGenerator(seed);
   const digits: number[] = [];
   for (let value = 1; value <= 9; value += 1) {
-    for (let copy = 0; copy < ROWS; copy += 1) digits.push(value);
+    for (let copy = 0; copy < base + (value <= extra ? 1 : 0); copy += 1) digits.push(value);
   }
   shuffle(digits, generator);
 
   const stacks: TenCell[][] = [];
   let index = 0;
-  for (let column = 0; column < COLUMNS; column += 1) {
-    stacks.push(digits.slice(index, index + ROWS).map(cell));
-    index += ROWS;
+  for (let column = 0; column < columns; column += 1) {
+    stacks.push(digits.slice(index, index + rows).map(cell));
+    index += rows;
   }
-  return { seed, stacks };
+  return { seed, columns, rows, stacks };
 }
 
 /**
@@ -85,10 +102,16 @@ export function newBoard(seed: number): TenBoard {
  * shape is padded to nine columns so a short board means empty columns rather
  * than a narrower grid — the same thing the Swift initialiser does.
  */
-export function boardFromStacks(stacks: number[][], seed = 0): TenBoard {
-  const columns = stacks.slice(0, COLUMNS).map((column) => column.slice(0, ROWS).map(cell));
-  while (columns.length < COLUMNS) columns.push([]);
-  return { seed, stacks: columns };
+export function boardFromStacks(
+  stacks: number[][],
+  seed = 0,
+  shape: { columns?: number; rows?: number } = {},
+): TenBoard {
+  const columns = shape.columns ?? COLUMNS;
+  const rows = shape.rows ?? ROWS;
+  const filled = stacks.slice(0, columns).map((column) => column.slice(0, rows).map(cell));
+  while (filled.length < columns) filled.push([]);
+  return { seed, columns, rows, stacks: filled };
 }
 
 /** The digits in the shape the fixture and the app use. */
@@ -217,7 +240,7 @@ export function take(
       if (position.row < 0 || position.row >= stacks[position.column].length) continue;
       stacks[position.column].splice(position.row, 1);
     }
-    return { board: { seed: board.seed, stacks }, move: { rowsCleared: [] } };
+    return { board: { ...board, stacks }, move: { rowsCleared: [] } };
   }
 
   for (const position of [a, b]) {
@@ -234,7 +257,7 @@ export function take(
   for (;;) {
     const tallest = stacks.reduce((most, column) => Math.max(most, column.length), 0);
     if (row >= tallest) break;
-    if (!isRowComplete({ seed: board.seed, stacks }, row)) {
+    if (!isRowComplete({ ...board, stacks }, row)) {
       row += 1;
       continue;
     }
@@ -245,7 +268,7 @@ export function take(
     // No increment: the row above has just dropped into this one.
   }
 
-  return { board: { seed: board.seed, stacks }, move: { rowsCleared } };
+  return { board: { ...board, stacks }, move: { rowsCleared } };
 }
 
 /** Takes a pair off the board, dropping whatever was above it. */
@@ -255,12 +278,12 @@ export function remove(board: TenBoard, a: Position, b: Position): TenBoard | nu
 
 /** A new row can go on the bottom only while the top of the grid is free. */
 export function canAddRow(board: TenBoard): boolean {
-  return board.stacks.every((column) => column.length < ROWS);
+  return board.stacks.every((column) => column.length < board.rows);
 }
 
 /** Puts a fresh row on the bottom, pushing everything else up one row. */
 export function addRow(board: TenBoard, digits: number[]): TenBoard | null {
-  if (!canAddRow(board) || digits.length < COLUMNS) return null;
+  if (!canAddRow(board) || digits.length < board.columns) return null;
   const stacks = board.stacks.map((column, index) => [cell(digits[index]), ...column]);
-  return { seed: board.seed, stacks };
+  return { ...board, stacks };
 }

@@ -59,6 +59,26 @@ final class VibeTenModel: ObservableObject {
 
     static let addRowKey = "vibeten.addRow"
 
+    /// The board's shape, as the player likes it. A room's board is the shape
+    /// the host dealt, so these apply to solo play and to the rooms this player
+    /// creates; a joiner plays what they were given.
+    @Published var columns: Int {
+        didSet {
+            guard columns != oldValue else { return }
+            UserDefaults.standard.set(columns, forKey: Self.columnsKey)
+        }
+    }
+
+    @Published var rows: Int {
+        didSet {
+            guard rows != oldValue else { return }
+            UserDefaults.standard.set(rows, forKey: Self.rowsKey)
+        }
+    }
+
+    static let columnsKey = "vibeten.columns"
+    static let rowsKey = "vibeten.rows"
+
     @Published private(set) var snapshot = VibeTenSnapshot()
     @Published private(set) var isBusy = false
     @Published var errorMessage: String?
@@ -106,6 +126,14 @@ final class VibeTenModel: ObservableObject {
         addRowEnabled = defaults.object(forKey: Self.addRowKey) == nil
             ? true
             : defaults.bool(forKey: Self.addRowKey)
+        // `integer(forKey:)` rather than a cast: a launch argument arrives as a
+        // string, and a shape that is not one of the four is not a board.
+        let savedColumns = defaults.integer(forKey: Self.columnsKey)
+        columns = VibeTenBoard.columnOptions.contains(savedColumns)
+            ? savedColumns
+            : VibeTenBoard.defaultColumns
+        let savedRows = defaults.integer(forKey: Self.rowsKey)
+        rows = VibeTenBoard.rowOptions.contains(savedRows) ? savedRows : VibeTenBoard.defaultRows
     }
 
     var remaining: Int { board?.remaining ?? 0 }
@@ -184,12 +212,17 @@ final class VibeTenModel: ObservableObject {
         do {
             try await service.createGame(gameID: gameID,
                                          seed: seed,
+                                         columns: columns,
+                                         rows: rows,
                                          creatorName: playerName,
                                          playerID: PlayerIdentity.id)
             UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
             session = .shared(gameID: gameID, isHost: true)
             previousSeed = seed
-            deal(seed: seed)
+            // Dealt with the shape this room was just made with: the observer
+            // for the room arrives a moment later, and the first board must not
+            // be the wrong size for a heartbeat.
+            deal(seed: seed, shape: (columns, rows))
             beginObserving(gameID: gameID)
         } catch {
             FirebaseBootstrapper.record(error, during: "Could not create the game")
@@ -277,8 +310,16 @@ final class VibeTenModel: ObservableObject {
         }
     }
 
-    private func deal(seed: UInt32) {
-        board = VibeTenBoard(seed: seed)
+    /// The shape the next board will be dealt with: the room's when playing in
+    /// one, otherwise the player's own choice.
+    var boardShape: (columns: Int, rows: Int) {
+        if isShared { return (snapshot.columns, snapshot.rows) }
+        return (columns, rows)
+    }
+
+    private func deal(seed: UInt32, shape: (columns: Int, rows: Int)? = nil) {
+        let shape = shape ?? boardShape
+        board = VibeTenBoard(seed: seed, columns: shape.columns, rows: shape.rows)
         boardToken += 1
         startedAt = Date()
         selected = nil
@@ -344,7 +385,7 @@ final class VibeTenModel: ObservableObject {
     func addRow() {
         guard canAddRow, var board else { return }
         var digits: [Int] = []
-        for _ in 0..<VibeTenBoard.columnCount { digits.append(Int.random(in: 1...9)) }
+        for _ in 0..<board.columns { digits.append(Int.random(in: 1...9)) }
         guard board.addRow(digits) else { return }
         self.board = board
         selected = nil

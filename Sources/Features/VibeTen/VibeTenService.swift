@@ -14,18 +14,26 @@ struct VibeTenScore: Equatable {
 ///     ten/{gameId}
 ///       meta/
 ///         seed        1234567890
+///         columns     9
+///         rows        18
 ///         creator     "Alex"
 ///         createdAt   1737052800000
 ///         started     true
 ///       players/{playerId} { name, joinedAt }
 ///       scores/{playerId}  { score, finishedAt }
 ///
-/// The board is never stored: it is a pure function of the seed, so every device
-/// — phone or browser — deals the identical 162 digits from one number. Only the
-/// scores travel, and each player writes their own.
+/// The board is never stored: it is a pure function of the seed and the shape,
+/// so every device — phone or browser — deals the identical digits from three
+/// numbers. The shape is the host's choice, written once when the room is made
+/// and kept for the room's life; only the scores travel, and each player writes
+/// their own.
 struct VibeTenSnapshot: Equatable {
     var exists = false
     var seed: UInt32?
+    /// The board's shape. Rooms made before the choice existed have neither
+    /// field, and read as the full board.
+    var columns = VibeTenBoard.defaultColumns
+    var rows = VibeTenBoard.defaultRows
     var creator: String?
     var started = false
     var restartTime: Date?
@@ -48,6 +56,14 @@ struct VibeTenSnapshot: Equatable {
             if let rawSeed = object["seed"] as? NSNumber {
                 let value = rawSeed.uint64Value
                 if value <= UInt64(UInt32.max) { seed = UInt32(value) }
+            }
+            if let rawColumns = (object["columns"] as? NSNumber)?.intValue,
+               VibeTenBoard.columnOptions.contains(rawColumns) {
+                columns = rawColumns
+            }
+            if let rawRows = (object["rows"] as? NSNumber)?.intValue,
+               VibeTenBoard.rowOptions.contains(rawRows) {
+                rows = rawRows
             }
             if let rawRestart = object["restartTime"] as? NSNumber {
                 restartTime = Date(timeIntervalSince1970: rawRestart.doubleValue / 1000)
@@ -176,12 +192,16 @@ final class VibeTenService {
 
     func createGame(gameID: String,
                     seed: UInt32,
+                    columns: Int,
+                    rows: Int,
                     creatorName: String,
                     playerID: String) async throws {
         guard let reference = gameReference(gameID) else { return }
 
         try await reference.child("meta").setValue([
             "seed": Int(seed),
+            "columns": columns,
+            "rows": rows,
             "creator": creatorName,
             "createdAt": Self.milliseconds(Date()),
             "started": false

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import fixtures from '../games/ten/board.fixtures.json';
 import {
   COLUMNS,
+  COLUMN_OPTIONS,
   ROWS,
+  ROW_OPTIONS,
   addRow,
   availableMatches,
   boardFromStacks,
@@ -27,7 +29,11 @@ import {
  * from `VibeTenBoard.swift` and checked by `VibeTenBoardTests.swift` too.
  */
 
-const board = (columns: number[][]) => boardFromStacks(columns);
+const board = (
+  columns: number[][],
+  seed = 0,
+  shape: { columns?: number; rows?: number } = {},
+) => boardFromStacks(columns, seed, shape);
 
 describe('what pairs', () => {
   it('takes equal digits and digits that add to ten', () => {
@@ -198,5 +204,61 @@ describe('adding a row', () => {
   it('is refused while a column reaches the top row', () => {
     expect(canAddRow(newBoard(7))).toBe(false);
     expect(addRow(newBoard(7), Array(COLUMNS).fill(1))).toBeNull();
+  });
+});
+
+describe('the shape', () => {
+  it('deals a full grid in every shape on offer', () => {
+    for (const columns of COLUMN_OPTIONS) {
+      for (const rows of ROW_OPTIONS) {
+        const grid = newBoard(31337, columns, rows);
+        expect(grid.columns).toBe(columns);
+        expect(grid.rows).toBe(rows);
+        expect(grid.stacks).toHaveLength(columns);
+        grid.stacks.forEach((column) => {
+          expect(column).toHaveLength(rows);
+          column.forEach((entry) => {
+            expect(entry.value).toBeGreaterThanOrEqual(1);
+            expect(entry.value).toBeLessThanOrEqual(9);
+          });
+        });
+        expect(remaining(grid)).toBe(columns * rows);
+      }
+    }
+  });
+
+  it('spreads nine values as evenly as the shape allows', () => {
+    for (const columns of COLUMN_OPTIONS) {
+      for (const rows of ROW_OPTIONS) {
+        const counts = new Map<number, number>();
+        newBoard(99, columns, rows).stacks.flat().forEach((entry) => {
+          counts.set(entry.value, (counts.get(entry.value) ?? 0) + 1);
+        });
+        expect(counts.size).toBe(9);
+        const values = [...counts.values()];
+        expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('is part of the deal', () => {
+    expect(values(newBoard(7, 6, 12))).toEqual(values(newBoard(7, 6, 12)));
+    expect(values(newBoard(7, 6, 12))).not.toEqual(values(newBoard(7, 6, 14)));
+    // The board the app deals for six by twelve, pinned in the same fixture the
+    // Swift test reads: one seed, one shape, one board on both platforms.
+    expect(values(newBoard(1234, 6, 12))).toEqual(fixtures['1234x6x12']);
+  });
+
+  it('counts the top row of its own shape, not of the full board', () => {
+    const cells = [[1, 9], [9, 8], [2, 7], [8, 6], [3, 5], [7, 4]];
+    const full = board(cells, 0, { columns: 6, rows: 2 });
+    expect(canAddRow(full)).toBe(false);
+
+    const shorter = board(cells, 0, { columns: 6, rows: 3 });
+    expect(canAddRow(shorter)).toBe(true);
+    const next = addRow(shorter, [1, 2, 3, 4, 5, 6])!;
+    expect(next.stacks[0]).toHaveLength(3);
+    expect(next.columns).toBe(6);
+    expect(next.rows).toBe(3);
   });
 });

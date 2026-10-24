@@ -313,26 +313,30 @@ struct VibeTenView: View {
 
     private var boardView: some View {
         GeometryReader { geo in
+            // The board's own shape, so a six-column game draws six columns and
+            // the digits grow into the space that leaves.
+            let columns = model.board?.columns ?? VibeTenBoard.defaultColumns
+            let rows = model.board?.rows ?? VibeTenBoard.defaultRows
             let gap: CGFloat = 2
-            let cell = min((geo.size.width - gap * 8) / CGFloat(VibeTenBoard.columnCount),
-                           (geo.size.height - gap * CGFloat(VibeTenBoard.rowCount - 1))
-                               / CGFloat(VibeTenBoard.rowCount))
+            let width = (geo.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+            let height = (geo.size.height - gap * CGFloat(rows - 1)) / CGFloat(rows)
+            let cell = min(width, height)
+            let gridWidth = cell * CGFloat(columns) + gap * CGFloat(columns - 1)
+            let gridHeight = cell * CGFloat(rows) + gap * CGFloat(rows - 1)
 
             HStack(alignment: .bottom, spacing: gap) {
-                ForEach(0..<VibeTenBoard.columnCount, id: \.self) { column in
+                ForEach(0..<columns, id: \.self) { column in
                     VStack(spacing: gap) {
-                        ForEach(Array((0..<VibeTenBoard.rowCount).reversed()), id: \.self) { row in
+                        ForEach(Array((0..<rows).reversed()), id: \.self) { row in
                             cellView(column: column, row: row, size: cell)
                         }
                     }
                 }
             }
-            .frame(width: cell * CGFloat(VibeTenBoard.columnCount) + gap * 8,
-                   height: cell * CGFloat(VibeTenBoard.rowCount) + gap * 17)
+            .frame(width: gridWidth, height: gridHeight)
             .overlay(alignment: .top) {
                 if model.canAddRow {
-                    addRowButton(width: cell * CGFloat(VibeTenBoard.columnCount) + gap * 8,
-                                 height: cell)
+                    addRowButton(width: gridWidth, height: cell)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -582,10 +586,46 @@ struct VibeTenSettingsView: View {
         }
     }
 
+    private var shapeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSectionTitle("The board")
+
+            Text("Columns")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+
+            Picker("Columns", selection: $model.columns) {
+                ForEach(VibeTenBoard.columnOptions, id: \.self) { count in
+                    Text("\(count)").tag(count)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("tenSettings.columns")
+
+            Text("Rows")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+
+            Picker("Rows", selection: $model.rows) {
+                ForEach(VibeTenBoard.rowOptions, id: \.self) { count in
+                    Text("\(count)").tag(count)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("tenSettings.rows")
+
+            Text("Fewer columns and rows means bigger digits. Applies to the next board you deal; in a room everybody plays the shape the host dealt.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
+                    shapeSection
                     modeSection
                     addRowSection
                     GameSettingsSections()

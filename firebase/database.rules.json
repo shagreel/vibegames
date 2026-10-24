@@ -337,6 +337,14 @@
             ".write": true,
             ".validate": "newData.isNumber() || newData.val() === null"
           },
+          "columns": {
+            ".write": "!data.exists()",
+            ".validate": "newData.isNumber() && newData.val() >= 6 && newData.val() <= 9 && newData.val() % 1 === 0"
+          },
+          "rows": {
+            ".write": "!data.exists()",
+            ".validate": "newData.isNumber() && newData.val() >= 12 && newData.val() <= 18 && newData.val() % 1 === 0"
+          },
           "$other": {
             ".validate": false
           }

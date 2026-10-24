@@ -34,32 +34,6 @@
 /* The code, once a game is under way. A peer of the heart rather than an
    overlay on the board: the scoreboard is the busiest screen in the game, and
    the code is only wanted for the few seconds somebody is reading it out. */
-.blurt__code-button {
-  flex: 0 0 auto;
-  width: 2.5rem;
-  height: 2.5rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--raise);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.blurt__code-button svg {
-  width: 1.15rem;
-  height: 1.15rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-}
-
-.blurt__code-button:hover {
-  border-color: var(--line-hover);
-}
-
 /* ── lobby ──────────────────────────────────────────────────────────── */
 
 .blurt__lobby {

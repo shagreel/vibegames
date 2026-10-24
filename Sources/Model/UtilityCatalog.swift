@@ -8,6 +8,7 @@ import SwiftUI
 enum UtilityRoute: Hashable {
     case list
     case dice
+    case firstPlayer
 }
 
 /// A tool on the utilities screen. The shape of a game's hub entry, without the
@@ -27,6 +28,14 @@ struct UtilityEntry: Identifiable {
             title: "Dice",
             tagline: "d4, d6, d8, d10, d12, d20. Roll one, or a handful.",
             symbol: "dice.fill",
+            gradient: VibeTheme.vibeUtility
+        ),
+        UtilityEntry(
+            id: "firstPlayer",
+            route: .firstPlayer,
+            title: "First Player",
+            tagline: "One question, and the table knows who starts.",
+            symbol: "person.2.badge.gearshape",
             gradient: VibeTheme.vibeUtility
         )
     ]

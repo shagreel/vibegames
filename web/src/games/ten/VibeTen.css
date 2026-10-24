@@ -12,7 +12,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  padding-bottom: 1.5rem;
+  /* Just enough to keep the last row off the edge: the grid is sized to the
+     screen, and a padding big enough to scroll is a board that does not fit. */
+  padding-bottom: 0.5rem;
 }
 
 /* The board takes whatever height the header and the result leave. A row is
@@ -20,14 +22,23 @@
    without the page scrolling under a thumb. */
 .ten__board-wrap {
   --ten-gap: 2px;
+  /* The header and the padding around the grid. It was 15rem, which left a
+     third of a phone screen empty under the board; the grid fills what it is
+     given, and a round-over panel below it scrolls if it needs to. */
+  --ten-chrome: 7rem;
   position: relative;
-  width: min(100% - 1rem, calc((100svh - 15rem) * 9 / 18));
+  /* A row is square, so the width that keeps `rows` rows on screen is the
+     height available times columns over rows. Six columns is not a six-ninths
+     board: the squares grow into the width the grid is given. */
+  width: min(100% - 1rem,
+             calc((100svh - var(--ten-chrome)) * var(--ten-columns, 9)
+                  / var(--ten-rows, 18)));
   margin: 0 auto;
 }
 
 .ten__board {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(var(--ten-columns, 9), 1fr);
   gap: var(--ten-gap);
   width: 100%;
 }
@@ -39,7 +50,8 @@
   top: 0;
   left: 0;
   right: 0;
-  height: calc((100% - 8 * var(--ten-gap)) / 9);
+  height: calc((100% - (var(--ten-columns, 9) - 1) * var(--ten-gap))
+               / var(--ten-columns, 9));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,6 +106,17 @@
 
 .ten__gap {
   visibility: hidden;
+}
+
+/* The label over a row of choices in the settings sheet. */
+.ten__setting-label {
+  margin: 0.2rem 0 0;
+  padding: 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
 /* Taken in dim mode: still there to read, clearly out of play — no fill, a

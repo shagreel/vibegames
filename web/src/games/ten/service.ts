@@ -1,18 +1,20 @@
 import { get, onDisconnect, onValue, ref, remove, set, update } from 'firebase/database';
 import { database } from '../../firebase';
+import { COLUMN_OPTIONS, COLUMNS, ROW_OPTIONS, ROWS } from './engine';
 
 /**
  * A shared Vibe Ten room.
  *
  *   ten/{gameId}
- *     meta/                { seed, creator, createdAt, started }
+ *     meta/                { seed, columns, rows, creator, createdAt, started }
  *     players/{playerId}   { name, joinedAt }
  *     scores/{playerId}    { score, finishedAt }
  *
- * The board is never stored. It is a pure function of the seed, so every client
- * deals the identical 162 digits and then plays its own game — one player's
- * pairs cannot appear on anybody else's board. Only the scores travel, one write
- * each, and the rules allow nothing else in a room.
+ * The board is never stored. It is a pure function of the seed and the shape, so
+ * every client deals the identical digits and then plays its own game — one
+ * player's pairs cannot appear on anybody else's board. The shape is the host's
+ * choice, written once when the room is made; only the scores travel after that,
+ * one write each, and the rules allow nothing else in a room.
  */
 
 export interface TenScore {
@@ -24,6 +26,9 @@ export interface TenScore {
 export interface TenSnapshot {
   exists: boolean;
   seed: number | null;
+  /** The board's shape. Rooms made before the choice existed read as 9x18. */
+  columns: number;
+  rows: number;
   creator: string | null;
   started: boolean;
   players: Record<string, string>;
@@ -33,6 +38,8 @@ export interface TenSnapshot {
 export const EMPTY_SNAPSHOT: TenSnapshot = {
   exists: false,
   seed: null,
+  columns: COLUMNS,
+  rows: ROWS,
   creator: null,
   started: false,
   players: {},
@@ -45,6 +52,10 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
 
   const meta = (value.meta ?? {}) as Record<string, unknown>;
   const seedValue = typeof meta.seed === 'number' ? Math.trunc(meta.seed) : null;
+  const rawColumns = typeof meta.columns === 'number' ? Math.trunc(meta.columns) : COLUMNS;
+  const rawRows = typeof meta.rows === 'number' ? Math.trunc(meta.rows) : ROWS;
+  const columns = (COLUMN_OPTIONS as readonly number[]).includes(rawColumns) ? rawColumns : COLUMNS;
+  const rows = (ROW_OPTIONS as readonly number[]).includes(rawRows) ? rawRows : ROWS;
 
   const players: Record<string, string> = {};
   const rawPlayers = (value.players ?? {}) as Record<string, unknown>;
@@ -65,6 +76,8 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
   return {
     exists: true,
     seed: seedValue,
+    columns,
+    rows,
     creator: typeof meta.creator === 'string' ? meta.creator : null,
     started: meta.started === true,
     players,
@@ -107,13 +120,15 @@ export function observeGame(gameId: string, onChange: (snapshot: TenSnapshot) =>
 export async function createGame(
   gameId: string,
   seed: number,
+  columns: number,
+  rows: number,
   creatorName: string,
   playerId: string,
 ): Promise<void> {
   // One write: the rules only let a room be created while it does not exist, so
   // the meta and the creator's place go in together.
   await set(ref(database, `ten/${gameId}`), {
-    meta: { seed, creator: creatorName, createdAt: Date.now(), started: false },
+    meta: { seed, columns, rows, creator: creatorName, createdAt: Date.now(), started: false },
     players: { [playerId]: { name: creatorName, joinedAt: Date.now() } },
   });
   registerPresence(gameId, playerId);

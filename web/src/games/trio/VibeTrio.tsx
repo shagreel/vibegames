@@ -449,6 +449,7 @@ function VibeTrio() {
         }
         onBack={screen === 'game' && gameId ? leave : undefined}
         backLabel={screen === 'game' && gameId ? 'Leave game' : undefined}
+        code={gameId}
       >
         <SupportButton game="trio" />
         <SettingsButton prefix="trio" onClick={() => setSettingsOpen(true)} />

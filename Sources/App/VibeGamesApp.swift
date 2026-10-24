@@ -92,6 +92,8 @@ struct RootView: View {
                         UtilitiesView()
                     case .dice:
                         DiceView()
+                    case .firstPlayer:
+                        FirstPlayerView()
                     }
                 }
         }

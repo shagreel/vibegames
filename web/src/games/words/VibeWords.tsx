@@ -690,14 +690,20 @@ function VibeWords() {
 
   return (
     <div className="vibewords-container">
-      <GameHeader prefix="words" title="Word Vibe">
+      <GameHeader
+        prefix="words"
+        title="Word Vibe"
+        // The room's size belongs under the name, not in the corner: the corner
+        // is for buttons, and four of them leave no room for the name.
+        subtitle={
+          playerCount > 0
+            ? `${playerCount} ${playerCount === 1 ? 'player' : 'players'}`
+            : undefined
+        }
+        code={gameId}
+      >
         <SupportButton game="words" />
         <SettingsButton prefix="words" onClick={() => setSettingsOpen(true)} />
-        {playerCount > 0 && (
-          <span className="player-count">
-            👥 {playerCount} {playerCount === 1 ? 'player' : 'players'}
-          </span>
-        )}
       </GameHeader>
 
       {settingsOpen && (

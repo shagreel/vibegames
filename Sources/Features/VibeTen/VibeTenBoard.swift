@@ -43,8 +43,18 @@ struct VibeTenCell: Equatable {
 /// "what is at the next index".
 struct VibeTenBoard: Equatable {
 
-    static let columnCount = 9
-    static let rowCount = 18
+    /// The size a board is unless the player asks for another. Columns run
+    /// 6–9 and rows 12–18, so every shape is a grid that still fills the screen
+    /// with bigger digits.
+    static let defaultColumns = 9
+    static let defaultRows = 18
+    static let columnOptions = [6, 7, 8, 9]
+    static let rowOptions = [12, 14, 16, 18]
+
+    /// How many columns and rows this board has. A room's board is dealt from
+    /// the seed *and* these two numbers, so the size is part of the deal.
+    let columns: Int
+    let rows: Int
 
     /// A cell. `row` is 0 at the bottom of the board.
     struct Position: Hashable {
@@ -65,44 +75,71 @@ struct VibeTenBoard: Equatable {
 
     // MARK: - Building
 
-    /// Deal a new board. A shared game stores only the seed, so every device —
-    /// phone or browser — deals the identical 162 digits from it.
-    init(seed: UInt32) {
+    init(seed: UInt32,
+         columns: Int = VibeTenBoard.defaultColumns,
+         rows: Int = VibeTenBoard.defaultRows) {
         self.seed = seed
+        self.columns = columns
+        self.rows = rows
+        self.stacks = VibeTenBoard.deal(seed: seed, columns: columns, rows: rows)
+    }
+
+    /// The digits, dealt: nine values spread as evenly as the grid allows, then
+    /// shuffled with the suite's seeded generator, then cut into columns.
+    ///
+    /// Every device deals from (seed, columns, rows) — the phone, the browser,
+    /// and the test that pins the two together — so the recipe has to be exact:
+    /// values 1 to `total / 9`, and the first `total % 9` values one more time.
+    /// For nine by eighteen that is eighteen of each, as it always was.
+    static func deal(seed: UInt32, columns: Int, rows: Int) -> [[VibeTenCell]] {
+        let total = columns * rows
+        let base = total / 9
+        let extra = total % 9
+
         var generator = SeededGenerator(seed: seed)
         var digits: [Int] = []
+        digits.reserveCapacity(total)
         for value in 1...9 {
-            digits.append(contentsOf: Array(repeating: value, count: VibeTenBoard.rowCount))
+            digits.append(contentsOf: Array(repeating: value,
+                                           count: base + (value <= extra ? 1 : 0)))
         }
         digits.shuffle(using: &generator)
 
-        var stacks = [[VibeTenCell]](repeating: [], count: VibeTenBoard.columnCount)
+        var stacks = [[VibeTenCell]](repeating: [], count: columns)
         var index = 0
-        for column in 0..<VibeTenBoard.columnCount {
-            stacks[column] = digits[index..<(index + VibeTenBoard.rowCount)]
-                .map { VibeTenCell(value: $0) }
-            index += VibeTenBoard.rowCount
+        for column in 0..<columns {
+            stacks[column] = digits[index..<(index + rows)].map { VibeTenCell(value: $0) }
+            index += rows
         }
-        self.stacks = stacks
+        return stacks
     }
 
     /// A board with an exact shape, for tests and for the browser to check
-    /// itself against. Every digit starts undimmed.
-    init(stacks: [[Int]], seed: UInt32 = 0) {
+    /// itself against. Every digit starts undimmed. The default is the full
+    /// board, so an existing test written for nine columns still has nine.
+    init(stacks: [[Int]],
+         seed: UInt32 = 0,
+         columns: Int = VibeTenBoard.defaultColumns,
+         rows: Int = VibeTenBoard.defaultRows) {
         self.seed = seed
-        self.stacks = stacks.prefix(VibeTenBoard.columnCount).map { column in
-            column.prefix(VibeTenBoard.rowCount).map { VibeTenCell(value: $0) }
+        self.columns = columns
+        self.rows = rows
+        self.stacks = stacks.prefix(columns).map { column in
+            column.prefix(rows).map { VibeTenCell(value: $0) }
         }
-        while self.stacks.count < VibeTenBoard.columnCount { self.stacks.append([]) }
+        while self.stacks.count < columns { self.stacks.append([]) }
     }
 
     /// A board of cells, so a test can start with dimmed digits.
-    init(cells: [[VibeTenCell]], seed: UInt32 = 0) {
+    init(cells: [[VibeTenCell]],
+         seed: UInt32 = 0,
+         columns: Int = VibeTenBoard.defaultColumns,
+         rows: Int = VibeTenBoard.defaultRows) {
         self.seed = seed
-        self.stacks = cells.prefix(VibeTenBoard.columnCount).map { column in
-            Array(column.prefix(VibeTenBoard.rowCount))
-        }
-        while self.stacks.count < VibeTenBoard.columnCount { self.stacks.append([]) }
+        self.columns = columns
+        self.rows = rows
+        self.stacks = cells.prefix(columns).map { Array($0.prefix(rows)) }
+        while self.stacks.count < columns { self.stacks.append([]) }
     }
 
     // MARK: - Reading
@@ -139,7 +176,7 @@ struct VibeTenBoard: Equatable {
     /// Every digit that can still be picked, column by column from the bottom.
     var cells: [(position: Position, value: Int)] {
         var cells: [(Position, Int)] = []
-        for column in 0..<min(stacks.count, Self.columnCount) {
+        for column in 0..<min(stacks.count, columns) {
             for row in 0..<stacks[column].count where !stacks[column][row].dimmed {
                 cells.append((Position(column: column, row: row), stacks[column][row].value))
             }
@@ -266,7 +303,7 @@ struct VibeTenBoard: Equatable {
 
     /// A new row can go on the bottom only while the top of the grid is free.
     var canAddRow: Bool {
-        stacks.allSatisfy { $0.count < Self.rowCount }
+        stacks.allSatisfy { $0.count < rows }
     }
 
     /// Puts a fresh row on the bottom, pushing everything else up one row.
@@ -275,7 +312,7 @@ struct VibeTenBoard: Equatable {
     /// nothing taken in it, which is what gives the player somewhere to play.
     @discardableResult
     mutating func addRow(_ digits: [Int]) -> Bool {
-        guard canAddRow, digits.count >= Self.columnCount else { return false }
+        guard canAddRow, digits.count >= columns else { return false }
         for column in stacks.indices {
             stacks[column].insert(VibeTenCell(value: digits[column]), at: 0)
         }

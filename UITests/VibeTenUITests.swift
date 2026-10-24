@@ -18,8 +18,7 @@ final class VibeTenUITests: XCTestCase {
     }
 
     func testSoloBoardAndTakingAPair() throws {
-        let app = XCUIApplication()
-        app.launch(withName: "Tester")
+        let app = fullBoardApp()
         openSoloBoard(app)
 
         let board = app.descendants(matching: .any)["ten.board"].firstMatch
@@ -64,9 +63,7 @@ final class VibeTenUITests: XCTestCase {
     }
 
     func testDimModeLeavesATakenPairOnTheBoard() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.mode", "dim"]
-        app.launch(withName: "Tester")
+        let app = fullBoardApp(extra: ["-vibeten.mode", "dim"])
         openSoloBoard(app)
 
         let cells = app.tenCells
@@ -87,11 +84,10 @@ final class VibeTenUITests: XCTestCase {
     }
 
     func testANewRowIsOfferedInTheEmptyTopRowAndPushesOne() throws {
-        let app = XCUIApplication()
-        // Stated rather than inherited: the setting outlives the app, and one
-        // earlier test turning it off would make this one fail for no reason.
-        app.launchArguments += ["-vibeten.addRow", "YES"]
-        app.launch(withName: "Tester")
+        // Stated rather than inherited: the settings outlive the app, and one
+        // earlier test turning the new row off, or dealing itself a smaller
+        // board, would make this one fail for no reason.
+        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES"])
         openSoloBoard(app)
 
         let addRow = app.buttons["ten.addRow"]
@@ -119,9 +115,7 @@ final class VibeTenUITests: XCTestCase {
     }
 
     func testTheNewRowSettingIsInTheSettingsSheet() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.addRow", "YES"]
-        app.launch(withName: "Tester")
+        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES"])
         openSoloBoard(app)
 
         app.buttons["ten.settings"].tap()
@@ -137,6 +131,15 @@ final class VibeTenUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// An app launched on the full nine-by-eighteen board, whatever the last
+    /// run on this simulator left behind.
+    private func fullBoardApp(extra: [String] = []) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["-vibeten.columns", "9", "-vibeten.rows", "18"] + extra
+        app.launch(withName: "Tester")
+        return app
+    }
 
     private func openLobby(_ app: XCUIApplication) {
         let tile = app.descendants(matching: .any)["game.vibe-ten"].firstMatch

@@ -22,6 +22,8 @@ final class VibeTenServiceTests: XCTestCase {
         let room = GameCode.make()
         try await service.createGame(gameID: room,
                                      seed: 777,
+                                     columns: 9,
+                                     rows: 18,
                                      creatorName: "Tester",
                                      playerID: PlayerIdentity.id)
         try await service.recordScore(gameID: room,
@@ -32,6 +34,10 @@ final class VibeTenServiceTests: XCTestCase {
         let contents = try await read("ten/\(room)")
         XCTAssertEqual(Set(contents.keys), ["meta", "players", "scores"],
                        "a room is a seed, who is here, and the scores — not a board")
+
+        let meta = try await read("ten/\(room)/meta")
+        XCTAssertEqual(meta["columns"] as? Int, 9, "the room remembers the shape it was made with")
+        XCTAssertEqual(meta["rows"] as? Int, 18)
 
         // Nobody's pairs are in the room to be replayed.
         let taken = try await read("ten/\(room)/taken")
@@ -45,12 +51,42 @@ final class VibeTenServiceTests: XCTestCase {
         let room = GameCode.make()
         try await service.createGame(gameID: room,
                                      seed: 778,
+                                     columns: 6,
+                                     rows: 12,
                                      creatorName: "Tester",
                                      playerID: PlayerIdentity.id)
+
+        let meta = try await read("ten/\(room)/meta")
+        XCTAssertEqual(meta["columns"] as? Int, 6, "a smaller room is a smaller room")
+        XCTAssertEqual(meta["rows"] as? Int, 12)
 
         let status = try await put("ten/\(room)/taken/0", ["by": PlayerIdentity.id, "value": 1])
         XCTAssertNotEqual(status, 200, "the rules should refuse a take")
         XCTAssertTrue((400...403).contains(status), "expected a refusal, got \(status)")
+
+        // And a shape that is not one of the four is refused, so a room cannot
+        // be made with a board no client can draw.
+        let bad = try await put("ten/\(room)/meta/columns", ["value": 12])
+        XCTAssertNotEqual(bad, 200, "twelve columns is not a board this game has")
+    }
+
+    /// The shape is in the room, so a joiner deals the host's board. Rooms made
+    /// before the choice existed have no shape and read as the full board.
+    func testASnapshotCarriesTheRoomsShape() {
+        let full = VibeTenSnapshot(meta: ["seed": 1, "creator": "Alex"], players: nil, scores: nil)
+        XCTAssertEqual(full.columns, 9)
+        XCTAssertEqual(full.rows, 18)
+
+        let small = VibeTenSnapshot(meta: ["seed": 1, "creator": "Alex",
+                                           "columns": 6, "rows": 12],
+                                    players: nil, scores: nil)
+        XCTAssertEqual(small.columns, 6, "a room remembers the shape it was made with")
+        XCTAssertEqual(small.rows, 12)
+
+        let nonsense = VibeTenSnapshot(meta: ["seed": 1, "columns": 12, "rows": 3],
+                                       players: nil, scores: nil)
+        XCTAssertEqual(nonsense.columns, 9, "a shape that is not a board is not played")
+        XCTAssertEqual(nonsense.rows, 18)
     }
 
     // MARK: - Reading and writing

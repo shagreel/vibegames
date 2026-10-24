@@ -753,7 +753,7 @@ every device deals the identical 162 digits, and only each player's score
 travels. One point a pair, most pairs wins, a tie goes to whoever ran out of
 moves first. Play until nothing pairs; clear every digit and the board is done.
 
-Two properties of its own, both in the game's settings sheet:
+Three properties of its own, all in the game's settings sheet:
 
 - **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
   leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
@@ -766,6 +766,14 @@ Two properties of its own, both in the game's settings sheet:
   a button appears *in the empty top row* — no strip of its own on screen — and
   tapping it pushes a fresh row of digits in at the bottom, moving everything up
   one row. In a room the board is everybody's, so the offer is never there.
+- **The board's size.** Six to nine columns and twelve to eighteen rows, the
+  full board by default; fewer squares means bigger digits, and the grid still
+  fills the screen. The digits are spread as evenly as the shape allows — nine
+  values into `columns × rows`, so a 7 × 14 board has eleven of some digits and
+  ten of the rest — and the shape is part of the deal: the seed, the columns and
+  the rows together are what both clients deal from. A room plays the shape the
+  host created it with, which is why the size is written into the room's `meta`
+  next to the seed and can never be changed after the room exists.
 
 `VibeTenBoard` is the rules and knows nothing about screens or the database;
 `VibeTenModel` holds a board, a tapped cell and a score, and deals a shared
@@ -773,6 +781,29 @@ board from the room's seed. `web/src/games/ten/engine.ts` mirrors the board,
 including the deal, which is what makes a room's seed light up the same numbers
 in a browser — `Tests/VibeTenBoardTests.swift` and `web/src/test/tenEngine.test.ts`
 both pin themselves to `web/src/games/ten/board.fixtures.json`.
+
+## Utilities
+
+The hub has one more button beside the games: tools for the table that are not
+games. They are their own list rather than a row of buttons on the hub, because
+the list is meant to grow — a timer, a scorekeeper, a coin — and a hub with a
+dozen tool buttons on it stops being a hub. Each one is a `UtilityEntry` in
+`Sources/Model/UtilityCatalog.swift`, a route in `UtilityRoute`, and a screen.
+
+- **Dice** — d4 to d20, one to twenty of them, thrown onto a physics table
+  (SceneKit) and shaken to roll. Nothing is remembered between visits: the table
+  is a moment, not a scoreboard.
+- **First Player** — decides who starts. A question with one answer ("Who travelled
+  the farthest this month?") picks a person, and a second part
+  says which seat starts: that person, the person to their left, or the person
+  to their right. Tap the card — or shake the phone — for another question, and
+  it never asks the same one twice in a row. The bank lives in
+  `Sources/Features/Utilities/FirstPlayer.swift`, and the questions are
+  deliberately things a table can settle by looking at each other.
+
+Both open with the standard header: back, the name, the heart, and settings.
+The settings sheet is the suite's own — a name and light or dark — because
+neither tool has a rule to set.
 
 ## Building
 
