@@ -64,6 +64,19 @@ struct VibeWordsBoardView: View {
 }
 
 /// One letter tile.
+/// Whether a tile starts its life face-up.
+///
+/// A tile is dealt face-down and turns over when its row is scored. A board
+/// picked back up arrives with rows already scored, so those tiles are born
+/// face-up: there is no flip to animate, and a face still turned away is a board
+/// showing nothing where the guesses should be — which is exactly what the owner
+/// reported: the keyboard remembered the letters, the rows above it were blank.
+enum VibeWordsTileReveal {
+    static func startsFaceUp(feedback: LetterFeedback?) -> Bool {
+        feedback != nil
+    }
+}
+
 private struct VibeWordsTile: View {
     let letter: String
     let feedback: LetterFeedback?
@@ -72,7 +85,22 @@ private struct VibeWordsTile: View {
     let roundToken: Int
     let flipDelay: Double
 
-    @State private var hasFlipped = false
+    @State private var hasFlipped: Bool
+
+    init(letter: String,
+         feedback: LetterFeedback?,
+         isActive: Bool,
+         size: CGFloat,
+         roundToken: Int,
+         flipDelay: Double) {
+        self.letter = letter
+        self.feedback = feedback
+        self.isActive = isActive
+        self.size = size
+        self.roundToken = roundToken
+        self.flipDelay = flipDelay
+        _hasFlipped = State(initialValue: VibeWordsTileReveal.startsFaceUp(feedback: feedback))
+    }
 
     private var isScored: Bool { feedback != nil }
 
@@ -116,7 +144,10 @@ private struct VibeWordsTile: View {
             }
         }
         .onChange(of: roundToken) { _, _ in
-            hasFlipped = false
+            // A new round deals unscored tiles, which start face-down. A round
+            // picked back up bumps the token because its word has arrived, and
+            // its scored rows must stay face-up.
+            hasFlipped = VibeWordsTileReveal.startsFaceUp(feedback: feedback)
         }
         .accessibilityLabel(letter.isEmpty ? "Empty" : letter)
     }
