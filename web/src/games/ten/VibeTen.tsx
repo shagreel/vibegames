@@ -82,7 +82,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'Three levels',
-      body: "The board's difficulty is chosen with the other settings. **Easy** starts every pair side by side; **Medium** nests pairs inside one another so some have to be uncovered; **Hard** nests a whole row at a time, which makes for longer chains. Every level can be cleared — the digits are placed in pairs, and the order they were placed in is a way through.",
+      body: "The board's difficulty is chosen with the other settings. **Easy** starts every pair side by side; **Medium** nests pairs across a row, down a column, corner to corner, or round the join between two rows; **Hard** nests whole rows and whole columns, so the pair at the edge of a band has to wait for the digits around it. Every level can be cleared — the digits are placed in pairs, and the order they were placed in is a way through.",
     },
     {
       title: 'The board hangs from the top',
@@ -90,11 +90,11 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'Rows that join up',
-      body: 'One setting lets the rows read end to end: the last square of a row is next to the first of the row below, so a 5 at the end of one row matches a 5 at the start of the next — and, if the square between them has already been taken, the one after that.',
+      body: 'One setting lets the rows read end to end: the last square of a row is next to the first of the row below, so a 5 at the end of one row matches a 5 at the start of the next — and, if the square between them has already been taken, the one after that. In a room it is part of the host\'s rules, and from Medium up a band of the board is always nested across the join, so it is part of the way through.',
     },
     {
       title: 'Dim mode',
-      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything below it rises one row. Choose it on the start screen: a game in play keeps the setting it started with.',
+      body: 'In the settings, **Dim** leaves a taken pair on the board, greyed out, instead of removing it. A dimmed digit counts as gone: it cannot be picked again, and a pair can be made straight across it. When every digit in a row is dimmed the whole row clears at once and everything below it rises one row. Choose it on the start screen: a game in play keeps the setting it started with, and in a room it is part of the host\'s rules.',
     },
     {
       title: "The board's size",
@@ -106,7 +106,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'Playing as a room',
-      body: 'Everyone gets the identical board, dealt from a seed, and plays their own copy at their own pace. One point a pair. When everybody has run out of moves the most pairs wins, and a tie goes to whoever ran out first.',
+      body: "Everyone gets the identical board, dealt from a seed and played by the host's rules — the size, the level, whether the rows join end to end and how a taken pair leaves the board — and plays their own copy at their own pace. One point a pair. When everybody has run out of moves the most pairs wins, and a tie goes to whoever ran out first.",
     },
   ],
   bullets: [
@@ -220,6 +220,14 @@ function VibeTen() {
   const waitingForHost = Boolean(gameId) && !snapshot.started;
   const canPlay = board !== null && !finished && !waitingForHost;
 
+  /** The rules in play: the room's when playing in one — the host chose them
+      when the room was made — otherwise this device's choices. */
+  const shownMode = gameId ? snapshot.mode : mode;
+  const shownWrapRows = gameId ? snapshot.wrapRows : wrapRows;
+  const shownDifficulty = gameId ? snapshot.difficulty : difficulty;
+  const shownColumns = gameId ? snapshot.columns : columns;
+  const shownRows = gameId ? snapshot.rows : rows;
+
   // The board is a pure function of the seed: dealt once, then held in state so
   // tapping can take pairs out of it.
   const dealtSeed = useRef<number | null>(null);
@@ -234,7 +242,8 @@ function VibeTen() {
       : rows;
     setBoard(
       gameId
-        ? newBoard(seed, snapshot.columns, snapshot.rows, snapshot.rows, wrapRows, snapshot.difficulty)
+        ? newBoard(seed, snapshot.columns, snapshot.rows, snapshot.rows,
+            snapshot.wrapRows, snapshot.difficulty)
         : newBoard(seed, columns, rows, startRows, wrapRows, difficulty),
     );
     setSelected(null);
@@ -377,7 +386,13 @@ function VibeTen() {
       difficulty: data.difficulty,
       stacks: data.stacks,
     });
+    // The saved board comes with the rules it was dealt by, and they become the
+    // choices for the next one.
     setMode(data.mode);
+    setWrapRows(data.wrapRows);
+    setDifficulty(data.difficulty);
+    setColumns(data.columns);
+    setRows(data.rows);
     setScore(data.score);
     setFinished(data.finished);
     setCleared(data.cleared);
@@ -400,7 +415,7 @@ function VibeTen() {
     withName(() => {
       const newId = makeGameCode();
       const newSeed = randomSeed();
-      void createGame(newId, newSeed, columns, rows, difficulty, playerName(), id)
+      void createGame(newId, newSeed, columns, rows, difficulty, wrapRows, mode, playerName(), id)
         .then(() => {
           hostedGame(newId);
           setIsHost(true);
@@ -451,7 +466,7 @@ function VibeTen() {
       return;
     }
 
-    const moved = take(board, selected, position, mode);
+    const moved = take(board, selected, position, shownMode);
     if (!moved) {
       setSelected(position);
       setNotice("Those two don't pair.");
@@ -510,11 +525,11 @@ function VibeTen() {
   /** The shape is a choice for a new game, not for one under way. */
   const shapeLocked = board !== null;
 
-  /** The pair setting is a choice for a new game too, with two differences: a
-      room waiting for its host has not begun, so the choice is still there, and
-      a finished round counts as over. The new-row switch is not locked at all —
-      it is an offer that comes and goes during play. */
-  const modeLocked = board !== null && !finished && !waitingForHost;
+  /** The pair setting is a choice for a new game too. In a room it belongs to
+      the host, who chose it when the room was made, so it is not this player's
+      to change. The new-row switch is not locked at all — it is an offer that
+      comes and goes during play. */
+  const modeLocked = Boolean(gameId) || (board !== null && !finished && !waitingForHost);
 
   /** The fill and the rows a press deals are solo choices, and only with the
       new-row offer on: the rows are what fills a part-filled board. */
@@ -686,8 +701,8 @@ function VibeTen() {
                   key={choice}
                   type="button"
                   className="game-sheet__choice"
-                  data-on={difficulty === choice}
-                  aria-pressed={difficulty === choice}
+                  data-on={shownDifficulty === choice}
+                  aria-pressed={shownDifficulty === choice}
                   disabled={shapeLocked}
                   onClick={() => chooseDifficulty(choice)}
                 >
@@ -695,7 +710,7 @@ function VibeTen() {
                 </button>
               ))}
             </div>
-            <p>{DIFFICULTY_LABELS[difficulty].blurb}</p>
+            <p>{DIFFICULTY_LABELS[shownDifficulty].blurb}</p>
             <p>
               Every level can be cleared — the harder ones just hide more pairs behind other
               digits. In a room everybody plays the level the host dealt.
@@ -741,8 +756,8 @@ function VibeTen() {
                   key={choice}
                   type="button"
                   className="game-sheet__choice"
-                  data-on={columns === choice}
-                  aria-pressed={columns === choice}
+                  data-on={shownColumns === choice}
+                  aria-pressed={shownColumns === choice}
                   disabled={shapeLocked}
                   onClick={() => chooseColumns(choice)}
                 >
@@ -757,8 +772,8 @@ function VibeTen() {
                   key={choice}
                   type="button"
                   className="game-sheet__choice"
-                  data-on={rows === choice}
-                  aria-pressed={rows === choice}
+                  data-on={shownRows === choice}
+                  aria-pressed={shownRows === choice}
                   disabled={shapeLocked}
                   onClick={() => chooseRows(choice)}
                 >
@@ -772,7 +787,9 @@ function VibeTen() {
             title="When a pair is matched"
             note={
               modeLocked
-                ? 'This game is using the setting it started with. Leave it to choose again.'
+                ? gameId
+                  ? "In a room the host's rules are the game's rules. This room is playing the way it was created."
+                  : 'This game is using the setting it started with. Leave it to choose again.'
                 : 'Choose it before you start. Pairs taken in Dim mode stay on the board.'
             }
           >
@@ -782,8 +799,8 @@ function VibeTen() {
                   key={choice}
                   type="button"
                   className="game-sheet__choice"
-                  data-on={mode === choice}
-                  aria-pressed={mode === choice}
+                  data-on={shownMode === choice}
+                  aria-pressed={shownMode === choice}
                   disabled={modeLocked}
                   onClick={() => chooseMode(choice)}
                 >
@@ -791,11 +808,11 @@ function VibeTen() {
                 </button>
               ))}
             </div>
-            <p>{MODE_LABELS[mode].blurb}</p>
+            <p>{MODE_LABELS[shownMode].blurb}</p>
             <SettingsToggle
               label="Rows join end to end"
               note="The last square of a row is next to the first of the row below"
-              on={wrapRows}
+              on={shownWrapRows}
               onChange={chooseWrapRows}
               disabled={modeLocked}
             />

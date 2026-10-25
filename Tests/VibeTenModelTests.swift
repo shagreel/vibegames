@@ -269,6 +269,15 @@ final class VibeTenSoloProgressTests: XCTestCase {
 
     override func tearDown() {
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
+        // The saved rules become the preferences when a game is resumed, and
+        // these defaults are the app's: put them back so a UI test that runs
+        // after this one is not handed somebody else's board.
+        for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
+                    VibeTenModel.columnsKey, VibeTenModel.rowsKey,
+                    VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
+                    VibeTenModel.wrapRowsKey, VibeTenModel.difficultyKey] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
         super.tearDown()
     }
 
@@ -334,6 +343,42 @@ final class VibeTenSoloProgressTests: XCTestCase {
         model.leaveGame()
         XCTAssertNil(SoloProgressStore.saved(game: VibeTenModel.progressGame),
                      "a finished game is not a game in progress")
+    }
+
+    /// A resumed game is played by the rules it was dealt by, and those rules
+    /// become the choices for the next game.
+    func testTheResumedGameBringsItsRulesBack() {
+        let model = VibeTenModel()
+        model.difficulty = .hard
+        model.columns = 6
+        model.rows = 12
+        model.wrapRows = true
+        model.mode = .dim
+        model.playSolo()
+        guard let board = model.board, let pair = board.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
+        }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        let dealt = model.board
+        model.leaveGame()
+
+        // A new model, with the preferences back at their defaults, as if the
+        // game had been left on another day.
+        for key in [VibeTenModel.difficultyKey, VibeTenModel.columnsKey,
+                    VibeTenModel.rowsKey, VibeTenModel.wrapRowsKey,
+                    VibeTenModel.modeKey] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        let resumed = VibeTenModel()
+        XCTAssertEqual(resumed.difficulty, .medium, "the defaults are the defaults")
+        XCTAssertTrue(resumed.resumeSolo())
+        XCTAssertEqual(resumed.board, dealt, "the same digits, and the same rules")
+        XCTAssertEqual(resumed.difficulty, .hard, "the game comes back with its level")
+        XCTAssertEqual(resumed.columns, 6)
+        XCTAssertEqual(resumed.rows, 12)
+        XCTAssertEqual(resumed.wrapRows, true)
+        XCTAssertEqual(resumed.mode, .dim)
     }
 
     func testTheSummarySaysWhatIsWaiting() {

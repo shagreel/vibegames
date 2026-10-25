@@ -165,10 +165,11 @@ final class VibeTenModel: ObservableObject {
     /// it. A board that has been dealt is being played one way, and one board
     /// played two ways is not the game.
     ///
-    /// A room waiting for its host is not a game in play yet, so the choice is
-    /// still there — the board is dealt, but nobody has taken a pair.
+    /// A room's rules belong to the host, so once a room exists they are not
+    /// this player's to change — the same reason the shape is fixed. They are
+    /// chosen on the start screen, before the room is made.
     var canChoosePairMode: Bool {
-        !canPlay
+        !isShared && !canPlay
     }
 
     /// Whether the board's fill and the rows a press adds can still be chosen:
@@ -349,7 +350,14 @@ final class VibeTenModel: ObservableObject {
         }
         tearDownSharedGame()
         session = .solo
+        // The saved board comes with the rules it was dealt by, and they become
+        // the choices for the next one: a resumed game is played the way it
+        // started, and so is the game after it.
         mode = saved.mode
+        wrapRows = saved.wrapRows
+        difficulty = saved.difficulty
+        columns = saved.columns
+        rows = saved.rows
         board = VibeTenBoard(cells: saved.cells,
                              seed: saved.seed,
                              columns: saved.columns,
@@ -382,6 +390,8 @@ final class VibeTenModel: ObservableObject {
                                          columns: columns,
                                          rows: rows,
                                          difficulty: difficulty,
+                                         wrapRows: wrapRows,
+                                         mode: mode,
                                          creatorName: playerName,
                                          playerID: PlayerIdentity.id)
             UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
@@ -499,6 +509,20 @@ final class VibeTenModel: ObservableObject {
         return (columns, rows)
     }
 
+    /// How a taken pair leaves the board in play: the room's when playing in
+    /// one, otherwise this device's choice. One room is played one way, because
+    /// the pairs are on everybody's board and the boards have to agree.
+    var effectiveMode: VibeTenMode {
+        isShared ? snapshot.mode : mode
+    }
+
+    /// Whether the rows join end to end in play, the room's when playing in one.
+    /// The deal depends on it — a wrap pair is part of the way through the
+    /// board — so it is part of the room's rules, not a local preference.
+    var effectiveWrapRows: Bool {
+        isShared ? snapshot.wrapRows : wrapRows
+    }
+
     /// How many rows a board of this shape starts with.
     ///
     /// A part-filled board goes with the new-row setting — the rows are what
@@ -523,7 +547,7 @@ final class VibeTenModel: ObservableObject {
                              columns: shape.columns,
                              rows: shape.rows,
                              startRows: startRows(for: shape),
-                             wrapRows: wrapRows,
+                             wrapRows: effectiveWrapRows,
                              difficulty: boardDifficulty)
         boardToken += 1
         startedAt = Date()
@@ -550,7 +574,7 @@ final class VibeTenModel: ObservableObject {
             return
         }
 
-        if board.take(first, position, mode: mode) != nil {
+        if board.take(first, position, mode: effectiveMode) != nil {
             self.board = board
             score += 1
             selected = nil

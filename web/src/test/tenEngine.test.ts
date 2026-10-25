@@ -118,12 +118,12 @@ describe('the deal', () => {
     expect(newBoard(99).stacks).toEqual(newBoard(99).stacks);
     expect(newBoard(99).stacks).not.toEqual(newBoard(100).stacks);
     // Dumped from the Swift engine: the app and the browser must agree.
-    expect(values(newBoard(1234, 9, 18, 18, false, 'medium')))
-      .toEqual(fixtures['1234-9x18-medium']);
-    expect(values(newBoard(1234, 9, 18, 18, false, 'easy')))
-      .toEqual(fixtures['1234-9x18-easy']);
-    expect(values(newBoard(1234, 9, 18, 18, false, 'hard')))
-      .toEqual(fixtures['1234-9x18-hard']);
+    for (const [name, expected] of Object.entries(fixtures)) {
+      const [seed, shape, level, extra] = name.split('-');
+      const [columns, rows] = shape.split('x').map(Number);
+      expect(values(newBoard(Number(seed), columns, rows, rows, extra === 'wrap',
+        level as TenDifficulty))).toEqual(expected);
+    }
   });
 });
 
@@ -336,26 +336,67 @@ describe('the rows joining end to end', () => {
 });
 
 describe('a solution always exists', () => {
-  const replay = (seed: number, columns: number, rows: number, difficulty: TenDifficulty) => {
-    const { steps } = plan(seed, columns, rows, difficulty);
+  const seeds = [1, 7, 1234, 999, 424242];
+
+  const replay = (
+    seed: number,
+    columns: number,
+    rows: number,
+    difficulty: TenDifficulty,
+    wrapRows: boolean,
+  ) => {
+    const { steps } = plan(seed, columns, rows, difficulty, wrapRows);
     const built: TenCell[][] = Array.from({ length: columns }, () => []);
     for (const step of steps) {
-      built[step.first.column].splice(Math.min(step.first.row, built[step.first.column].length), 0, cell(step.firstValue));
-      built[step.second.column].splice(Math.min(step.second.row, built[step.second.column].length), 0, cell(step.secondValue));
-      const board = { seed, columns, rows, wrapRows: false, difficulty, stacks: built };
-      expect(canMatch(board, step.first, step.second), `${difficulty} ${seed}: ${JSON.stringify(step)}`).toBe(true);
+      built[step.first.column].splice(
+        Math.min(step.first.row, built[step.first.column].length), 0, cell(step.firstValue),
+      );
+      built[step.second.column].splice(
+        Math.min(step.second.row, built[step.second.column].length), 0, cell(step.secondValue),
+      );
+      const board = { seed, columns, rows, wrapRows, difficulty, stacks: built };
+      expect(canMatch(board, step.first, step.second),
+        `${difficulty} wrap ${wrapRows} ${seed}: ${JSON.stringify(step)}`).toBe(true);
     }
     return { steps, built };
   };
 
   it('places every pair where it can be seen, on every level', () => {
     for (const difficulty of DIFFICULTIES) {
-      for (const seed of [1, 7, 1234, 999, 424242]) {
-        for (const columns of COLUMN_OPTIONS) {
-          for (const rows of ROW_OPTIONS) {
-            const { steps, built } = replay(seed, columns, rows, difficulty);
-            expect(steps).toHaveLength((columns * rows) / 2);
-            built.forEach((column) => expect(column).toHaveLength(rows));
+      for (const wrapRows of [false, true]) {
+        for (const seed of seeds) {
+          for (const columns of COLUMN_OPTIONS) {
+            for (const rows of ROW_OPTIONS) {
+              const { steps, built } = replay(seed, columns, rows, difficulty, wrapRows);
+              expect(steps).toHaveLength((columns * rows) / 2);
+              built.forEach((column) => expect(column).toHaveLength(rows));
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('reads the plan backwards as a real clearance', () => {
+    for (const difficulty of DIFFICULTIES) {
+      for (const wrapRows of [false, true]) {
+        for (const seed of [1, 1234]) {
+          for (const columns of COLUMN_OPTIONS) {
+            for (const rows of ROW_OPTIONS) {
+              const { steps, stacks } = plan(seed, columns, rows, difficulty, wrapRows);
+              let board = boardFromStacks(
+                stacks.map((column) => column.map((entry) => entry.value)),
+                seed,
+                { columns, rows, wrapRows, difficulty },
+              );
+              for (const step of [...steps].reverse()) {
+                const moved = take(board, step.first, step.second, 'remove');
+                expect(moved, `${difficulty} wrap ${wrapRows} ${seed} ${columns}x${rows}`)
+                  .not.toBeNull();
+                board = moved!.board;
+              }
+              expect(isCleared(board), `${difficulty} wrap ${wrapRows} ${seed}`).toBe(true);
+            }
           }
         }
       }
@@ -372,11 +413,76 @@ describe('a solution always exists', () => {
 
   it('hides pairs on hard boards', () => {
     let separated = 0;
-    for (const seed of [1, 7, 1234, 999, 424242]) {
+    for (const seed of seeds) {
       const { steps } = plan(seed, 9, 18, 'hard');
       const board = newBoard(seed, 9, 18, 18, false, 'hard');
       separated += steps.filter((step) => !canMatch(board, step.first, step.second)).length;
     }
     expect(separated).toBeGreaterThan(100);
+  });
+
+  it('hides some pairs on medium boards', () => {
+    let separated = 0;
+    for (const seed of seeds) {
+      const { steps } = plan(seed, 9, 18, 'medium');
+      const board = newBoard(seed, 9, 18, 18, false, 'medium');
+      separated += steps.filter((step) => !canMatch(board, step.first, step.second)).length;
+    }
+    expect(separated).toBeGreaterThan(0);
+  });
+
+  it('deals both kinds of pair', () => {
+    for (const seed of seeds) {
+      for (const columns of COLUMN_OPTIONS) {
+        for (const rows of ROW_OPTIONS) {
+          const { steps } = plan(seed, columns, rows, 'medium');
+          expect(steps.some((step) => step.firstValue === step.secondValue)).toBe(true);
+          expect(steps.some((step) => step.firstValue + step.secondValue === 10)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('uses the join in the solution when the rows join', () => {
+    for (const difficulty of ['medium', 'hard'] as TenDifficulty[]) {
+      for (const seed of seeds) {
+        const { steps } = plan(seed, 9, 18, difficulty, true);
+        const crossing = steps.filter((step) => step.first.row !== step.second.row &&
+          step.first.column !== step.second.column &&
+          Math.abs(step.first.column - step.second.column) !==
+            Math.abs(step.first.row - step.second.row));
+        expect(crossing.length, `${difficulty} ${seed}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('uses rows, columns and diagonals on hard boards', () => {
+    let horizontal = 0;
+    let vertical = 0;
+    let diagonal = 0;
+    for (const seed of seeds) {
+      const { steps } = plan(seed, 9, 18, 'hard');
+      for (const step of steps) {
+        if (step.first.row === step.second.row) horizontal += 1;
+        else if (step.first.column === step.second.column) vertical += 1;
+        else diagonal += 1;
+      }
+    }
+    expect(horizontal).toBeGreaterThan(0);
+    expect(vertical).toBeGreaterThan(0);
+    expect(diagonal).toBeGreaterThan(0);
+  });
+
+  it('cuts a part-filled board at a band boundary', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const { bandEnds } = plan(1234, 9, 18, difficulty);
+      for (let wanted = 1; wanted <= 18; wanted += 1) {
+        const board = newBoard(1234, 9, 18, wanted, false, difficulty);
+        const height = heightOf(board, 0);
+        expect(bandEnds).toContain(height);
+        const expected = [...bandEnds].reverse().find((end) => end <= wanted) ?? bandEnds[0];
+        expect(height).toBe(expected);
+      }
+    }
   });
 });

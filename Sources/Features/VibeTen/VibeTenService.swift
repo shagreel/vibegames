@@ -17,17 +17,20 @@ struct VibeTenScore: Equatable {
 ///         columns     9
 ///         rows        18
 ///         difficulty  "medium"
+///         wrap        false
+///         mode        "remove"
 ///         creator     "Alex"
 ///         createdAt   1737052800000
 ///         started     true
 ///       players/{playerId} { name, joinedAt }
 ///       scores/{playerId}  { score, finishedAt }
 ///
-/// The board is never stored: it is a pure function of the seed and the shape,
-/// so every device — phone or browser — deals the identical digits from three
-/// numbers. The shape is the host's choice, written once when the room is made
-/// and kept for the room's life; only the scores travel, and each player writes
-/// their own.
+/// The board is never stored: it is a pure function of the seed *and the rules*
+/// — the shape, the difficulty, whether the rows join end to end, and how a
+/// taken pair leaves the board — so every device — phone or browser — deals the
+/// identical digits and plays them the same way. Those rules are the host's
+/// choice, written once when the room is made and kept for the room's life;
+/// only the scores travel, and each player writes their own.
 struct VibeTenSnapshot: Equatable {
     var exists = false
     var seed: UInt32?
@@ -38,6 +41,12 @@ struct VibeTenSnapshot: Equatable {
     /// How hard the board is to take apart. Rooms made before the levels
     /// existed read as medium, which is the level most boards are dealt at now.
     var difficulty = VibeTenDifficulty.medium
+    /// Whether the rows join end to end. A room rule, because the board can only
+    /// be cleared one way: a joiner cannot turn the join on for a board dealt
+    /// without it.
+    var wrapRows = false
+    /// How a taken pair leaves the board, also part of the room's rules.
+    var mode = VibeTenMode.remove
     var creator: String?
     var started = false
     var restartTime: Date?
@@ -72,6 +81,11 @@ struct VibeTenSnapshot: Equatable {
             if let raw = object["difficulty"] as? String,
                let level = VibeTenDifficulty(rawValue: raw) {
                 difficulty = level
+            }
+            wrapRows = (object["wrap"] as? Bool) ?? false
+            if let raw = object["mode"] as? String,
+               let value = VibeTenMode(rawValue: raw) {
+                mode = value
             }
             if let rawRestart = object["restartTime"] as? NSNumber {
                 restartTime = Date(timeIntervalSince1970: rawRestart.doubleValue / 1000)
@@ -203,6 +217,8 @@ final class VibeTenService {
                     columns: Int,
                     rows: Int,
                     difficulty: VibeTenDifficulty,
+                    wrapRows: Bool,
+                    mode: VibeTenMode,
                     creatorName: String,
                     playerID: String) async throws {
         guard let reference = gameReference(gameID) else { return }
@@ -212,6 +228,8 @@ final class VibeTenService {
             "columns": columns,
             "rows": rows,
             "difficulty": difficulty.rawValue,
+            "wrap": wrapRows,
+            "mode": mode.rawValue,
             "creator": creatorName,
             "createdAt": Self.milliseconds(Date()),
             "started": false

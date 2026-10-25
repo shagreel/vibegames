@@ -349,6 +349,14 @@
             ".write": "!data.exists()",
             ".validate": "newData.val() === 'easy' || newData.val() === 'medium' || newData.val() === 'hard'"
           },
+          "wrap": {
+            ".write": "!data.exists()",
+            ".validate": "newData.isBoolean()"
+          },
+          "mode": {
+            ".write": "!data.exists()",
+            ".validate": "newData.val() === 'remove' || newData.val() === 'dim'"
+          },
           "$other": {
             ".validate": false
           }

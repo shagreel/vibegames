@@ -133,9 +133,12 @@ struct GameInstructions {
             Section(title: "Easy, medium, hard",
                     body: "The **difficulty** is part of the deal, chosen with the other "
                         + "settings. **Easy** starts every pair side by side. **Medium** nests "
-                        + "pairs inside one another, so some have to be uncovered. **Hard** "
-                        + "nests a whole row at a time, which makes for longer chains of "
-                        + "\"clear that before this\". Every level can be cleared."),
+                        + "pairs inside one another across a row, down a column, corner to "
+                        + "corner, or round the join between two rows. **Hard** nests whole "
+                        + "rows and whole columns, so a pair at the edge of a band only comes "
+                        + "together once the digits around it are gone. Every level can be "
+                        + "cleared: the digits are placed in pairs, and the order they were "
+                        + "placed in is a way through."),
             Section(title: "The board hangs from the top",
                     body: "The digits hang from the top row and a gap closes **upward**: take a "
                         + "pair and the digits below it rise into the space. Half the game is "
@@ -152,7 +155,9 @@ struct GameInstructions {
                     body: "One setting lets the rows read end to end: the last square of a row "
                         + "is next to the first square of the row below it, so a 5 at the end of "
                         + "one row matches a 5 at the start of the next — and, if the square "
-                        + "between them has already been taken, the one after that."),
+                        + "between them has already been taken, the one after that. With the "
+                        + "join on, the deal nests a band of every board round it from Medium "
+                        + "up, so the join is part of the way through."),
             Section(title: "Dim mode",
                     body: "In the game settings, **Dim** leaves a taken pair on the board, "
                         + "greyed out, instead of removing it. A dimmed digit is gone as far as "
@@ -160,7 +165,7 @@ struct GameInstructions {
                         + "made straight across it. When every digit in a row has been dimmed, "
                         + "the whole row clears at once and everything below it rises one row. "
                         + "Choose it on the start screen: a game in play keeps the setting it "
-                        + "started with."),
+                        + "started with, and in a room it is part of the host's rules."),
             Section(title: "New rows, solo",
                     body: "Playing alone, you can hang fresh rows of digits under the board. "
                         + "It is only possible while the bottom row of the grid is empty — and "
@@ -170,10 +175,12 @@ struct GameInstructions {
                         + "them. A room plays the board it was dealt, so the button is never "
                         + "there in a shared game."),
             Section(title: "Playing as a room",
-                    body: "Everyone gets the identical board, dealt from a seed. You each take "
-                        + "pairs at your own pace on your own device. One point per pair, and "
-                        + "when everybody has run out of moves, the most pairs wins. A tie goes "
-                        + "to whoever ran out of moves first."),
+                    body: "Everyone gets the identical board, dealt from a seed and played by "
+                        + "the host's rules — the size, the level, whether the rows join end to "
+                        + "end, and how a taken pair leaves the board. You each take pairs at "
+                        + "your own pace on your own device. One point per pair, and when "
+                        + "everybody has run out of moves, the most pairs wins. A tie goes to "
+                        + "whoever ran out of moves first."),
         ],
         bullets: [
             Bullet(lead: "Solo", text: "A fresh board whenever you want one, any shape you "

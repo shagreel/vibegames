@@ -778,41 +778,51 @@ digits below it rise into the space, so every take changes the board.
 
 **Every board can be cleared, at three levels.** The digits are not a random
 shuffle — a random board is usually finishable in no order at all — so the deal
-is built the other way round: pairs are placed one at a time, each where it can
-be seen, and the order they were placed in, read backwards, is a solution. The
-difficulty changes where a pair ends up, because a row's pairs are nested inside
-one another:
+is built the other way round: the grid is cut into bands of rows, each band is
+filled with pairs nested along its own line, and the pairs are placed one at a
+time, each where it can be seen. The order they were placed in, read backwards,
+is a solution, and the tests replay that order through the real rule.
 
-- **Easy** pairs each row in adjacent squares: every pair is already together.
-- **Medium** nests within a block of four, so an outer pair has two digits in
-  between it until they go.
-- **Hard** nests a whole row, so the pair at the edge of a row only comes
-  together once the row either side of it has been cleared.
+A band is filled along one of the four lines a pair can be found on — a row, a
+column, a diagonal, or, when the rows join end to end, round the join:
 
-Nested pairs are why a board can need clearing before it opens up: the outer pair
-of a block is placed first, while the squares it spans are empty, and the inner
-pairs are then placed between its two halves. The board still looks dealt rather
+- **Easy** uses two-row bands paired side by side along each row. Every pair is
+  already together.
+- **Medium** mixes two-row bands: pairs nested across a row, down a column,
+  corner to corner, and — when the join is on — round it. One band of every
+  medium board is round the join or corner to corner.
+- **Hard** uses taller bands, so a pair can be nested down a whole column as well
+  as across a whole row, and it opens with a two-row band of corner-to-corner
+  pairs (and, with the join on, one of wrap pairs).
+
+Nested pairs are why a board can need clearing before it opens up. A band's
+outer pair is placed first, while the squares it spans are empty; the pairs that
+cover it are inserted between its two halves afterwards, which pushes the earlier
+ones down into place. Read the placements backwards and each pair is uncovered
+exactly by the pairs that went in after it. The board still looks dealt rather
 than sorted — the pair kinds are shuffled, the digits of a pair can be either way
-round, and a part-filled start keeps whole pairs so it stays clearable.
+round, both an equal pair and a pair that adds to ten are guaranteed in every
+deal, and a part-filled start keeps whole bands so it stays clearable.
 
-A room stores the level with the seed, because every device has to deal the same
-board: the host chooses it and everybody plays it.
+A room stores its rules with the seed — the shape, the level, the join and the
+pair mode — because every device has to deal the same board *and play it the same
+way*: the host chooses them when the room is made and everybody plays them.
 
 Solo or a room, and the room works the way the other races do: one seed, so
 every device deals the identical 162 digits, and only each player's score
 travels. One point a pair, most pairs wins, a tie goes to whoever ran out of
 moves first. Play until nothing pairs; clear every digit and the board is done.
 
-Three properties of its own, all in the game's settings sheet:
+The settings sheet, with each setting a choice for a game that has not begun:
 
 - **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
   leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
   digit cannot be picked again and a line can be drawn straight through it, so a
   pair can be made across one. A row clears once *every* digit in it has been
   dimmed — the whole row goes at once and everything below it rises a row.
-  Like the size, it is a choice for a new game: once a board is dealt the sheet
-  shows it disabled, because one board played half one way and half the other is
-  not the game.
+  In a room it is one of the host's rules, written when the room is made; solo it
+  is a choice for the next game, and a board in play keeps the one it started
+  with.
 - **New rows (solo only).** While no column reaches the bottom of the grid, a
   button appears *on that empty bottom row* — no strip of its own on screen — and
   a press hangs one to four fresh rows underneath, as a setting chooses. A board
@@ -822,7 +832,10 @@ Three properties of its own, all in the game's settings sheet:
 - **Rows joining end to end.** One setting lets the rows read as a continuous
   line: the last square of a row is next to the first square of the row below,
   so a 5 at the end of a row matches a 5 at the start of the next — and, because
-  a taken digit is not in the way, the one after that too.
+  a taken digit is not in the way, the one after that too. The deal depends on
+  it, so it is part of the room's rules, not a local preference: with the join on
+  a band of every board from Medium up is nested round it, and the solution uses
+  the join.
 - **The board's size.** Six to nine columns and twelve to eighteen rows, the
   full board by default; fewer squares means bigger digits, and the grid still
   fills the screen. It is a choice for a new game: the sheet offers it on the
@@ -839,7 +852,15 @@ Three properties of its own, all in the game's settings sheet:
 board from the room's seed. `web/src/games/ten/engine.ts` mirrors the board,
 including the deal, which is what makes a room's seed light up the same numbers
 in a browser — `Tests/VibeTenBoardTests.swift` and `web/src/test/tenEngine.test.ts`
-both pin themselves to `web/src/games/ten/board.fixtures.json`.
+both pin themselves to `web/src/games/ten/board.fixtures.json`. That file is
+dumped from the Swift engine, with and without the join, by:
+
+```sh
+swiftc -O Sources/Model/SeededGenerator.swift \
+  Sources/Features/VibeTen/VibeTenBoard.swift \
+  Tools/dump_ten_board.swift -o /tmp/dump_ten_board
+/tmp/dump_ten_board > web/src/games/ten/board.fixtures.json
+```
 
 ## Utilities
 
@@ -1152,11 +1173,13 @@ Tools/make_web_cards.py         Derives the web-sized card faces
 Tools/make_web_packs.py         Generates the web Vibe Five categories
 Tools/make_web_game_codes.py    Mirrors the code words into the web app
 Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in browsers
+Tools/ten_room_rules_e2e.mjs    A Vibe Ten room played by the host's rules, in browsers
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/words_e2e.mjs             A real game of Word Vibe, in a browser
 Tools/ways_to_help_e2e.mjs      Sends a real note from the ways-to-help page
 Tools/trio_fixtures/            Dumps the Swift Trio engine for the web tests
 Tools/sudoku_fixtures/          Dumps the Swift Sudoku engine for the web tests
+Tools/dump_ten_board.swift      Dumps the Swift Vibe Ten board for the web fixtures
 Tools/prune_games.py            Deletes old games (admin — clients cannot)
 Tools/make_illustrations.py     Generates the stand-in illustrations
 Tools/shoot_site.mjs            Screenshots the landing page for review

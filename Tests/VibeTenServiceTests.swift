@@ -25,6 +25,8 @@ final class VibeTenServiceTests: XCTestCase {
                                      columns: 9,
                                      rows: 18,
                                      difficulty: .easy,
+                                     wrapRows: true,
+                                     mode: .dim,
                                      creatorName: "Tester",
                                      playerID: PlayerIdentity.id)
         try await service.recordScore(gameID: room,
@@ -41,6 +43,10 @@ final class VibeTenServiceTests: XCTestCase {
         XCTAssertEqual(meta["rows"] as? Int, 18)
         XCTAssertEqual(meta["difficulty"] as? String, "easy",
                        "and the level, because every device has to deal the same board")
+        XCTAssertEqual(meta["wrap"] as? Bool, true,
+                       "and whether the rows join, because it changes the way through")
+        XCTAssertEqual(meta["mode"] as? String, "dim",
+                       "and how a pair leaves the board, because a room is played one way")
 
         // Nobody's pairs are in the room to be replayed.
         let taken = try await read("ten/\(room)/taken")
@@ -57,6 +63,8 @@ final class VibeTenServiceTests: XCTestCase {
                                      columns: 6,
                                      rows: 12,
                                      difficulty: .hard,
+                                     wrapRows: false,
+                                     mode: .remove,
                                      creatorName: "Tester",
                                      playerID: PlayerIdentity.id)
 
@@ -77,6 +85,30 @@ final class VibeTenServiceTests: XCTestCase {
         // And a level that is not one of the three is refused too.
         let badLevel = try await put("ten/\(room)/meta/difficulty", ["value": "impossible"])
         XCTAssertNotEqual(badLevel, 200, "there are three levels, not four")
+
+        // The rules are fixed when the room is made: a joiner cannot turn the
+        // join on, or change the way pairs leave the board, for everybody.
+        let changedWrap = try await put("ten/\(room)/meta/wrap", ["value": true])
+        XCTAssertNotEqual(changedWrap, 200, "the host's rules are the room's rules")
+        let changedMode = try await put("ten/\(room)/meta/mode", ["value": "dim"])
+        XCTAssertNotEqual(changedMode, 200, "and they are decided once")
+    }
+
+    /// The join and the pair mode are in the room too, so every device plays the
+    /// same game. Rooms made before they existed read as off and remove.
+    func testASnapshotCarriesTheRoomsRules() {
+        let plain = VibeTenSnapshot(meta: ["seed": 1], players: nil, scores: nil)
+        XCTAssertFalse(plain.wrapRows, "the rows do not join unless the host says so")
+        XCTAssertEqual(plain.mode, .remove, "and a room without a mode removes")
+
+        let joined = VibeTenSnapshot(meta: ["seed": 1, "wrap": true, "mode": "dim"],
+                                     players: nil, scores: nil)
+        XCTAssertTrue(joined.wrapRows)
+        XCTAssertEqual(joined.mode, .dim)
+
+        let nonsense = VibeTenSnapshot(meta: ["seed": 1, "mode": "vanish"],
+                                       players: nil, scores: nil)
+        XCTAssertEqual(nonsense.mode, .remove, "a mode that does not exist is remove")
     }
 
     /// The shape is in the room, so a joiner deals the host's board. Rooms made

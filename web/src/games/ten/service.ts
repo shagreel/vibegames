@@ -7,21 +7,23 @@ import {
   ROW_OPTIONS,
   ROWS,
   type TenDifficulty,
+  type TenMode,
 } from './engine';
 
 /**
  * A shared Vibe Ten room.
  *
  *   ten/{gameId}
- *     meta/                { seed, columns, rows, difficulty, creator, createdAt, started }
+ *     meta/                { seed, columns, rows, difficulty, wrap, mode, creator, createdAt, started }
  *     players/{playerId}   { name, joinedAt }
  *     scores/{playerId}    { score, finishedAt }
  *
- * The board is never stored. It is a pure function of the seed and the shape, so
- * every client deals the identical digits and then plays its own game — one
- * player's pairs cannot appear on anybody else's board. The shape is the host's
- * choice, written once when the room is made; only the scores travel after that,
- * one write each, and the rules allow nothing else in a room.
+ * The board is never stored. It is a pure function of the seed *and the rules* —
+ * the shape, the difficulty, whether the rows join end to end, and how a taken
+ * pair leaves the board — so every client deals the identical digits and plays
+ * them the same way. Those rules are the host's choice, written once when the
+ * room is made; only the scores travel after that, one write each, and the rules
+ * allow nothing else in a room.
  */
 
 export interface TenScore {
@@ -38,6 +40,11 @@ export interface TenSnapshot {
   rows: number;
   /** How hard the board is to take apart. Rooms without one read as medium. */
   difficulty: TenDifficulty;
+  /** Whether the rows join end to end. A room rule: the board can only be
+      cleared one way, so a joiner cannot switch it on. */
+  wrapRows: boolean;
+  /** How a taken pair leaves the board, also part of the room's rules. */
+  mode: TenMode;
   creator: string | null;
   started: boolean;
   players: Record<string, string>;
@@ -50,6 +57,8 @@ export const EMPTY_SNAPSHOT: TenSnapshot = {
   columns: COLUMNS,
   rows: ROWS,
   difficulty: 'medium',
+  wrapRows: false,
+  mode: 'remove',
   creator: null,
   started: false,
   players: {},
@@ -70,6 +79,9 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
   const difficulty = (DIFFICULTIES as readonly string[]).includes(rawDifficulty)
     ? (rawDifficulty as TenDifficulty)
     : 'medium';
+  const wrapRows = meta.wrap === true;
+  const rawMode = typeof meta.mode === 'string' ? meta.mode : 'remove';
+  const mode: TenMode = rawMode === 'dim' ? 'dim' : 'remove';
 
   const players: Record<string, string> = {};
   const rawPlayers = (value.players ?? {}) as Record<string, unknown>;
@@ -93,6 +105,8 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
     columns,
     rows,
     difficulty,
+    wrapRows,
+    mode,
     creator: typeof meta.creator === 'string' ? meta.creator : null,
     started: meta.started === true,
     players,
@@ -138,6 +152,8 @@ export async function createGame(
   columns: number,
   rows: number,
   difficulty: TenDifficulty,
+  wrapRows: boolean,
+  mode: TenMode,
   creatorName: string,
   playerId: string,
 ): Promise<void> {
@@ -149,6 +165,8 @@ export async function createGame(
       columns,
       rows,
       difficulty,
+      wrap: wrapRows,
+      mode,
       creator: creatorName,
       createdAt: Date.now(),
       started: false,

@@ -553,11 +553,34 @@ struct VibeTenSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: VibeTenModel
 
+    /// The sheet reads the rules in play — the room's in a room, this device's
+    /// solo — and writes the local choice, which is only possible before the
+    /// game begins.
+    private var modeBinding: Binding<VibeTenMode> {
+        Binding(get: { model.effectiveMode }, set: { model.mode = $0 })
+    }
+
+    private var wrapBinding: Binding<Bool> {
+        Binding(get: { model.effectiveWrapRows }, set: { model.wrapRows = $0 })
+    }
+
+    private var difficultyBinding: Binding<VibeTenDifficulty> {
+        Binding(get: { model.boardDifficulty }, set: { model.difficulty = $0 })
+    }
+
+    private var columnsBinding: Binding<Int> {
+        Binding(get: { model.boardShape.columns }, set: { model.columns = $0 })
+    }
+
+    private var rowsBinding: Binding<Int> {
+        Binding(get: { model.boardShape.rows }, set: { model.rows = $0 })
+    }
+
     private var modeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("When a pair is matched")
 
-            Picker("When a pair is matched", selection: $model.mode) {
+            Picker("When a pair is matched", selection: modeBinding) {
                 ForEach(VibeTenMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }
@@ -566,14 +589,16 @@ struct VibeTenSettingsView: View {
             .disabled(!model.canChoosePairMode)
             .accessibilityIdentifier("tenSettings.mode")
 
-            Text(model.mode.blurb)
+            Text(model.effectiveMode.blurb)
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(model.canChoosePairMode
                  ? "Choose it before you start. Pairs taken in Dim mode stay on the board."
-                 : "This game is using the setting it started with. Leave it to choose again.")
+                 : model.isShared
+                    ? "In a room the host's rules are the game's rules. This room is playing the way it was created."
+                    : "This game is using the setting it started with. Leave it to choose again.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -582,7 +607,7 @@ struct VibeTenSettingsView: View {
                 SettingsRow(symbol: "arrow.turn.down.right",
                             title: "Rows join end to end",
                             subtitle: "The last square of a row is next to the first of the row below") {
-                    Toggle("", isOn: $model.wrapRows)
+                    Toggle("", isOn: wrapBinding)
                         .labelsHidden()
                         .tint(VibeTheme.vibeTenBorder)
                         .disabled(!model.canChoosePairMode)
@@ -622,7 +647,7 @@ struct VibeTenSettingsView: View {
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 
-            Picker("Difficulty", selection: $model.difficulty) {
+            Picker("Difficulty", selection: difficultyBinding) {
                 ForEach(VibeTenDifficulty.allCases) { level in
                     Text(level.title).tag(level)
                 }
@@ -631,7 +656,7 @@ struct VibeTenSettingsView: View {
             .disabled(!model.canChooseBoardShape)
             .accessibilityIdentifier("tenSettings.difficulty")
 
-            Text(model.difficulty.blurb)
+            Text(model.boardDifficulty.blurb)
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -645,7 +670,7 @@ struct VibeTenSettingsView: View {
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 
-            Picker("Columns", selection: $model.columns) {
+            Picker("Columns", selection: columnsBinding) {
                 ForEach(VibeTenBoard.columnOptions, id: \.self) { count in
                     Text("\(count)").tag(count)
                 }
@@ -658,7 +683,7 @@ struct VibeTenSettingsView: View {
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 
-            Picker("Rows", selection: $model.rows) {
+            Picker("Rows", selection: rowsBinding) {
                 ForEach(VibeTenBoard.rowOptions, id: \.self) { count in
                     Text("\(count)").tag(count)
                 }
