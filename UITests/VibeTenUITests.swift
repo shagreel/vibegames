@@ -42,9 +42,13 @@ final class VibeTenUITests: XCTestCase {
         XCTAssertEqual(after.count, 160, "taking a pair should remove exactly two digits")
         let heightsBefore = Dictionary(grouping: cells, by: \.column).mapValues { $0.count }
         let heightsAfter = Dictionary(grouping: after, by: \.column).mapValues { $0.count }
-        for column in [firstDigit.column, pair.1.column] {
-            XCTAssertEqual(heightsAfter[column] ?? 0, (heightsBefore[column] ?? 0) - 1,
-                           "column \(column) is one square shorter")
+        // A pair can be two columns, or two squares in one column, so the
+        // expectation is per column: as many squares gone as were taken there.
+        var taken: [Int: Int] = [:]
+        for cell in [pair.0, pair.1] { taken[cell.column, default: 0] += 1 }
+        for (column, count) in taken {
+            XCTAssertEqual(heightsAfter[column] ?? 0, (heightsBefore[column] ?? 0) - count,
+                           "column \(column) is \(count) square(s) shorter")
         }
         tenAttach(app, named: "49-ten-solo")
     }
@@ -142,7 +146,7 @@ final class VibeTenUITests: XCTestCase {
         app.buttons["tenSettings.done"].tap()
 
         // In the game it cannot, and the sheet says so.
-        app.buttons["ten.playSolo"].tap()
+        startSolo(app, button: "ten.playSolo")
         XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
                         .waitForExistence(timeout: 10))
         app.buttons["ten.settings"].tap()
@@ -213,7 +217,7 @@ final class VibeTenUITests: XCTestCase {
         wrap.tap()
         app.buttons["tenSettings.done"].tap()
 
-        app.buttons["ten.playSolo"].tap()
+        startSolo(app, button: "ten.playSolo")
         XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
                         .waitForExistence(timeout: 10))
         app.buttons["ten.settings"].tap()
@@ -264,7 +268,7 @@ final class VibeTenUITests: XCTestCase {
 
     private func openSoloBoard(_ app: XCUIApplication) {
         openLobby(app)
-        app.buttons["ten.playSolo"].tap()
+        startSolo(app, button: "ten.playSolo")
         XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
                         .waitForExistence(timeout: 10), "the board should appear")
     }

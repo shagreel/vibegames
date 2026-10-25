@@ -9,6 +9,8 @@ struct VibeSudokuView: View {
     @State private var isShowingSettings = false
     /// Held while a name is collected, so the tap that needed it still happens.
     @State private var pendingAction: (() -> Void)?
+    /// A solo puzzle already on this device, waiting to be continued or replaced.
+    @State private var pendingResume: SoloProgress?
 
     var body: some View {
         Group {
@@ -43,6 +45,9 @@ struct VibeSudokuView: View {
                 .presentationDragIndicator(.visible)
         }
         .onDisappear { model.endSession() }
+        .soloResumePrompt($pendingResume,
+                          onContinue: { model.resumeSolo() },
+                          onNewGame: { model.playSolo() })
         // The puzzle's seed *is* the round. A solo game, a shared game starting
         // and a rematch all arrive here as a new seed, so one hook covers them.
         .onChange(of: model.puzzle?.seed) { _, seed in

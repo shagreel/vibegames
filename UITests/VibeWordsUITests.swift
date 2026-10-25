@@ -141,7 +141,7 @@ final class VibeWordsUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
         openWordsLobby(app)
-        app.buttons["words.playSolo"].tap()
+        startSolo(app, button: "words.playSolo")
 
         XCTAssertTrue(app.descendants(matching: .any)["words.board"].waitForExistence(timeout: 10))
         try playFullRound(app)
@@ -317,7 +317,7 @@ final class VibeWordsUITests: XCTestCase {
     /// Walks from launch to a solo board.
     private func openSoloGame(_ app: XCUIApplication) {
         openWordsLobby(app)
-        app.buttons["words.playSolo"].tap()
+        startSolo(app, button: "words.playSolo")
     }
 
     private func type(_ word: String, in app: XCUIApplication) {

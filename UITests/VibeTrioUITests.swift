@@ -530,7 +530,7 @@ final class VibeTrioUITests: XCTestCase {
 
     private func openSolo(_ app: XCUIApplication) {
         openLobby(app)
-        app.buttons["trio.playSolo"].tap()
+        startSolo(app, button: "trio.playSolo")
     }
 
     private func attach(_ app: XCUIApplication, named name: String) {

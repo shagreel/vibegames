@@ -1,7 +1,7 @@
 import Foundation
 
 /// How a taken pair leaves the board.
-enum VibeTenMode: String, CaseIterable, Identifiable {
+enum VibeTenMode: String, CaseIterable, Identifiable, Codable {
     /// The pair's digits are gone, and the digits below rise into the hole.
     case remove = "remove"
     /// The pair's digits are dimmed: still there to look at, but gone as far as
@@ -53,7 +53,7 @@ enum VibeTenStartFill: String, CaseIterable, Identifiable {
 }
 
 /// One digit on the board.
-struct VibeTenCell: Equatable {
+struct VibeTenCell: Equatable, Codable {
     let value: Int
     /// Taken in dim mode: still drawn, but gone for the rules.
     var dimmed = false

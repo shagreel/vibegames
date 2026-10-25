@@ -9,6 +9,8 @@ struct VibeTrioView: View {
     @State private var showingSettings = false
     /// Held while a name is collected, so the tap that needed it still happens.
     @State private var pendingAction: (() -> Void)?
+    /// A solo table already on this device, waiting to be continued or replaced.
+    @State private var pendingResume: SoloProgress?
 
     var body: some View {
         Group {
@@ -41,6 +43,9 @@ struct VibeTrioView: View {
                 .presentationDragIndicator(.visible)
         }
         .onDisappear { model.endSession() }
+        .soloResumePrompt($pendingResume,
+                          onContinue: { model.resumeSolo() },
+                          onNewGame: { model.playSolo() })
         // Trio ends when the deck is spent, which is nobody's win in particular
         // — the score is the result, so that is what gets reported. Observed
         // rather than logged where the table is rebuilt, because the last take
@@ -73,7 +78,11 @@ struct VibeTrioView: View {
                            subtitle: "Clear the whole deck at your own pace",
                            symbol: "ipad.and.iphone",
                            identifier: "trio.playSolo") {
-                    model.playSolo()
+                    if let saved = SoloProgressStore.saved(game: VibeTrioModel.progressGame) {
+                        pendingResume = saved
+                    } else {
+                        model.playSolo()
+                    }
                 }
 
                 actionCard(title: "Race your friends",

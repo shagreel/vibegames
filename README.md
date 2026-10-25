@@ -193,6 +193,34 @@ a poor proxy: a 34-clue grid very often still falls to singles, which is how
 Generation costs roughly 15 ms for Easy and 250 ms for Hard — a single carve,
 graded as it goes. Every board is still verified to have exactly one solution.
 
+## Solo games left in progress
+
+A solo game is a sitting, not a commitment. Leaving one — the back button to the
+hub, closing the tab, killing the app — keeps it, and "Play on this device" asks
+whether to carry on with the game that is waiting or start a new one. There is a
+Cancel as well, because tapping the card by mistake should not discard anything.
+
+One record per game, in `UserDefaults` on the phone and `localStorage` in the
+browser. A game decides what goes in it and what the summary line says, because
+only the game knows what "in progress" looks like:
+
+| Game | Kept | Dropped when |
+| --- | --- | --- |
+| Word Vibe | the word, the guesses, the half-typed letters | solved, or out of guesses |
+| Number Vibe | the puzzle's seed, the digits, the pencil marks, the clock | solved |
+| Vibe Pairings | the table's seed, the takes replayed onto it, the clock | the deck is cleared |
+| Vibe Ten | the seed, the shape, every square, the score, the rules it was dealt | no moves left, or the board is clear |
+
+The web's version lives in `web/src/hub/soloProgress.ts`, with one dialog in
+`web/src/hub/SoloResume.tsx`; the phone's is `Sources/Model/SoloProgress.swift`
+and `Sources/Features/Home/SoloResumePrompt.swift`, so the words of the question
+are written once. A record that cannot be read — an older version's payload — is
+thrown away rather than half restored.
+
+Vibe Five is the exception: it has no solo session to come back to. A round is a
+few seconds of a category and a clock, and it starts the moment you press it, so
+there is nothing to resume.
+
 ## Playing in a browser
 
 **play.vibegames.party** is a menu. It used to be Word Vibe and nothing else,

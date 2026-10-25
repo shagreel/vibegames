@@ -11,6 +11,8 @@ import {
 } from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
 import { GameCodeBadge } from '../../hub/GameCodeBadge';
+import { SoloResume } from '../../hub/SoloResume';
+import { clearSolo, loadSolo, saveSolo, savedSolo, type SavedSolo } from '../../hub/soloProgress';
 import { RoundOver, RoundOverChoices } from '../../hub/RoundOver';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
@@ -97,6 +99,8 @@ function VibeSudoku() {
   const [snapshot, setSnapshot] = useState<SudokuSnapshot>(EMPTY_SNAPSHOT);
 
   const [soloSeed, setSoloSeed] = useState<number | null>(null);
+  /** A solo puzzle already saved in this browser, waiting to be continued. */
+  const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
   const [values, setValues] = useState<number[]>(() => new Array(CELL_COUNT).fill(0));
   const [notes, setNotes] = useState<Set<number>[]>(() =>
     Array.from({ length: CELL_COUNT }, () => new Set<number>()),
@@ -127,6 +131,26 @@ function VibeSudoku() {
     return generate(seed, chosen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed, gameId, gameId ? snapshot.difficulty : difficulty]);
+
+  // A solo puzzle is kept as it changes, so leaving the screen — or the browser —
+  // does not end it. A finished puzzle is not something to come back to.
+  useEffect(() => {
+    if (gameId || soloSeed == null) return;
+    if (solved) {
+      clearSolo('sudoku');
+      return;
+    }
+    const filled = values.filter((value) => value !== 0).length;
+    saveSolo('sudoku',
+             {
+               seed: soloSeed,
+               values,
+               notes: notes.map((set) => [...set].sort((a, b) => a - b)),
+               elapsed,
+               solved,
+             },
+             `${filled} of ${CELL_COUNT} squares filled`);
+  }, [gameId, soloSeed, values, notes, elapsed, solved]);
 
   // Starting a round lays the givens down and clears everything else.
   const previousSeed = useRef<number | null>(null);
@@ -257,12 +281,50 @@ function VibeSudoku() {
   };
 
   const playSolo = () => {
+    clearSolo('sudoku');
     setSoloSeed(randomSeed());
     setValues(new Array(CELL_COUNT).fill(0));
     setNotes(Array.from({ length: CELL_COUNT }, () => new Set<number>()));
     setSelected(null);
     setSolved(false);
     previousSeed.current = null;
+  };
+
+  /** From the start screen: continue the puzzle saved here, or ask what to do. */
+  const requestSolo = () => {
+    const saved = savedSolo('sudoku');
+    if (saved) {
+      setSavedResume(saved);
+      return;
+    }
+    playSolo();
+  };
+
+  /** Picks the saved puzzle back up, digits, pencils and clock and all. */
+  const resumeSolo = () => {
+    const saved = loadSolo<{
+      seed: number;
+      values: number[];
+      notes: number[][];
+      elapsed: number;
+      solved: boolean;
+    }>('sudoku');
+    setSavedResume(null);
+    if (!saved) {
+      playSolo();
+      return;
+    }
+    const data = saved.payload;
+    setGameId(null);
+    // The seed guard: a restored board is not a new round, so the effect that
+    // clears the values for a new seed must not fire.
+    previousSeed.current = data.seed;
+    setSoloSeed(data.seed);
+    setValues(data.values);
+    setNotes(data.notes.map((set) => new Set(set)));
+    setElapsed(data.elapsed);
+    setSolved(data.solved);
+    setSelected(null);
   };
 
   const createShared = () =>
@@ -489,7 +551,7 @@ function VibeSudoku() {
           onDifficulty={setDifficulty}
           onJoinCode={setJoinCode}
           onJoin={join}
-          onSolo={playSolo}
+          onSolo={requestSolo}
           onCreate={createShared}
           onRules={() => setRulesOpen(true)}
         />
@@ -567,6 +629,18 @@ function VibeSudoku() {
       )}
 
       {askingForName && <NamePrompt onSubmit={submitName} />}
+
+      {savedResume && (
+        <SoloResume
+          saved={savedResume}
+          onContinue={resumeSolo}
+          onNewGame={() => {
+            setSavedResume(null);
+            playSolo();
+          }}
+          onCancel={() => setSavedResume(null)}
+        />
+      )}
 
       {settingsOpen && (
         <GameSettings prefix="sudoku" onClose={() => setSettingsOpen(false)}>

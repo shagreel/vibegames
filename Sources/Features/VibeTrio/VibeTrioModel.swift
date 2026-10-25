@@ -176,8 +176,83 @@ final class VibeTrioModel: ObservableObject {
 
     func playSolo() {
         tearDownSharedGame()
+        SoloProgressStore.clear(game: Self.progressGame)
         session = .solo
         start(seed: SudokuGenerator.randomSeed())
+    }
+
+    // MARK: - Left in progress
+
+    /// Where this game's saved table lives.
+    static let progressGame = "trio"
+
+    /// A solo table, well enough to put it back: the cards still on it, the ones
+    /// still to come, and the count.
+    struct Saved: Codable, Equatable {
+        var seed: UInt32
+        var visible: [Int]
+        var remaining: [Int]
+        var triosTaken: Int
+        var extraDeals: Int
+        var elapsed: TimeInterval
+    }
+
+    var savedSolo: Saved? {
+        guard case .solo = session, let table, let seed = currentSeed else { return nil }
+        return Saved(seed: seed,
+                     visible: table.visible.map(\.id),
+                     remaining: table.remaining.map(\.id),
+                     triosTaken: table.triosTaken,
+                     extraDeals: table.extraDeals,
+                     elapsed: elapsed)
+    }
+
+    var savedSummary: String {
+        let taken = table?.triosTaken ?? 0
+        return "\(taken) \(taken == 1 ? "trio" : "trios") taken"
+    }
+
+    /// Keeps the table so leaving the screen does not end it.
+    func saveSoloProgress() {
+        guard case .solo = session, let saved = savedSolo else { return }
+        if table?.isFinished == true {
+            SoloProgressStore.clear(game: Self.progressGame)
+        } else {
+            SoloProgressStore.save(saved, game: Self.progressGame, summary: savedSummary)
+        }
+    }
+
+    /// Picks the saved table back up, clock and all.
+    @discardableResult
+    func resumeSolo() -> Bool {
+        guard let saved = SoloProgressStore.state(Saved.self, game: Self.progressGame) else {
+            return false
+        }
+        let cards = Dictionary(uniqueKeysWithValues: TrioDeck.all.map { ($0.id, $0) })
+        let visible = saved.visible.compactMap { cards[$0] }
+        let remaining = saved.remaining.compactMap { cards[$0] }
+        guard visible.count == saved.visible.count, remaining.count == saved.remaining.count else {
+            SoloProgressStore.clear(game: Self.progressGame)
+            return false
+        }
+
+        tearDownSharedGame()
+        session = .solo
+        currentSeed = saved.seed
+        table = TrioTable(seed: saved.seed,
+                          visible: visible,
+                          remaining: remaining,
+                          triosTaken: saved.triosTaken,
+                          extraDeals: saved.extraDeals)
+        selected = []
+        rejected = []
+        pendingTakes = []
+        retriedClaims = []
+        isResolving = false
+        conflictNotice = nil
+        errorMessage = nil
+        startClock(from: saved.elapsed)
+        return true
     }
 
     func createSharedGame() async {
@@ -234,6 +309,7 @@ final class VibeTrioModel: ObservableObject {
     }
 
     func leaveGame() {
+        saveSoloProgress()
         dropPresence()
         tearDownSharedGame()
         session = .lobby
@@ -398,6 +474,7 @@ final class VibeTrioModel: ObservableObject {
             selected = []
             rejected = []
             if table?.isFinished == true { stopClock() }
+            saveSoloProgress()
             return
         }
 
@@ -519,9 +596,9 @@ final class VibeTrioModel: ObservableObject {
 
     // MARK: - Clock
 
-    private func startClock() {
+    private func startClock(from time: TimeInterval = 0) {
         clockTask?.cancel()
-        elapsed = 0
+        elapsed = time
         clockTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 500_000_000)
@@ -572,6 +649,7 @@ final class VibeTrioModel: ObservableObject {
     }
 
     func endSession() {
+        saveSoloProgress()
         dropPresence()
         countdownTask?.cancel(); countdownTask = nil
         clockTask?.cancel(); clockTask = nil

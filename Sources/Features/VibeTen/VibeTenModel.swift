@@ -267,8 +267,88 @@ final class VibeTenModel: ObservableObject {
 
     func playSolo() {
         tearDownSharedGame()
+        SoloProgressStore.clear(game: Self.progressGame)
         session = .solo
         deal(seed: UInt32.random(in: 0...UInt32.max))
+    }
+
+    // MARK: - Left in progress
+
+    /// Where this game's saved board lives.
+    static let progressGame = "ten"
+
+    /// What a solo board is, well enough to put it back exactly.
+    struct Saved: Codable, Equatable {
+        var seed: UInt32
+        var columns: Int
+        var rows: Int
+        var wrapRows: Bool
+        var mode: VibeTenMode
+        var cells: [[VibeTenCell]]
+        var score: Int
+        var finished: Bool
+        var cleared: Bool
+        var elapsed: Int
+    }
+
+    /// The game as it stands, if it is a solo game worth coming back to.
+    var savedSolo: Saved? {
+        guard case .solo = session, let board else { return nil }
+        return Saved(seed: board.seed,
+                     columns: board.columns,
+                     rows: board.rows,
+                     wrapRows: board.wrapRows,
+                     mode: mode,
+                     cells: board.stacks,
+                     score: score,
+                     finished: finished,
+                     cleared: cleared,
+                     elapsed: lastRoundSeconds)
+    }
+
+    /// The line the resume prompt shows.
+    var savedSummary: String {
+        guard let board else { return "A board is waiting." }
+        let pairs = "\(score) \(score == 1 ? "pair" : "pairs")"
+        if finished { return "\(pairs) taken, and the board is done." }
+        return "\(pairs) taken · \(board.remaining) digits left"
+    }
+
+    /// Keeps the board so leaving the screen does not end the game.
+    func saveSoloProgress() {
+        guard case .solo = session, let saved = savedSolo else { return }
+        // A finished round is not something to come back to.
+        if saved.finished {
+            SoloProgressStore.clear(game: Self.progressGame)
+        } else {
+            SoloProgressStore.save(saved, game: Self.progressGame, summary: savedSummary)
+        }
+    }
+
+    /// Picks the saved board back up.
+    @discardableResult
+    func resumeSolo() -> Bool {
+        guard let saved = SoloProgressStore.state(Saved.self, game: Self.progressGame) else {
+            return false
+        }
+        tearDownSharedGame()
+        session = .solo
+        mode = saved.mode
+        board = VibeTenBoard(cells: saved.cells,
+                             seed: saved.seed,
+                             columns: saved.columns,
+                             rows: saved.rows,
+                             wrapRows: saved.wrapRows)
+        boardToken += 1
+        score = saved.score
+        finished = saved.finished
+        cleared = saved.cleared
+        selected = nil
+        message = nil
+        finishedAt = nil
+        lastRoundSeconds = saved.elapsed
+        startedAt = Date()
+        return true
     }
 
     func createSharedGame() async {
@@ -333,6 +413,7 @@ final class VibeTenModel: ObservableObject {
     }
 
     func leaveGame() {
+        saveSoloProgress()
         guard let gameID = sharedGameID else {
             session = .lobby
             board = nil
@@ -438,6 +519,7 @@ final class VibeTenModel: ObservableObject {
             message = nil
             reportScore()
             checkForFinish(board)
+            saveSoloProgress()
         } else {
             // The new tap becomes the selection, and the refusal is said once
             // rather than leaving a tap that appears to do nothing.
@@ -480,6 +562,7 @@ final class VibeTenModel: ObservableObject {
         self.board = board
         selected = nil
         message = nil
+        saveSoloProgress()
     }
 
     /// Whether the board should offer the new-row button: the setting is on,
@@ -506,6 +589,7 @@ final class VibeTenModel: ObservableObject {
 
     /// The screen has gone: stop listening and stop being here.
     func endSession() {
+        saveSoloProgress()
         guard let gameID = sharedGameID else { return }
         service.removePresence(gameID: gameID, playerID: PlayerIdentity.id)
         tearDownSharedGame()

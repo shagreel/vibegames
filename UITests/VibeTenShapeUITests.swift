@@ -93,7 +93,7 @@ final class VibeTenShapeUITests: XCTestCase {
 
     private func openSoloBoard(_ app: XCUIApplication) {
         openLobby(app)
-        app.buttons["ten.playSolo"].tap()
+        startSolo(app, button: "ten.playSolo")
         XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
                         .waitForExistence(timeout: 10), "the board should appear")
     }

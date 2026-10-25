@@ -30,6 +30,7 @@ final class VibeTenModelTests: XCTestCase {
                     VibeTenModel.wrapRowsKey] {
             defaults.removeObject(forKey: key)
         }
+        SoloProgressStore.clear(game: VibeTenModel.progressGame)
     }
 
     override func tearDown() {
@@ -40,6 +41,7 @@ final class VibeTenModelTests: XCTestCase {
         defaults.set(savedRow, forKey: VibeTenModel.addRowKey)
         defaults.set(savedColumns, forKey: VibeTenModel.columnsKey)
         defaults.set(savedRows, forKey: VibeTenModel.rowsKey)
+        SoloProgressStore.clear(game: VibeTenModel.progressGame)
         defaults.set(savedFill, forKey: VibeTenModel.startFillKey)
         defaults.set(savedPerAdd, forKey: VibeTenModel.rowsPerAddKey)
         defaults.set(savedWrap, forKey: VibeTenModel.wrapRowsKey)
@@ -227,5 +229,103 @@ final class VibeTenModelTests: XCTestCase {
         model.wrapRows = true
         model.playSolo()
         XCTAssertEqual(model.board?.wrapRows, true, "the rule reaches the board")
+    }
+}
+
+
+/// Leaving a solo game and coming back to it.
+@MainActor
+final class VibeTenSoloProgressTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        SoloProgressStore.clear(game: VibeTenModel.progressGame)
+        for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
+                    VibeTenModel.columnsKey, VibeTenModel.rowsKey,
+                    VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
+                    VibeTenModel.wrapRowsKey] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
+    override func tearDown() {
+        SoloProgressStore.clear(game: VibeTenModel.progressGame)
+        super.tearDown()
+    }
+
+    func testASoloGameLeftInProgressComesBack() {
+        let model = VibeTenModel()
+        model.playSolo()
+        guard let board = model.board, let pair = board.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
+        }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        XCTAssertEqual(model.score, 1)
+
+        let before = model.board
+        model.leaveGame()
+        XCTAssertNotNil(SoloProgressStore.saved(game: VibeTenModel.progressGame),
+                        "leaving keeps the board")
+
+        let resumed = VibeTenModel()
+        XCTAssertTrue(resumed.resumeSolo(), "and tapping play asks whether to carry on")
+        XCTAssertEqual(resumed.score, 1)
+        XCTAssertEqual(resumed.board, before, "the same digits in the same places")
+        XCTAssertEqual(resumed.session, .solo)
+    }
+
+    func testStartingAgainClearsTheSavedGame() {
+        let model = VibeTenModel()
+        model.playSolo()
+        guard let board = model.board, let pair = board.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
+        }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        model.leaveGame()
+        XCTAssertNotNil(SoloProgressStore.saved(game: VibeTenModel.progressGame))
+
+        model.playSolo()
+        XCTAssertNil(SoloProgressStore.saved(game: VibeTenModel.progressGame),
+                     "a new game is a new game")
+        XCTAssertEqual(model.score, 0)
+    }
+
+    func testAFinishedBoardIsNotSomethingToComeBackTo() {
+        let model = VibeTenModel()
+        model.playSolo()
+        guard let board = model.board, let pair = board.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
+        }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        // Finish the round by playing it out.
+        var guardCount = 0
+        while !(model.finished), guardCount < 200 {
+            guard let current = model.board, let next = current.availableMatches().first else { break }
+            model.tap(next.0)
+            model.tap(next.1)
+            guardCount += 1
+        }
+        guard model.finished else {
+            XCTFail("this board should run out of moves")
+            return
+        }
+        model.leaveGame()
+        XCTAssertNil(SoloProgressStore.saved(game: VibeTenModel.progressGame),
+                     "a finished game is not a game in progress")
+    }
+
+    func testTheSummarySaysWhatIsWaiting() {
+        let model = VibeTenModel()
+        model.playSolo()
+        guard let board = model.board, let pair = board.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
+        }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        XCTAssertTrue(model.savedSummary.contains("1 pair"), model.savedSummary)
+        XCTAssertTrue(model.savedSummary.contains("160 digits left"), model.savedSummary)
     }
 }

@@ -11,6 +11,8 @@ import {
 } from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
 import { GameCodeBadge } from '../../hub/GameCodeBadge';
+import { SoloResume } from '../../hub/SoloResume';
+import { clearSolo, loadSolo, saveSolo, savedSolo, type SavedSolo } from '../../hub/soloProgress';
 import { RoundOver } from '../../hub/RoundOver';
 import { GAMES, trackGameFinish, trackGameStart, trackShare } from '../../analytics';
 import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayerName } from '../../identity';
@@ -29,10 +31,12 @@ import {
   cellAt,
   isCleared,
   newBoard,
+  remaining,
   roomForRows,
   take,
   type Position,
   type TenBoard,
+  type TenCell,
   type TenMode,
   type TenStartFill,
 } from './engine';
@@ -144,6 +148,20 @@ function savedWrapRows(): boolean {
   return localStorage.getItem(WRAP_ROWS_KEY) === 'true';
 }
 
+/** The game a solo board is, well enough to put it back: the cells, the score
+    and the rule it was being played by. */
+interface TenSaved {
+  seed: number;
+  columns: number;
+  rows: number;
+  wrapRows: boolean;
+  stacks: TenCell[][];
+  score: number;
+  finished: boolean;
+  cleared: boolean;
+  mode: TenMode;
+}
+
 function VibeTen() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const id = useMemo(() => playerId(), []);
@@ -171,6 +189,8 @@ function VibeTen() {
   const [addRowEnabled, setAddRowEnabled] = useState(savedAddRow);
   const [columns, setColumns] = useState(savedColumns);
   const [rows, setRows] = useState(savedRows);
+  /** A solo board already saved in this browser, waiting to be continued. */
+  const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
   const [startFill, setStartFill] = useState<TenStartFill>(savedStartFill);
   const [rowsPerAdd, setRowsPerAdd] = useState(savedRowsPerAdd);
   const [wrapRows, setWrapRows] = useState(savedWrapRows);
@@ -207,6 +227,28 @@ function VibeTen() {
     // not re-deal a board somebody is in the middle of.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed, gameId]);
+
+  // A solo board is kept as it changes, so leaving the screen — or the browser —
+  // does not end the game. A finished board is not something to come back to.
+  useEffect(() => {
+    if (gameId || !board) return;
+    if (finished) {
+      clearSolo('ten');
+      return;
+    }
+    const savedBoard: TenSaved = {
+      seed: board.seed,
+      columns: board.columns,
+      rows: board.rows,
+      wrapRows: board.wrapRows,
+      stacks: board.stacks.map((column) => column.map((entry) => ({ ...entry }))),
+      score,
+      finished,
+      cleared,
+      mode,
+    };
+    saveSolo('ten', savedBoard, `${score} pair${score === 1 ? '' : 's'} taken · ${remaining(board)} digits left`);
+  }, [gameId, board, score, finished, cleared, mode]);
 
   // A room's scores and roster, live. Only the seed rebuilds the board.
   useEffect(() => {
@@ -282,7 +324,48 @@ function VibeTen() {
     action?.();
   }
 
+  /** From the start screen: continue the board saved here, or ask what to do. */
+  function requestSolo() {
+    const saved = savedSolo('ten');
+    if (saved) {
+      setSavedResume(saved);
+      return;
+    }
+    solo();
+  }
+
+  /** Picks the saved board back up, exactly as it was left. */
+  function resumeSolo() {
+    const saved = loadSolo<TenSaved>('ten');
+    setSavedResume(null);
+    if (!saved) {
+      solo();
+      return;
+    }
+    const data = saved.payload;
+    setGameId(null);
+    setIsHost(false);
+    dealtSeed.current = data.seed;
+    setSoloSeed(data.seed);
+    setBoard({
+      seed: data.seed,
+      columns: data.columns,
+      rows: data.rows,
+      wrapRows: data.wrapRows,
+      stacks: data.stacks,
+    });
+    setMode(data.mode);
+    setScore(data.score);
+    setFinished(data.finished);
+    setCleared(data.cleared);
+    setSelected(null);
+    setFinishedAt(null);
+    setNotice('');
+    window.history.replaceState({}, '', '/ten');
+  }
+
   function solo() {
+    clearSolo('ten');
     setGameId(null);
     setIsHost(false);
     setSelected(null);
@@ -484,7 +567,7 @@ function VibeTen() {
           <LobbyCard
             title="Play on this device"
             blurb="A board of your own, no connection needed"
-            onClick={solo}
+            onClick={requestSolo}
           />
           <LobbyCard
             title="Play with others"
@@ -545,6 +628,18 @@ function VibeTen() {
       )}
 
       {askingForName && <NamePrompt onSubmit={submitName} />}
+
+      {savedResume && (
+        <SoloResume
+          saved={savedResume}
+          onContinue={resumeSolo}
+          onNewGame={() => {
+            setSavedResume(null);
+            solo();
+          }}
+          onCancel={() => setSavedResume(null)}
+        />
+      )}
 
       {settingsOpen && (
         <GameSettings prefix="ten" onClose={() => setSettingsOpen(false)}>

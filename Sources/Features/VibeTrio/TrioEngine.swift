@@ -27,6 +27,19 @@ struct TrioTable {
         ensurePlayable()
     }
 
+    /// A table put back exactly as it was left, for a solo game picked up again.
+    init(seed: UInt32,
+         visible: [TrioCard],
+         remaining: [TrioCard],
+         triosTaken: Int,
+         extraDeals: Int) {
+        _ = seed
+        self.visible = visible
+        self.remaining = remaining
+        self.triosTaken = triosTaken
+        self.extraDeals = extraDeals
+    }
+
     // MARK: - State
 
     var hasTrio: Bool { TrioDeck.hasTrio(among: visible) }

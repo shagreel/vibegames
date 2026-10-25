@@ -10,6 +10,8 @@ struct VibeWordsView: View {
     /// Held while a name is collected, so the tap that needed it still happens.
     @State private var pendingAction: (() -> Void)?
     @State private var roundToken = 0
+    /// A solo round already on this device, waiting to be continued or replaced.
+    @State private var pendingResume: SoloProgress?
 
     var body: some View {
         Group {
@@ -42,6 +44,9 @@ struct VibeWordsView: View {
                 .presentationDragIndicator(.visible)
         }
         .onDisappear { model.endSession() }
+        .soloResumePrompt($pendingResume,
+                          onContinue: { model.resumeSolo() },
+                          onNewGame: { model.playSolo() })
         .onChange(of: model.answer) { _, _ in
             roundToken += 1
             // A new word *is* a new round, solo and shared alike: the answer
@@ -81,7 +86,11 @@ struct VibeWordsView: View {
                     symbol: "ipad.and.iphone",
                     identifier: "words.playSolo"
                 ) {
-                    model.playSolo()
+                    if let saved = SoloProgressStore.saved(game: VibeWordsModel.progressGame) {
+                        pendingResume = saved
+                    } else {
+                        model.playSolo()
+                    }
                 }
 
                 actionCard(

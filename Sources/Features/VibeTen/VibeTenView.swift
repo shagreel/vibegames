@@ -4,6 +4,8 @@ import SwiftUI
 struct VibeTenView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = VibeTenModel()
+    /// A solo game already on this device, waiting to be continued or replaced.
+    @State private var pendingResume: SoloProgress?
 
     @State private var joinCode = ""
     @State private var showingSettings = false
@@ -51,6 +53,9 @@ struct VibeTenView: View {
                                     seconds: model.lastRoundSeconds)
         }
         .onDisappear { model.endSession() }
+        .soloResumePrompt($pendingResume,
+                          onContinue: { model.resumeSolo() },
+                          onNewGame: { model.playSolo() })
     }
 
     // MARK: - Header
@@ -97,7 +102,11 @@ struct VibeTenView: View {
                            subtitle: "A board of your own, no connection needed",
                            symbol: "ipad.and.iphone",
                            identifier: "ten.playSolo") {
-                    model.playSolo()
+                    if let saved = SoloProgressStore.saved(game: VibeTenModel.progressGame) {
+                        pendingResume = saved
+                    } else {
+                        model.playSolo()
+                    }
                 }
 
                 actionCard(title: "Race your friends",

@@ -118,8 +118,69 @@ final class VibeSudokuModel: ObservableObject {
 
     func playSolo() {
         tearDownSharedGame()
+        SoloProgressStore.clear(game: Self.progressGame)
         session = .solo
         loadPuzzle(seed: SudokuGenerator.randomSeed(), difficulty: difficulty)
+    }
+
+    // MARK: - Left in progress
+
+    /// Where this game's saved puzzle lives.
+    static let progressGame = "sudoku"
+
+    /// A solo puzzle, well enough to put it back: the seed it was generated
+    /// from, what has been filled in and what the player has pencilled.
+    struct Saved: Codable, Equatable {
+        var seed: UInt32
+        var difficulty: SudokuDifficulty
+        var values: [Int]
+        var notes: [[Int]]
+        var elapsed: TimeInterval
+        var solved: Bool
+    }
+
+    var savedSolo: Saved? {
+        guard case .solo = session, let puzzle else { return nil }
+        return Saved(seed: puzzle.seed,
+                     difficulty: puzzle.difficulty,
+                     values: values,
+                     notes: notes.map { $0.sorted() },
+                     elapsed: elapsed,
+                     solved: solved)
+    }
+
+    var savedSummary: String {
+        let filled = values.filter { $0 != 0 }.count
+        return "\(filled) of \(SudokuPuzzle.cellCount) squares filled"
+    }
+
+    /// Keeps the puzzle so leaving the screen does not end it.
+    func saveSoloProgress() {
+        guard case .solo = session, let saved = savedSolo else { return }
+        if saved.solved {
+            SoloProgressStore.clear(game: Self.progressGame)
+        } else {
+            SoloProgressStore.save(saved, game: Self.progressGame, summary: savedSummary)
+        }
+    }
+
+    /// Picks the saved puzzle back up, clock and all.
+    @discardableResult
+    func resumeSolo() -> Bool {
+        guard let saved = SoloProgressStore.state(Saved.self, game: Self.progressGame) else {
+            return false
+        }
+        tearDownSharedGame()
+        session = .solo
+        difficulty = saved.difficulty
+        puzzle = SudokuGenerator.puzzle(seed: saved.seed, difficulty: saved.difficulty)
+        values = saved.values
+        notes = saved.notes.map { Set($0) }
+        solved = saved.solved
+        selectedCell = nil
+        errorMessage = nil
+        if !saved.solved { startClock(from: saved.elapsed) }
+        return true
     }
 
     func createSharedGame() async {
@@ -185,6 +246,7 @@ final class VibeSudokuModel: ObservableObject {
     }
 
     func leaveGame() {
+        saveSoloProgress()
         dropPresence()
         tearDownSharedGame()
         session = .lobby
@@ -338,6 +400,7 @@ final class VibeSudokuModel: ObservableObject {
         }
 
         checkForCompletion()
+        saveSoloProgress()
     }
 
     func erase() {
@@ -345,6 +408,7 @@ final class VibeSudokuModel: ObservableObject {
         guard !puzzle.isGiven(index) else { return }
         values[index] = 0
         notes[index] = []
+        saveSoloProgress()
     }
 
     /// Removes a digit from the notes of the row, column and box around a cell.
@@ -428,9 +492,9 @@ final class VibeSudokuModel: ObservableObject {
 
     // MARK: - Clock
 
-    private func startClock() {
+    private func startClock(from time: TimeInterval = 0) {
         clockTask?.cancel()
-        elapsed = 0
+        elapsed = time
         clockTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 500_000_000)
@@ -480,6 +544,7 @@ final class VibeSudokuModel: ObservableObject {
     }
 
     func endSession() {
+        saveSoloProgress()
         dropPresence()
         countdownTask?.cancel(); countdownTask = nil
         clockTask?.cancel(); clockTask = nil

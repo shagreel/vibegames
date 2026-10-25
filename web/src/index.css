@@ -651,6 +651,38 @@ body {
   background: var(--raise-2);
 }
 
+/* The question a solo game asks when one is already saved here. */
+.solo-resume__summary {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.solo-resume__primary,
+.solo-resume__secondary {
+  padding: 0.85rem 1.2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 1rem;
+  background: var(--raise);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.solo-resume__primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--lobby-a, #4585f5), var(--lobby-b, #21b8a8));
+  color: var(--on-accent);
+}
+
+.solo-resume__cancel {
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  color: var(--ink-muted);
+}
+
 /* The code itself: big enough to read across a table, with the link under it. */
 .room-code__value {
   margin: 0;

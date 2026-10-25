@@ -2,7 +2,7 @@ import Foundation
 
 /// How hard a puzzle is. Expressed as a target clue count — see the note on
 /// ``SudokuGenerator`` for what that does and does not guarantee.
-enum SudokuDifficulty: String, CaseIterable, Identifiable, Hashable, Sendable {
+enum SudokuDifficulty: String, CaseIterable, Identifiable, Hashable, Sendable, Codable {
     case easy
     case medium
     case hard

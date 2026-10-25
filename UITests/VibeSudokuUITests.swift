@@ -29,7 +29,7 @@ final class VibeSudokuUITests: XCTestCase {
         app.launch(withName: "Tester")
         openSudokuLobby(app)
 
-        app.buttons["sudoku.playSolo"].tap()
+        startSolo(app, button: "sudoku.playSolo")
 
         let board = app.descendants(matching: .any)["sudoku.board"].firstMatch
         XCTAssertTrue(board.waitForExistence(timeout: 10), "The grid should appear")
@@ -61,7 +61,7 @@ final class VibeSudokuUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
         openSudokuLobby(app)
-        app.buttons["sudoku.playSolo"].tap()
+        startSolo(app, button: "sudoku.playSolo")
 
         let board = app.descendants(matching: .any)["sudoku.board"].firstMatch
         XCTAssertTrue(board.waitForExistence(timeout: 10))
@@ -88,7 +88,7 @@ final class VibeSudokuUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
         openSudokuLobby(app)
-        app.buttons["sudoku.playSolo"].tap()
+        startSolo(app, button: "sudoku.playSolo")
 
         let board = app.descendants(matching: .any)["sudoku.board"].firstMatch
         XCTAssertTrue(board.waitForExistence(timeout: 10))

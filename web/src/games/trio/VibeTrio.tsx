@@ -35,6 +35,8 @@ import {
 } from '../../hub/GameSettings';
 import { GameMessage } from '../../hub/GameMessage';
 import { GameCodeBadge } from '../../hub/GameCodeBadge';
+import { SoloResume } from '../../hub/SoloResume';
+import { clearSolo, loadSolo, saveSolo, savedSolo, type SavedSolo } from '../../hub/soloProgress';
 import { RoundOver } from '../../hub/RoundOver';
 import './VibeTrio.css';
 
@@ -77,6 +79,8 @@ function VibeTrio() {
 
   const [soloSeed, setSoloSeed] = useState<number | null>(null);
   const [soloTakes, setSoloTakes] = useState<number[][]>([]);
+  /** A solo table already saved in this browser, waiting to be continued. */
+  const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
 
   const [selected, setSelected] = useState<number[]>([]);
@@ -183,6 +187,19 @@ function VibeTrio() {
   }, [table]);
 
   // A fresh round: clear everything that belonged to the last one.
+  // A solo table is kept as it changes, so leaving the screen — or the browser —
+  // does not end it. A cleared deck is not something to come back to.
+  useEffect(() => {
+    if (gameId || soloSeed == null) return;
+    if (finished) {
+      clearSolo('trio');
+      return;
+    }
+    saveSolo('trio',
+             { seed: soloSeed, takes: soloTakes, elapsed },
+             `${soloTakes.length} trio${soloTakes.length === 1 ? '' : 's'} taken`);
+  }, [gameId, soloSeed, soloTakes, elapsed, finished]);
+
   const previousSeed = useRef<number | null>(null);
   useEffect(() => {
     if (seed == null || previousSeed.current === seed) return;
@@ -274,10 +291,43 @@ function VibeTrio() {
   };
 
   const playSolo = () => {
+    clearSolo('trio');
     setSoloSeed(randomSeed());
     setSoloTakes([]);
     setSelected([]);
     setRejected([]);
+  };
+
+  /** From the start screen: continue the table saved here, or ask what to do. */
+  const requestSolo = () => {
+    const saved = savedSolo('trio');
+    if (saved) {
+      setSavedResume(saved);
+      return;
+    }
+    playSolo();
+  };
+
+  /** Picks the saved table back up: the same seed, and the takes replayed onto
+      it, which is exactly how the engine rebuilds a shared table. */
+  const resumeSolo = () => {
+    const saved = loadSolo<{ seed: number; takes: number[][]; elapsed: number }>('trio');
+    setSavedResume(null);
+    if (!saved) {
+      playSolo();
+      return;
+    }
+    const data = saved.payload;
+    setGameId(null);
+    // The seed guard: a restored table is not a new round, so the effect that
+    // clears the selection and the clock must not fire.
+    previousSeed.current = data.seed;
+    setSoloSeed(data.seed);
+    setSoloTakes(data.takes);
+    setElapsed(data.elapsed);
+    setSelected([]);
+    setRejected([]);
+    setPending([]);
   };
 
   const createShared = () =>
@@ -498,7 +548,7 @@ function VibeTrio() {
           joinError={joinError}
           onJoinCode={setJoinCode}
           onJoin={join}
-          onSolo={playSolo}
+          onSolo={requestSolo}
           onCreate={createShared}
           onRules={() => setShowRules(true)}
         />
@@ -538,6 +588,18 @@ function VibeTrio() {
       )}
 
       {askingForName && <NamePrompt onSubmit={submitName} />}
+
+      {savedResume && (
+        <SoloResume
+          saved={savedResume}
+          onContinue={resumeSolo}
+          onNewGame={() => {
+            setSavedResume(null);
+            playSolo();
+          }}
+          onCancel={() => setSavedResume(null)}
+        />
+      )}
     </div>
   );
 }

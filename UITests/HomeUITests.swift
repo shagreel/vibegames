@@ -120,7 +120,7 @@ final class HomeUITests: XCTestCase {
         XCTAssertFalse(app.textFields["trio.nameField"].exists,
                        "and without a name field anywhere on it")
 
-        app.buttons["trio.playSolo"].tap()
+        startSolo(app, button: "trio.playSolo")
         XCTAssertTrue(app.buttons["trio.card.0"].waitForExistence(timeout: 10),
                       "solo play should deal with no name at all")
 

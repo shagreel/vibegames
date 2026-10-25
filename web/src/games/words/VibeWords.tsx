@@ -6,6 +6,8 @@ import { SupportButton } from '../../hub/Support';
 import { GameHeader } from '../../hub/GameHeader';
 import { GameSettings, SettingsButton } from '../../hub/GameSettings';
 import { GameCodeBadge } from '../../hub/GameCodeBadge';
+import { SoloResume } from '../../hub/SoloResume';
+import { clearSolo, loadSolo, saveSolo, savedSolo, type SavedSolo } from '../../hub/soloProgress';
 import { GameMessage } from '../../hub/GameMessage';
 import { RoundOver } from '../../hub/RoundOver';
 import { Lobby as SharedLobby, LobbyCard } from '../../hub/Lobby';
@@ -77,6 +79,8 @@ function VibeWords() {
   const [nameSubmitted, setNameSubmitted] = useState(() => savedName() !== '');
   /** Playing on this device: a word dealt here, with no room and no network. */
   const [solo, setSolo] = useState(false);
+  /** A solo round already saved in this browser, waiting to be continued. */
+  const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
   /** Chosen a room of their own, so the intro gets out of the way. */
   const [creating, setCreating] = useState(false);
   const [joinCode, setJoinCode] = useState('');
@@ -104,6 +108,20 @@ function VibeWords() {
   /** The settings sheet: the player's name, the appearance, and nothing else
       yet — Word Vibe has no choices of its own. */
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // A solo round is kept as it changes, so leaving the screen — or the browser —
+  // does not end it. A solved or exhausted word is not something to come back to.
+  useEffect(() => {
+    if (!solo || !gameStarted || !answer) return;
+    const over = won || gameOver;
+    if (over) {
+      clearSolo('words');
+      return;
+    }
+    saveSolo('words',
+             { answer, guesses, currentGuess, won },
+             `${guesses.length} of ${MAX_GUESSES} guesses used`);
+  }, [solo, gameStarted, answer, guesses, currentGuess, won, gameOver]);
 
   // Track previous answer to detect word changes
   const previousAnswerRef = useRef<string>('');
@@ -573,10 +591,41 @@ function VibeWords() {
   ///
   /// No name is asked for, because there is nobody to tell it to.
   const playSolo = () => {
+    clearSolo('words');
     setSolo(true);
     resetGame();
     setGameStarted(true);
     trackGameStart(GAMES.words, { mode: 'solo' });
+  };
+
+  /** From the start screen: continue the word saved here, or ask what to do. */
+  const requestSolo = () => {
+    const saved = savedSolo('words');
+    if (saved) {
+      setSavedResume(saved);
+      return;
+    }
+    playSolo();
+  };
+
+  /** Picks the saved word back up, guesses and half-typed letters and all. */
+  const resumeSolo = () => {
+    const saved = loadSolo<{ answer: string; guesses: string[]; currentGuess: string; won: boolean }>('words');
+    setSavedResume(null);
+    if (!saved) {
+      playSolo();
+      return;
+    }
+    setSolo(true);
+    setGameId(null);
+    setIsCreator(false);
+    setGameStarted(true);
+    setAnswer(saved.payload.answer);
+    setGuesses(saved.payload.guesses);
+    setCurrentGuess(saved.payload.currentGuess);
+    setWon(saved.payload.won);
+    setGameOver(false);
+    setMessage('');
   };
 
   /// Join somebody else's room, the way the other games do: put its code in the
@@ -710,6 +759,18 @@ function VibeWords() {
         <GameSettings prefix="words" onClose={() => setSettingsOpen(false)} />
       )}
 
+      {savedResume && (
+        <SoloResume
+          saved={savedResume}
+          onContinue={resumeSolo}
+          onNewGame={() => {
+            setSavedResume(null);
+            playSolo();
+          }}
+          onCancel={() => setSavedResume(null)}
+        />
+      )}
+
       <div className="game-content">
         {/* The way in: on your own, a room of your own, or somebody else's. */}
         {!solo && !creating && !gameExists && (
@@ -725,7 +786,7 @@ function VibeWords() {
             <LobbyCard
               title="Play on this device"
               blurb="A word to yourself, and nobody waiting on you"
-              onClick={playSolo}
+              onClick={requestSolo}
             />
             <LobbyCard
               title="Race your friends"

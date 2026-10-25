@@ -71,6 +71,22 @@ func assertLooksLikeADisplayedCode(_ displayed: String, label: String,
                   "a code is two words, so letters and a space: \(label)", file: file, line: line)
 }
 
+/// Starts a solo game, whatever the last run left saved.
+///
+/// A solo game is kept when it is left, so a test that wants a *new* one has to
+/// say so: this taps the "Play on this device" button and, if the resume
+/// question appears, chooses to start again.
+func startSolo(_ app: XCUIApplication, button: String) {
+    let play = app.buttons[button]
+    XCTAssertTrue(play.waitForExistence(timeout: 10), "\(button) should be there")
+    play.tap()
+
+    let alert = app.alerts["A game is in progress"]
+    if alert.waitForExistence(timeout: 1.5) {
+        alert.buttons["New game"].tap()
+    }
+}
+
 /// Gets the first-run name prompt out of the way.
 ///
 /// A test that launches without a name has this sitting over the hub, and every

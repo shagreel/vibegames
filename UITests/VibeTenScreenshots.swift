@@ -88,9 +88,9 @@ final class VibeTenScreenshots: XCTestCase {
         let tile = app.descendants(matching: .any)["game.vibe-ten"].firstMatch
         XCTAssertTrue(tile.waitForExistence(timeout: 15), "Vibe Ten tile should exist")
         tile.tap()
-        let solo = app.buttons["ten.playSolo"]
-        XCTAssertTrue(solo.waitForExistence(timeout: 5), "the lobby should offer solo play")
-        solo.tap()
+        XCTAssertTrue(app.buttons["ten.playSolo"].waitForExistence(timeout: 5),
+                      "the lobby should offer solo play")
+        startSolo(app, button: "ten.playSolo")
         XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
                         .waitForExistence(timeout: 10), "the board should appear")
     }

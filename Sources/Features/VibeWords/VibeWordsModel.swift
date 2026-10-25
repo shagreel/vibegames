@@ -135,8 +135,66 @@ final class VibeWordsModel: ObservableObject {
 
     func playSolo() {
         tearDownSharedGame()
+        SoloProgressStore.clear(game: Self.progressGame)
         session = .solo
         startLocalRound()
+    }
+
+    // MARK: - Left in progress
+
+    /// Where this game's saved round lives.
+    static let progressGame = "words"
+
+    /// A solo round, well enough to put it back exactly: the word, the guesses
+    /// already made and the letters half-typed.
+    struct Saved: Codable, Equatable {
+        var answer: String
+        var guesses: [String]
+        var currentGuess: String
+        var won: Bool
+        var lost: Bool
+    }
+
+    var savedSolo: Saved? {
+        guard case .solo = session, !answer.isEmpty else { return nil }
+        return Saved(answer: answer,
+                     guesses: guesses,
+                     currentGuess: currentGuess,
+                     won: won,
+                     lost: lost)
+    }
+
+    var savedSummary: String {
+        let used = guesses.count
+        if used == 0 { return "A word is waiting, with every guess left." }
+        return "\(used) of \(WordGameEngine.maxGuesses) guesses used"
+    }
+
+    /// Keeps the round so leaving the screen does not end it.
+    func saveSoloProgress() {
+        guard case .solo = session, let saved = savedSolo else { return }
+        if saved.won || saved.lost {
+            SoloProgressStore.clear(game: Self.progressGame)
+        } else {
+            SoloProgressStore.save(saved, game: Self.progressGame, summary: savedSummary)
+        }
+    }
+
+    /// Picks the saved round back up.
+    @discardableResult
+    func resumeSolo() -> Bool {
+        guard let saved = SoloProgressStore.state(Saved.self, game: Self.progressGame) else {
+            return false
+        }
+        tearDownSharedGame()
+        session = .solo
+        answer = saved.answer
+        guesses = saved.guesses
+        currentGuess = saved.currentGuess
+        won = saved.won
+        lost = saved.lost
+        message = nil
+        return true
     }
 
     func createSharedGame() async {
@@ -202,6 +260,7 @@ final class VibeWordsModel: ObservableObject {
     }
 
     func leaveGame() {
+        saveSoloProgress()
         dropPresence()
         tearDownSharedGame()
         session = .lobby
@@ -289,6 +348,7 @@ final class VibeWordsModel: ObservableObject {
         case .enter:
             submitGuess()
         }
+        saveSoloProgress()
     }
 
     private func submitGuess() {
@@ -422,6 +482,7 @@ final class VibeWordsModel: ObservableObject {
     }
 
     func endSession() {
+        saveSoloProgress()
         dropPresence()
         countdownTask?.cancel()
         countdownTask = nil
