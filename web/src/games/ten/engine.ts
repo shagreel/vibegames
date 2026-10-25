@@ -85,11 +85,18 @@ export interface TenMove {
 const cell = (value: number): TenCell => ({ value, dimmed: false });
 
 /**
- * Deals a board. Every column starts full, and the digits are spread as evenly
- * as the shape allows: `total / 9` of each value, and the first `total % 9`
- * values one more time — for nine by eighteen that is eighteen of each. The
- * recipe has to match `VibeTenBoard.deal` exactly, or a room's seed deals two
- * different boards.
+ * Deals a board out of pairs, so that every board can be cleared.
+ *
+ * A random shuffle of the right digits is a board with a random chance of being
+ * finishable — usually none. So the five kinds of pair (1 with 9, 2 with 8, 3
+ * with 7, 4 with 6, 5 with 5) are counted, each column is a run of them, and the
+ * two digits of a pair sit next to each other. A solution therefore always
+ * exists: take the bottom pair of any column, again and again. Players can still
+ * take other pairs, and clearing the board is still the win.
+ *
+ * The recipe has to match `VibeTenBoard.deal` exactly — same generator, same
+ * five groups, same number of draws — because a room's board comes back from one
+ * seed. `board.fixtures.json` pins it.
  *
  * `startRows` then keeps that many rows off the top of each column, so a
  * part-filled board is the top of the same deal hanging from the top of the
@@ -102,32 +109,61 @@ export function newBoard(
   startRows = rows,
   wrapRows = false,
 ): TenBoard {
-  const total = columns * rows;
-  const base = Math.floor(total / 9);
-  const extra = total % 9;
-
   const generator = new SeededGenerator(seed);
-  const digits: number[] = [];
-  for (let value = 1; value <= 9; value += 1) {
-    for (let copy = 0; copy < base + (value <= extra ? 1 : 0); copy += 1) digits.push(value);
-  }
-  shuffle(digits, generator);
 
-  const kept = Math.max(1, Math.min(rows, startRows));
+  // How many pairs of each kind. Five pairs put two fives on the board, and
+  // every other pair puts one of each digit, so the fives need half as many
+  // pairs as the others to keep the digits even: nine fives-pairs and eighteen
+  // of each other kind, for the full board.
+  const pairs = Math.floor((columns * rows) / 2);
+  const fivePairs = Math.floor((2 * pairs + 9) / 18);
+  const otherPairs = pairs - fivePairs;
+
+  // Which group gets the odd pair or two, and which way round the digits of a
+  // pair go, are the parts that vary between seeds.
+  const order = [0, 1, 2, 3];
+  shuffle(order, generator);
+  const groupPairs = [0, 0, 0, 0].map(() => Math.floor(otherPairs / 4));
+  for (let index = 0; index < otherPairs % 4; index += 1) groupPairs[order[index]] += 1;
+
+  const deck: [number, number][] = [];
+  for (let group = 0; group < 5; group += 1) {
+    if (group === 4) {
+      // 5 with 5 is the one group that is a single digit.
+      for (let index = 0; index < fivePairs; index += 1) deck.push([5, 5]);
+      continue;
+    }
+    const count = groupPairs[group];
+    const low = group + 1;
+    const high = 10 - low;
+    // A pair can be equal or add to ten. Equal pairs are kept rare: a run of
+    // them reads as a column of one digit, which is not a dealt board.
+    const equal = generator.nextBounded(Math.min(2, Math.floor(count / 2)) + 1);
+    for (let index = 0; index < equal; index += 1) deck.push([low, low]);
+    for (let index = 0; index < equal; index += 1) deck.push([high, high]);
+    for (let index = 0; index < count - 2 * equal; index += 1) deck.push([low, high]);
+  }
+  shuffle(deck, generator);
+
+  const pairsPerColumn = Math.floor(rows / 2);
+  // A part-filled board keeps whole pairs off the top, so it is clearable the
+  // same way the full board is.
+  let kept = Math.max(1, Math.min(rows, startRows));
+  if (kept % 2 === 1) kept = Math.max(2, kept - 1);
   const stacks: TenCell[][] = [];
-  let index = 0;
   for (let column = 0; column < columns; column += 1) {
-    stacks.push(digits.slice(index, index + kept).map(cell));
-    index += rows;
+    const stack: TenCell[] = [];
+    for (let pairIndex = 0; pairIndex < pairsPerColumn; pairIndex += 1) {
+      const pair = deck[column * pairsPerColumn + pairIndex];
+      const flipped = generator.nextBounded(2) === 1;
+      stack.push(cell(flipped ? pair[1] : pair[0]));
+      stack.push(cell(flipped ? pair[0] : pair[1]));
+    }
+    stacks.push(stack.slice(0, kept));
   }
   return { seed, columns, rows, wrapRows, stacks };
 }
 
-/**
- * A board of an exact shape, for tests. Every digit starts undimmed, and the
- * shape is padded to nine columns so a short board means empty columns rather
- * than a narrower grid — the same thing the Swift initialiser does.
- */
 export function boardFromStacks(
   stacks: number[][],
   seed = 0,

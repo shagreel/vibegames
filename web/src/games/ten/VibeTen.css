@@ -22,6 +22,10 @@
    without the page scrolling under a thumb. */
 .ten__board-wrap {
   --ten-gap: 2px;
+  /* The wrap is the ruler the digits are sized against: a square is a ninth of
+     it, and the digit is a little over half a square — the same proportion the
+     phone uses, which is what the web was missing. */
+  container-type: inline-size;
   /* The header and the padding around the grid. It was 15rem, which left a
      third of a phone screen empty under the board; the grid fills what it is
      given, and a round-over panel below it scrolls if it needs to. */
@@ -34,6 +38,15 @@
              calc((100svh - var(--ten-chrome)) * var(--ten-columns, 9)
                   / var(--ten-rows, 18)));
   margin: 0 auto;
+}
+
+/* On a laptop the height is the scarce thing, so fitting eighteen rows to it
+   leaves a postage stamp in the middle of the page. Wide screens use the width
+   instead and let the page scroll. */
+@media (min-width: 700px) {
+  .ten__board-wrap {
+    width: min(100% - 2rem, 30rem);
+  }
 }
 
 .ten__board {
@@ -87,7 +100,10 @@
   border-radius: 22%;
   background: var(--raise);
   color: var(--ink);
-  font-size: clamp(0.55rem, 1.9vmin, 1.05rem);
+  /* A little over half a square, like the phone. The old clamp was against the
+     viewport, which on a phone came out at nine pixels in a forty-pixel
+     square. */
+  font-size: calc(100cqw / var(--ten-columns, 9) * 0.55);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;

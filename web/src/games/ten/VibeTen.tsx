@@ -74,6 +74,10 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
       body: 'Two digits pair if they are **equal** or **add up to ten** — 1 with 9, 2 with 8, 3 with 7, 4 with 6, 5 with 5. They have to be on the same row, column or diagonal with nothing in between: neighbours count, and so does a line with only gaps in it.',
     },
     {
+      title: 'Every board can be cleared',
+      body: 'The digits are not placed at random: each column is a run of **pairs**, so a solution always exists — take the bottom pair of a column and the ones above it become the next pair. That is one way through; the board is yours to take apart however you like.',
+    },
+    {
       title: 'The board hangs from the top',
       body: 'The digits hang from the top row, and a gap closes **upward**: take a pair and the digits below it rise into the space. Every take changes what is next to what, which is half the game.',
     },

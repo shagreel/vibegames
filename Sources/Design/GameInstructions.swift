@@ -125,6 +125,11 @@ struct GameInstructions {
                         + "They have to be on the same row, column or diagonal, with nothing "
                         + "in between: neighbours count, and so does a line with only gaps "
                         + "in it."),
+            Section(title: "Every board can be cleared",
+                    body: "The digits are not placed at random: each column is a run of "
+                        + "**pairs**, so a solution always exists — take the bottom pair of a "
+                        + "column and the ones above it become the next pair. That is one way "
+                        + "through; the board is yours to take apart however you like."),
             Section(title: "The board hangs from the top",
                     body: "The digits hang from the top row and a gap closes **upward**: take a "
                         + "pair and the digits below it rise into the space. Half the game is "

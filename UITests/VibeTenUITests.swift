@@ -124,6 +124,10 @@ final class VibeTenUITests: XCTestCase {
         let before = app.tenCells.count
         addRow.tap()
         XCTAssertEqual(app.tenCells.count, before + 9, "nine new digits arrive underneath")
+        // A column that was two squares short needs two presses before the grid
+        // is full again.
+        for _ in 0..<6 where addRow.exists { addRow.tap() }
+        XCTAssertEqual(app.tenCells.count, 162, "and the board fills to the full grid")
         XCTAssertFalse(addRow.exists, "the grid is full again, so the offer goes")
         tenAttach(app, named: "49c-ten-new-row")
     }

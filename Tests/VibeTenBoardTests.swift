@@ -123,15 +123,15 @@ final class VibeTenBoardTests: XCTestCase {
     /// fixture both engines share.
     func testTheDealMatchesTheFixtureTheWebUses() {
         let expected: [[Int]] = [
-            [7, 6, 2, 3, 1, 7, 5, 3, 4, 8, 2, 4, 8, 6, 9, 9, 7, 8],
-            [3, 6, 4, 2, 2, 3, 5, 7, 1, 7, 5, 3, 1, 3, 6, 7, 7, 8],
-            [4, 9, 1, 6, 8, 2, 4, 9, 5, 9, 1, 7, 5, 5, 6, 4, 9, 1],
-            [2, 3, 3, 4, 4, 8, 4, 6, 4, 5, 2, 5, 6, 9, 9, 2, 5, 2],
-            [9, 7, 1, 1, 7, 8, 4, 7, 9, 3, 2, 6, 3, 2, 7, 7, 6, 6],
-            [1, 2, 7, 9, 1, 5, 5, 5, 4, 8, 8, 1, 3, 5, 6, 6, 7, 2],
-            [3, 1, 2, 6, 4, 8, 3, 9, 8, 8, 9, 2, 3, 9, 5, 8, 3, 6],
-            [1, 8, 2, 8, 5, 4, 6, 5, 4, 9, 8, 9, 1, 3, 4, 4, 7, 7],
-            [3, 9, 8, 2, 1, 1, 4, 8, 5, 1, 5, 3, 2, 7, 6, 6, 1, 9]
+            [2, 2, 2, 8, 4, 6, 1, 9, 2, 8, 4, 6, 7, 3, 5, 5, 5, 5],
+            [6, 4, 4, 6, 2, 8, 7, 3, 3, 3, 1, 9, 9, 1, 2, 8, 3, 7],
+            [6, 4, 4, 6, 4, 6, 3, 7, 8, 2, 2, 8, 2, 8, 3, 7, 1, 9],
+            [4, 6, 6, 4, 3, 3, 5, 5, 6, 4, 9, 1, 2, 8, 8, 2, 9, 1],
+            [1, 9, 3, 7, 1, 9, 9, 1, 1, 9, 1, 9, 1, 9, 8, 8, 3, 7],
+            [1, 9, 9, 1, 4, 6, 7, 3, 2, 8, 7, 3, 7, 3, 2, 8, 9, 1],
+            [2, 8, 4, 4, 9, 1, 6, 6, 7, 3, 7, 7, 5, 5, 1, 9, 5, 5],
+            [6, 4, 2, 8, 5, 5, 7, 7, 4, 6, 8, 8, 3, 7, 2, 2, 6, 4],
+            [7, 3, 1, 9, 6, 4, 4, 6, 7, 3, 2, 8, 5, 5, 5, 5, 5, 5]
         ]
         XCTAssertEqual(VibeTenBoard(seed: 1234).values, expected)
     }
@@ -384,12 +384,12 @@ final class VibeTenShapeTests: XCTestCase {
     /// number, or a room of six-column games is two different games.
     func testASmallerBoardMatchesTheFixtureTheWebUses() {
         let expected: [[Int]] = [
-            [7, 6, 3, 4, 7, 7, 5, 3, 4, 8, 1, 4],
-            [2, 7, 9, 9, 8, 9, 4, 6, 5, 1, 3, 3],
-            [6, 1, 7, 2, 1, 5, 3, 5, 1, 8, 3, 8],
-            [6, 2, 8, 4, 8, 6, 2, 2, 5, 9, 6, 1],
-            [4, 5, 4, 2, 1, 9, 9, 8, 8, 5, 7, 1],
-            [7, 7, 5, 6, 6, 3, 4, 9, 3, 9, 2, 2]
+            [2, 2, 8, 2, 4, 6, 9, 1, 9, 1, 9, 1],
+            [3, 7, 5, 5, 5, 5, 1, 9, 5, 5, 8, 2],
+            [4, 4, 3, 7, 3, 7, 8, 8, 7, 7, 6, 6],
+            [4, 6, 2, 2, 4, 6, 4, 6, 1, 9, 3, 3],
+            [3, 7, 9, 1, 9, 1, 8, 8, 2, 8, 8, 2],
+            [5, 5, 9, 1, 4, 6, 7, 7, 4, 6, 3, 3]
         ]
         XCTAssertEqual(VibeTenBoard(seed: 1234, columns: 6, rows: 12).values, expected)
     }
@@ -471,5 +471,73 @@ final class VibeTenWrapTests: XCTestCase {
         let stacks = columns.map { $0.map { VibeTenCell(value: $0) } }
         XCTAssertFalse(VibeTenBoard(cells: stacks, columns: 9, rows: 2)
                         .canMatch(.init(column: 8, row: 0), .init(column: 0, row: 1)))
+    }
+}
+
+
+/// Every board can be cleared.
+///
+/// The deal is built out of pairs, so it is not a board with a chance of being
+/// finishable — it has a solution by construction. These tests play that
+/// solution: the bottom pair of a column, again and again, until the board is
+/// empty.
+final class VibeTenSolutionTests: XCTestCase {
+
+    private func bottomPair(_ board: VibeTenBoard) -> (VibeTenBoard.Position, VibeTenBoard.Position)? {
+        for column in 0..<board.columns {
+            let height = board.height(ofColumn: column)
+            guard height >= 2 else { continue }
+            let lower = VibeTenBoard.Position(column: column, row: height - 2)
+            let upper = VibeTenBoard.Position(column: column, row: height - 1)
+            if board.canMatch(lower, upper) { return (lower, upper) }
+        }
+        return nil
+    }
+
+    func testEveryBoardCanBeClearedFromTheBottomOfItsColumns() {
+        for seed in [UInt32(1), 7, 1234, 999, 424242] {
+            for columns in VibeTenBoard.columnOptions {
+                for rows in VibeTenBoard.rowOptions {
+                    var board = VibeTenBoard(seed: seed, columns: columns, rows: rows)
+                    var takes = 0
+                    while !board.isCleared, takes < columns * rows / 2 {
+                        guard let pair = bottomPair(board) else { break }
+                        XCTAssertNotNil(board.take(pair.0, pair.1, mode: .remove))
+                        takes += 1
+                    }
+                    XCTAssertTrue(board.isCleared,
+                                  "seed \(seed) on \(columns)x\(rows) should be clearable")
+                }
+            }
+        }
+    }
+
+    func testEveryColumnIsMadeOfNeighbouringPairs() {
+        for columns in VibeTenBoard.columnOptions {
+            for rows in VibeTenBoard.rowOptions {
+                let board = VibeTenBoard(seed: 31, columns: columns, rows: rows)
+                for column in 0..<columns {
+                    let values = board.values[column]
+                    XCTAssertEqual(values.count, rows)
+                    for index in stride(from: 0, to: values.count, by: 2) {
+                        XCTAssertTrue(VibeTenBoard.valuesPair(values[index], values[index + 1]),
+                                      "\(columns)x\(rows) column \(column) rows \(index), \(index + 1)")
+                    }
+                }
+            }
+        }
+    }
+
+    func testAPartFilledBoardCanStillBeCleared() {
+        for rows in VibeTenBoard.rowOptions {
+            var board = VibeTenBoard(seed: 1234, columns: 9, rows: rows, startRows: rows / 3)
+            var takes = 0
+            while !board.isCleared, takes < 9 * rows {
+                guard let pair = bottomPair(board) else { break }
+                XCTAssertNotNil(board.take(pair.0, pair.1, mode: .remove))
+                takes += 1
+            }
+            XCTAssertTrue(board.isCleared, "a third-filled board on \(rows) rows should clear")
+        }
     }
 }

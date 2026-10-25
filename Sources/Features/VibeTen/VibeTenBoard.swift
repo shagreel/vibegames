@@ -126,36 +126,74 @@ struct VibeTenBoard: Equatable {
         self.rows = rows
         self.wrapRows = wrapRows
         let dealt = VibeTenBoard.deal(seed: seed, columns: columns, rows: rows)
-        let kept = max(1, min(rows, startRows ?? rows))
+        // A part-filled board keeps whole pairs off the top, so it is clearable
+        // the same way the full board is.
+        var kept = max(1, min(rows, startRows ?? rows))
+        if kept % 2 == 1 { kept = max(2, kept - 1) }
         self.stacks = dealt.map { Array($0.prefix(kept)) }
     }
 
-    /// The digits, dealt: nine values spread as evenly as the grid allows, then
-    /// shuffled with the suite's seeded generator, then cut into columns.
+    /// The digits, dealt so that every board can be cleared.
     ///
-    /// Every device deals from (seed, columns, rows) — the phone, the browser,
-    /// and the test that pins the two together — so the recipe has to be exact:
-    /// values 1 to `total / 9`, and the first `total % 9` values one more time.
-    /// For nine by eighteen that is eighteen of each, as it always was.
+    /// A random shuffle of the right digits is a board with a random chance of
+    /// being finishable — usually none. So the board is built out of **pairs**:
+    /// the five kinds of pair (1 with 9, 2 with 8, 3 with 7, 4 with 6, 5 with 5)
+    /// are counted, each column is a run of them, and two digits of a pair sit
+    /// next to each other. A solution therefore always exists: take the bottom
+    /// pair of any column, again and again, and the board comes off. Players are
+    /// still free to take other pairs, and a clear is still the win.
+    ///
+    /// The pairs are counted first and then shuffled, so the board looks dealt
+    /// rather than sorted, and both clients have to reproduce the recipe exactly
+    /// — the same generator, the same five groups, the same number of draws —
+    /// because a room's board comes back from one seed.
     static func deal(seed: UInt32, columns: Int, rows: Int) -> [[VibeTenCell]] {
-        let total = columns * rows
-        let base = total / 9
-        let extra = total % 9
-
         var generator = SeededGenerator(seed: seed)
-        var digits: [Int] = []
-        digits.reserveCapacity(total)
-        for value in 1...9 {
-            digits.append(contentsOf: Array(repeating: value,
-                                           count: base + (value <= extra ? 1 : 0)))
-        }
-        digits.shuffle(using: &generator)
 
+        // How many pairs of each kind. Five pairs put two fives on the board,
+        // and every other pair puts one of each digit, so the fives need half
+        // as many pairs as the others to keep the digits even: nine fives-pairs
+        // and eighteen of each other kind, for the full board.
+        let pairs = columns * rows / 2
+        let fivePairs = (2 * pairs + 9) / 18
+        let otherPairs = pairs - fivePairs
+
+        // Which group gets the odd pair or two, and which way round the digits
+        // of a pair go, are the parts that vary between seeds.
+        var order = Array(0..<4)
+        order.shuffle(using: &generator)
+        var groupPairs = [Int](repeating: otherPairs / 4, count: 4)
+        for index in 0..<(otherPairs % 4) { groupPairs[order[index]] += 1 }
+
+        var deck: [(Int, Int)] = []
+        for group in 0..<5 {
+            if group == 4 {
+                // 5 with 5 is the one group that is a single digit.
+                deck.append(contentsOf: Array(repeating: (5, 5), count: fivePairs))
+                continue
+            }
+            let count = groupPairs[group]
+            let low = group + 1
+            let high = 10 - low
+            // A pair can be equal or add to ten. Equal pairs are kept rare: a
+            // run of them reads as a column of one digit, which is not a dealt
+            // board.
+            let equal = Int.random(in: 0...min(2, count / 2), using: &generator)
+            deck.append(contentsOf: Array(repeating: (low, low), count: equal))
+            deck.append(contentsOf: Array(repeating: (high, high), count: equal))
+            deck.append(contentsOf: Array(repeating: (low, high), count: count - 2 * equal))
+        }
+        deck.shuffle(using: &generator)
+
+        let pairsPerColumn = rows / 2
         var stacks = [[VibeTenCell]](repeating: [], count: columns)
-        var index = 0
         for column in 0..<columns {
-            stacks[column] = digits[index..<(index + rows)].map { VibeTenCell(value: $0) }
-            index += rows
+            for pairIndex in 0..<pairsPerColumn {
+                let pair = deck[column * pairsPerColumn + pairIndex]
+                let flipped = Int.random(in: 0...1, using: &generator) == 1
+                stacks[column].append(VibeTenCell(value: flipped ? pair.1 : pair.0))
+                stacks[column].append(VibeTenCell(value: flipped ? pair.0 : pair.1))
+            }
         }
         return stacks
     }

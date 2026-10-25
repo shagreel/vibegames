@@ -4,6 +4,7 @@ import {
   COLUMNS,
   COLUMN_OPTIONS,
   type TenCell,
+  type TenBoard,
   ROWS,
   ROW_OPTIONS,
   addRow,
@@ -18,6 +19,7 @@ import {
   newBoard,
   remaining,
   remove,
+  valuesPair,
   take,
   valueAt,
   values,
@@ -323,5 +325,54 @@ describe('the rows joining end to end', () => {
 
   it('is off unless it is asked for', () => {
     expect(newBoard(1).wrapRows).toBe(false);
+  });
+});
+
+describe('a solution always exists', () => {
+  const bottomPair = (grid: TenBoard) => {
+    for (let column = 0; column < grid.columns; column += 1) {
+      const height = heightOf(grid, column);
+      if (height < 2) continue;
+      const lower = { column, row: height - 2 };
+      const upper = { column, row: height - 1 };
+      if (canMatch(grid, lower, upper)) return [lower, upper] as const;
+    }
+    return null;
+  };
+
+  it('clears every board by taking the bottom pair of each column', () => {
+    for (const seed of [1, 7, 1234, 999, 424242]) {
+      for (const columns of COLUMN_OPTIONS) {
+        for (const rows of ROW_OPTIONS) {
+          let grid = newBoard(seed, columns, rows);
+          let takes = 0;
+          while (!isCleared(grid) && takes < (columns * rows) / 2) {
+            const pair = bottomPair(grid);
+            if (!pair) break;
+            grid = take(grid, pair[0], pair[1], 'remove')!.board;
+            takes += 1;
+          }
+          expect(isCleared(grid), `${seed} on ${columns}x${rows}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('deals each column as neighbouring pairs', () => {
+    for (const columns of COLUMN_OPTIONS) {
+      for (const rows of ROW_OPTIONS) {
+        const grid = newBoard(31, columns, rows);
+        for (let column = 0; column < columns; column += 1) {
+          const values = grid.stacks[column].map((entry) => entry.value);
+          expect(values).toHaveLength(rows);
+          for (let index = 0; index < values.length; index += 2) {
+            expect(
+              valuesPair(values[index], values[index + 1]),
+              `${columns}x${rows} column ${column} rows ${index},${index + 1}`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
   });
 });

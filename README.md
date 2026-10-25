@@ -776,6 +776,16 @@ top. Two digits pair when they are **equal** or **add up to ten**, on one line �
 a row, a column or a diagonal — with nothing in between. Take a pair and the
 digits below it rise into the space, so every take changes the board.
 
+**Every board can be cleared.** The digits are not a random shuffle — a random
+board is usually finishable in no order at all — so the deal is built out of
+pairs: the five kinds of pair are counted, each column is a run of them, and the
+two digits of a pair sit next to each other. Taking the bottom pair of a column
+and letting the next one rise into place clears the board, which is the guarantee
+that a solution always exists. The board still looks dealt rather than sorted
+(the pairs are shuffled, their order in a column is shuffled, and each pair can
+be either way round), and a part-filled start keeps whole pairs so it stays
+clearable.
+
 Solo or a room, and the room works the way the other races do: one seed, so
 every device deals the identical 162 digits, and only each player's score
 travels. One point a pair, most pairs wins, a tie goes to whoever ran out of
