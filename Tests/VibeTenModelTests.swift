@@ -13,6 +13,7 @@ final class VibeTenModelTests: XCTestCase {
     private var savedFill: Any?
     private var savedPerAdd: Any?
     private var savedWrap: Any?
+    private var savedDifficulty: Any?
 
     override func setUp() {
         super.setUp()
@@ -24,10 +25,11 @@ final class VibeTenModelTests: XCTestCase {
         savedFill = defaults.object(forKey: VibeTenModel.startFillKey)
         savedPerAdd = defaults.object(forKey: VibeTenModel.rowsPerAddKey)
         savedWrap = defaults.object(forKey: VibeTenModel.wrapRowsKey)
+        savedDifficulty = defaults.object(forKey: VibeTenModel.difficultyKey)
         for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
                     VibeTenModel.columnsKey, VibeTenModel.rowsKey,
                     VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
-                    VibeTenModel.wrapRowsKey] {
+                    VibeTenModel.wrapRowsKey, VibeTenModel.difficultyKey] {
             defaults.removeObject(forKey: key)
         }
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
@@ -45,6 +47,7 @@ final class VibeTenModelTests: XCTestCase {
         defaults.set(savedFill, forKey: VibeTenModel.startFillKey)
         defaults.set(savedPerAdd, forKey: VibeTenModel.rowsPerAddKey)
         defaults.set(savedWrap, forKey: VibeTenModel.wrapRowsKey)
+        defaults.set(savedDifficulty, forKey: VibeTenModel.difficultyKey)
         super.tearDown()
     }
 
@@ -54,6 +57,7 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertTrue(model.addRowEnabled, "solo players get the extra row unless they turn it off")
         XCTAssertEqual(model.columns, 9, "the board the game shipped with")
         XCTAssertEqual(model.rows, 18)
+        XCTAssertEqual(model.difficulty, .medium, "medium unless it is chosen")
     }
 
     /// The shape is a setting, so a solo board is dealt the size it says — and a
@@ -87,6 +91,21 @@ final class VibeTenModelTests: XCTestCase {
 
         model.leaveGame()
         XCTAssertTrue(model.canChooseBoardShape, "and leaving the game offers it again")
+    }
+
+    /// The level is part of the deal, like the shape: the board is dealt with the
+    /// one that was chosen, and the choice is locked once it has been dealt.
+    func testTheDifficultyIsChosenBeforeTheBoardIsDealt() {
+        UserDefaults.standard.set("hard", forKey: VibeTenModel.difficultyKey)
+        let model = VibeTenModel()
+        XCTAssertEqual(model.difficulty, .hard, "the sheet's choice is read back")
+
+        model.playSolo()
+        XCTAssertEqual(model.board?.difficulty, .hard, "and the board is dealt with it")
+        XCTAssertFalse(model.canChooseBoardShape, "a dealt board keeps its level")
+
+        model.leaveGame()
+        XCTAssertTrue(model.canChooseBoardShape)
     }
 
     func testAShapeThatIsNotOfferedIsIgnored() {

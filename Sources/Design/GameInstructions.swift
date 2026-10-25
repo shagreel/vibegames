@@ -126,10 +126,16 @@ struct GameInstructions {
                         + "in between: neighbours count, and so does a line with only gaps "
                         + "in it."),
             Section(title: "Every board can be cleared",
-                    body: "The digits are not placed at random: each column is a run of "
-                        + "**pairs**, so a solution always exists — take the bottom pair of a "
-                        + "column and the ones above it become the next pair. That is one way "
-                        + "through; the board is yours to take apart however you like."),
+                    body: "The digits are not placed at random: the board is built out of "
+                        + "pairs, each placed where it could be seen, so a solution always "
+                        + "exists — the order they were placed in, read backwards, is a way "
+                        + "through."),
+            Section(title: "Easy, medium, hard",
+                    body: "The **difficulty** is part of the deal, chosen with the other "
+                        + "settings. **Easy** starts every pair side by side. **Medium** nests "
+                        + "pairs inside one another, so some have to be uncovered. **Hard** "
+                        + "nests a whole row at a time, which makes for longer chains of "
+                        + "\"clear that before this\". Every level can be cleared."),
             Section(title: "The board hangs from the top",
                     body: "The digits hang from the top row and a gap closes **upward**: take a "
                         + "pair and the digits below it rise into the space. Half the game is "

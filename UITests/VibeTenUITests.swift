@@ -124,11 +124,20 @@ final class VibeTenUITests: XCTestCase {
         let before = app.tenCells.count
         addRow.tap()
         XCTAssertEqual(app.tenCells.count, before + 9, "nine new digits arrive underneath")
-        // A column that was two squares short needs two presses before the grid
-        // is full again.
-        for _ in 0..<6 where addRow.exists { addRow.tap() }
-        XCTAssertEqual(app.tenCells.count, 162, "and the board fills to the full grid")
-        XCTAssertFalse(addRow.exists, "the grid is full again, so the offer goes")
+        // Keep taking rows while the grid has room. It can stop short of a full
+        // board: the takes that freed the bottom row may have left one column
+        // reaching it, and a row is only added when every column is clear of it.
+        var presses = 0
+        while addRow.exists, presses < 6 {
+            addRow.tap()
+            presses += 1
+            _ = waitForCellCount(app, before + 9 * (presses + 1), timeout: 2)
+        }
+        let cells = app.tenCells
+        let heights = Dictionary(grouping: cells, by: \.column).mapValues { $0.count }
+        let gridHasRoom = heights.values.allSatisfy { $0 < 18 }
+        XCTAssertEqual(addRow.exists, gridHasRoom,
+                       "the offer is there exactly while every column is clear of the last row")
         tenAttach(app, named: "49c-ten-new-row")
     }
 
@@ -207,6 +216,13 @@ final class VibeTenUITests: XCTestCase {
         XCTAssertTrue(fill.buttons["Full"].exists)
         XCTAssertTrue(fill.buttons["One third"].exists)
 
+        let level = app.segmentedControls["tenSettings.difficulty"].firstMatch
+        XCTAssertTrue(level.exists, "the sheet offers a difficulty")
+        XCTAssertTrue(level.isEnabled, "before the game starts it can be chosen")
+        XCTAssertTrue(level.buttons["Easy"].exists)
+        XCTAssertTrue(level.buttons["Medium"].exists)
+        XCTAssertTrue(level.buttons["Hard"].exists)
+
         let perPress = app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
         XCTAssertTrue(perPress.exists, "and how many rows a press deals")
         for count in [1, 2, 3, 4] {
@@ -230,6 +246,8 @@ final class VibeTenUITests: XCTestCase {
         XCTAssertFalse(app.segmentedControls["tenSettings.startFill"].firstMatch.isEnabled,
                        "a game in play keeps the board it started with")
         XCTAssertFalse(app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch.isEnabled)
+        XCTAssertFalse(app.segmentedControls["tenSettings.difficulty"].firstMatch.isEnabled,
+                       "a game in play keeps the level it was dealt at")
         XCTAssertFalse(app.switches["tenSettings.wrapRows"].firstMatch.isEnabled,
                        "and how pairs are found is part of the game")
         app.buttons["tenSettings.done"].tap()
@@ -252,6 +270,19 @@ final class VibeTenUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Waits for the board to show a number of digits: a tap returns before the
+    /// screen has finished redrawing, so a count taken straight after it can be
+    /// one square short.
+    private func waitForCellCount(_ app: XCUIApplication, _ expected: Int,
+                                  timeout: TimeInterval = 5) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if app.tenCells.count == expected { return true }
+            Thread.sleep(forTimeInterval: 0.15)
+        }
+        return app.tenCells.count == expected
+    }
 
     /// An app launched on the full nine-by-eighteen board, whatever the last
     /// run on this simulator left behind.

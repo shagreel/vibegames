@@ -618,6 +618,29 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("The board")
 
+            Text("Difficulty")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(VibeTheme.secondaryText)
+
+            Picker("Difficulty", selection: $model.difficulty) {
+                ForEach(VibeTenDifficulty.allCases) { level in
+                    Text(level.title).tag(level)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(!model.canChooseBoardShape)
+            .accessibilityIdentifier("tenSettings.difficulty")
+
+            Text(model.difficulty.blurb)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Every level can be cleared — the harder ones just hide more pairs behind other digits. In a room everybody plays the level the host dealt.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
             Text("Columns")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)

@@ -21,6 +21,35 @@ export const ROW_OPTIONS = [12, 14, 16, 18] as const;
 /** One press of the new-row offer adds this many rows, at most. */
 export const ROWS_PER_ADD_OPTIONS = [1, 2, 3, 4] as const;
 
+/** How hard a board is to take apart. */
+export type TenDifficulty = 'easy' | 'medium' | 'hard';
+
+export const DIFFICULTIES: TenDifficulty[] = ['easy', 'medium', 'hard'];
+
+export const DIFFICULTY_LABELS: Record<TenDifficulty, { title: string; blurb: string }> = {
+  easy: { title: 'Easy', blurb: 'Every pair starts side by side: a gentle board.' },
+  medium: {
+    title: 'Medium',
+    blurb: 'Some pairs start two or three squares apart, with other digits between them.',
+  },
+  hard: {
+    title: 'Hard',
+    blurb:
+      'Whole rows are nested: the pair at the edge of a row only comes together once the digits either side of it are gone.',
+  },
+};
+
+/** The widest run of columns a row's pairs are nested across. */
+const BLOCK_SIZE: Record<TenDifficulty, number> = { easy: 2, medium: 4, hard: 64 };
+
+/** One pair, and where it was placed — the reverse of a take. */
+export interface DealStep {
+  readonly first: Position;
+  readonly second: Position;
+  readonly firstValue: number;
+  readonly secondValue: number;
+}
+
 /** How much of the grid a game starts with. */
 export type TenStartFill = 'full' | 'third';
 
@@ -70,6 +99,8 @@ export interface TenBoard {
   /** How many columns and rows: a room is dealt from the seed *and* these. */
   readonly columns: number;
   readonly rows: number;
+  /** How hard it was to take apart. Part of the deal, like the seed. */
+  readonly difficulty: TenDifficulty;
   /** Whether the end of a row joins the start of the next. */
   readonly wrapRows: boolean;
   /** The columns, each top-first: the board hangs from the top. */
@@ -85,42 +116,34 @@ export interface TenMove {
 const cell = (value: number): TenCell => ({ value, dimmed: false });
 
 /**
- * Deals a board out of pairs, so that every board can be cleared.
+ * Deals a board, and records how it was made.
  *
  * A random shuffle of the right digits is a board with a random chance of being
- * finishable — usually none. So the five kinds of pair (1 with 9, 2 with 8, 3
- * with 7, 4 with 6, 5 with 5) are counted, each column is a run of them, and the
- * two digits of a pair sit next to each other. A solution therefore always
- * exists: take the bottom pair of any column, again and again. Players can still
- * take other pairs, and clearing the board is still the win.
+ * finishable — usually none. So the board is built the other way round: pairs are
+ * placed one at a time, each where it can be seen, and the order they are placed
+ * in, read backwards, is a solution. The difficulty changes where a pair ends up:
+ * the pairs of a row are nested inside one another, so an outer pair is only
+ * uncovered once the row's inner pairs have gone.
  *
- * The recipe has to match `VibeTenBoard.deal` exactly — same generator, same
- * five groups, same number of draws — because a room's board comes back from one
- * seed. `board.fixtures.json` pins it.
- *
- * `startRows` then keeps that many rows off the top of each column, so a
- * part-filled board is the top of the same deal hanging from the top of the
- * grid.
+ * The recipe has to match `VibeTenBoard.plan` exactly — same generator, same five
+ * groups, same draws in the same order — because a room's board comes back from
+ * one seed. `board.fixtures.json` pins it.
  */
-export function newBoard(
+export function plan(
   seed: number,
-  columns = COLUMNS,
-  rows = ROWS,
-  startRows = rows,
-  wrapRows = false,
-): TenBoard {
+  columns: number,
+  rows: number,
+  difficulty: TenDifficulty,
+): { steps: DealStep[]; stacks: TenCell[][] } {
   const generator = new SeededGenerator(seed);
 
-  // How many pairs of each kind. Five pairs put two fives on the board, and
-  // every other pair puts one of each digit, so the fives need half as many
-  // pairs as the others to keep the digits even: nine fives-pairs and eighteen
-  // of each other kind, for the full board.
+  // How many pairs of each kind. A fives-pair puts two 5s on the board and every
+  // other pair puts one of each digit, so the fives need half as many pairs as
+  // the others to keep the digits even.
   const pairs = Math.floor((columns * rows) / 2);
   const fivePairs = Math.floor((2 * pairs + 9) / 18);
   const otherPairs = pairs - fivePairs;
 
-  // Which group gets the odd pair or two, and which way round the digits of a
-  // pair go, are the parts that vary between seeds.
   const order = [0, 1, 2, 3];
   shuffle(order, generator);
   const groupPairs = [0, 0, 0, 0].map(() => Math.floor(otherPairs / 4));
@@ -129,15 +152,14 @@ export function newBoard(
   const deck: [number, number][] = [];
   for (let group = 0; group < 5; group += 1) {
     if (group === 4) {
-      // 5 with 5 is the one group that is a single digit.
       for (let index = 0; index < fivePairs; index += 1) deck.push([5, 5]);
       continue;
     }
     const count = groupPairs[group];
     const low = group + 1;
     const high = 10 - low;
-    // A pair can be equal or add to ten. Equal pairs are kept rare: a run of
-    // them reads as a column of one digit, which is not a dealt board.
+    // Equal pairs are kept rare: a run of them reads as a column of one digit,
+    // which is not a dealt board.
     const equal = generator.nextBounded(Math.min(2, Math.floor(count / 2)) + 1);
     for (let index = 0; index < equal; index += 1) deck.push([low, low]);
     for (let index = 0; index < equal; index += 1) deck.push([high, high]);
@@ -145,35 +167,124 @@ export function newBoard(
   }
   shuffle(deck, generator);
 
-  const pairsPerColumn = Math.floor(rows / 2);
+  const stacks: TenCell[][] = Array.from({ length: columns }, () => []);
+  const steps: DealStep[] = [];
+  let nextPair = 0;
+
+  const takePair = (): [number, number] => {
+    const pair = deck[nextPair];
+    nextPair += 1;
+    return generator.nextBounded(2) === 1 ? [pair[1], pair[0]] : pair;
+  };
+
+  const place = (value: number, column: number, row: number) => {
+    stacks[column].splice(Math.min(row, stacks[column].length), 0, cell(value));
+  };
+
+  for (let row = 0; row < rows; row += 1) {
+    // A column that already has this row's digit took a vertical pair from the
+    // row above; it comes back a row later.
+    const available: number[] = [];
+    for (let column = 0; column < columns; column += 1) {
+      if (stacks[column].length === row) available.push(column);
+    }
+    let vertical: number | null = null;
+    // An odd row of columns leaves one over, which goes down instead of across.
+    // It is always the last column, so the squares left to pair stay one
+    // unbroken run.
+    if (available.length % 2 === 1) vertical = available.pop() ?? null;
+
+    // The row's pairs, outermost first inside each block.
+    let cursor = 0;
+    while (cursor < available.length) {
+      const size = Math.min(BLOCK_SIZE[difficulty], available.length - cursor);
+      const block = available.slice(cursor, cursor + size);
+      cursor += size;
+      let low = 0;
+      let high = block.length - 1;
+      while (low < high) {
+        const first = block[low];
+        const second = block[high];
+        low += 1;
+        high -= 1;
+        const digits = takePair();
+        place(digits[0], first, row);
+        place(digits[1], second, row);
+        steps.push({
+          first: { column: first, row },
+          second: { column: second, row },
+          firstValue: digits[0],
+          secondValue: digits[1],
+        });
+      }
+    }
+
+    // The vertical pair goes last, so it never blocks its own row.
+    if (vertical !== null) {
+      const digits = takePair();
+      place(digits[0], vertical, row);
+      place(digits[1], vertical, row + 1);
+      steps.push({
+        first: { column: vertical, row },
+        second: { column: vertical, row: row + 1 },
+        firstValue: digits[0],
+        secondValue: digits[1],
+      });
+    }
+  }
+
+  return { steps, stacks };
+}
+
+/**
+ * The board a game is dealt: the plan's squares, trimmed to `startRows` so a
+ * part-filled board is the top of the same deal hanging from the top of the grid.
+ */
+export function newBoard(
+  seed: number,
+  columns = COLUMNS,
+  rows = ROWS,
+  startRows = rows,
+  wrapRows = false,
+  difficulty: TenDifficulty = 'medium',
+): TenBoard {
+  const { stacks } = plan(seed, columns, rows, difficulty);
   // A part-filled board keeps whole pairs off the top, so it is clearable the
   // same way the full board is.
   let kept = Math.max(1, Math.min(rows, startRows));
   if (kept % 2 === 1) kept = Math.max(2, kept - 1);
-  const stacks: TenCell[][] = [];
-  for (let column = 0; column < columns; column += 1) {
-    const stack: TenCell[] = [];
-    for (let pairIndex = 0; pairIndex < pairsPerColumn; pairIndex += 1) {
-      const pair = deck[column * pairsPerColumn + pairIndex];
-      const flipped = generator.nextBounded(2) === 1;
-      stack.push(cell(flipped ? pair[1] : pair[0]));
-      stack.push(cell(flipped ? pair[0] : pair[1]));
-    }
-    stacks.push(stack.slice(0, kept));
-  }
-  return { seed, columns, rows, wrapRows, stacks };
+  return {
+    seed,
+    columns,
+    rows,
+    wrapRows,
+    difficulty,
+    stacks: stacks.map((column) => column.slice(0, kept)),
+  };
 }
 
 export function boardFromStacks(
   stacks: number[][],
   seed = 0,
-  shape: { columns?: number; rows?: number; wrapRows?: boolean } = {},
+  shape: {
+    columns?: number;
+    rows?: number;
+    wrapRows?: boolean;
+    difficulty?: TenDifficulty;
+  } = {},
 ): TenBoard {
   const columns = shape.columns ?? COLUMNS;
   const rows = shape.rows ?? ROWS;
   const filled = stacks.slice(0, columns).map((column) => column.slice(0, rows).map(cell));
   while (filled.length < columns) filled.push([]);
-  return { seed, columns, rows, wrapRows: shape.wrapRows ?? false, stacks: filled };
+  return {
+    seed,
+    columns,
+    rows,
+    wrapRows: shape.wrapRows ?? false,
+    difficulty: shape.difficulty ?? 'medium',
+    stacks: filled,
+  };
 }
 
 /** The digits in the shape the fixture and the app use. */

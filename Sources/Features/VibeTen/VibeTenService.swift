@@ -16,6 +16,7 @@ struct VibeTenScore: Equatable {
 ///         seed        1234567890
 ///         columns     9
 ///         rows        18
+///         difficulty  "medium"
 ///         creator     "Alex"
 ///         createdAt   1737052800000
 ///         started     true
@@ -34,6 +35,9 @@ struct VibeTenSnapshot: Equatable {
     /// field, and read as the full board.
     var columns = VibeTenBoard.defaultColumns
     var rows = VibeTenBoard.defaultRows
+    /// How hard the board is to take apart. Rooms made before the levels
+    /// existed read as medium, which is the level most boards are dealt at now.
+    var difficulty = VibeTenDifficulty.medium
     var creator: String?
     var started = false
     var restartTime: Date?
@@ -64,6 +68,10 @@ struct VibeTenSnapshot: Equatable {
             if let rawRows = (object["rows"] as? NSNumber)?.intValue,
                VibeTenBoard.rowOptions.contains(rawRows) {
                 rows = rawRows
+            }
+            if let raw = object["difficulty"] as? String,
+               let level = VibeTenDifficulty(rawValue: raw) {
+                difficulty = level
             }
             if let rawRestart = object["restartTime"] as? NSNumber {
                 restartTime = Date(timeIntervalSince1970: rawRestart.doubleValue / 1000)
@@ -194,6 +202,7 @@ final class VibeTenService {
                     seed: UInt32,
                     columns: Int,
                     rows: Int,
+                    difficulty: VibeTenDifficulty,
                     creatorName: String,
                     playerID: String) async throws {
         guard let reference = gameReference(gameID) else { return }
@@ -202,6 +211,7 @@ final class VibeTenService {
             "seed": Int(seed),
             "columns": columns,
             "rows": rows,
+            "difficulty": difficulty.rawValue,
             "creator": creatorName,
             "createdAt": Self.milliseconds(Date()),
             "started": false

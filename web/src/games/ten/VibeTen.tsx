@@ -24,6 +24,8 @@ import {
   ROWS,
   ROWS_PER_ADD_OPTIONS,
   ROW_OPTIONS,
+  DIFFICULTIES,
+  DIFFICULTY_LABELS,
   START_FILL_LABELS,
   addRow,
   availableMatches,
@@ -37,6 +39,7 @@ import {
   type Position,
   type TenBoard,
   type TenCell,
+  type TenDifficulty,
   type TenMode,
   type TenStartFill,
 } from './engine';
@@ -67,7 +70,7 @@ import './VibeTen.css';
 const TEN_INSTRUCTIONS: HowToPlayContent = {
   name: 'Vibe Ten',
   intro:
-    'Take pairs of digits off the board until nothing pairs any more. Clear every digit and you have cleared the board.',
+    'Take pairs of digits off the board until nothing pairs any more. Clear every digit and you have cleared the board — every level can be cleared, it is only how much has to come off first that changes.',
   sections: [
     {
       title: 'What pairs',
@@ -75,7 +78,11 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'Every board can be cleared',
-      body: 'The digits are not placed at random: each column is a run of **pairs**, so a solution always exists — take the bottom pair of a column and the ones above it become the next pair. That is one way through; the board is yours to take apart however you like.',
+      body: 'The digits are not placed at random: the board is built out of pairs, each placed where it could be seen, so a solution always exists — the order they were placed in, read backwards, is a way through.',
+    },
+    {
+      title: 'Three levels',
+      body: "The board's difficulty is chosen with the other settings. **Easy** starts every pair side by side; **Medium** nests pairs inside one another so some have to be uncovered; **Hard** nests a whole row at a time, which makes for longer chains. Every level can be cleared — the digits are placed in pairs, and the order they were placed in is a way through.",
     },
     {
       title: 'The board hangs from the top',
@@ -112,6 +119,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     are how this player likes to play it. */
 const MODE_KEY = 'vibegames.ten.mode';
 const ADD_ROW_KEY = 'vibegames.ten.addRow';
+const DIFFICULTY_KEY = 'vibegames.ten.difficulty';
 const COLUMNS_KEY = 'vibegames.ten.columns';
 const ROWS_KEY = 'vibegames.ten.rows';
 const START_FILL_KEY = 'vibegames.ten.startFill';
@@ -137,6 +145,13 @@ function savedRows(): number {
   return (ROW_OPTIONS as readonly number[]).includes(saved) ? saved : ROWS;
 }
 
+function savedDifficulty(): TenDifficulty {
+  const saved = localStorage.getItem(DIFFICULTY_KEY);
+  return (DIFFICULTIES as readonly string[]).includes(saved ?? '')
+    ? (saved as TenDifficulty)
+    : 'medium';
+}
+
 function savedStartFill(): TenStartFill {
   return localStorage.getItem(START_FILL_KEY) === 'third' ? 'third' : 'full';
 }
@@ -160,6 +175,7 @@ interface TenSaved {
   rows: number;
   wrapRows: boolean;
   stacks: TenCell[][];
+  difficulty: TenDifficulty;
   score: number;
   finished: boolean;
   cleared: boolean;
@@ -195,6 +211,7 @@ function VibeTen() {
   const [rows, setRows] = useState(savedRows);
   /** A solo board already saved in this browser, waiting to be continued. */
   const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
+  const [difficulty, setDifficulty] = useState<TenDifficulty>(savedDifficulty);
   const [startFill, setStartFill] = useState<TenStartFill>(savedStartFill);
   const [rowsPerAdd, setRowsPerAdd] = useState(savedRowsPerAdd);
   const [wrapRows, setWrapRows] = useState(savedWrapRows);
@@ -217,8 +234,8 @@ function VibeTen() {
       : rows;
     setBoard(
       gameId
-        ? newBoard(seed, snapshot.columns, snapshot.rows, snapshot.rows, wrapRows)
-        : newBoard(seed, columns, rows, startRows, wrapRows),
+        ? newBoard(seed, snapshot.columns, snapshot.rows, snapshot.rows, wrapRows, snapshot.difficulty)
+        : newBoard(seed, columns, rows, startRows, wrapRows, difficulty),
     );
     setSelected(null);
     setScore(0);
@@ -245,6 +262,7 @@ function VibeTen() {
       columns: board.columns,
       rows: board.rows,
       wrapRows: board.wrapRows,
+      difficulty: board.difficulty,
       stacks: board.stacks.map((column) => column.map((entry) => ({ ...entry }))),
       score,
       finished,
@@ -356,6 +374,7 @@ function VibeTen() {
       columns: data.columns,
       rows: data.rows,
       wrapRows: data.wrapRows,
+      difficulty: data.difficulty,
       stacks: data.stacks,
     });
     setMode(data.mode);
@@ -381,7 +400,7 @@ function VibeTen() {
     withName(() => {
       const newId = makeGameCode();
       const newSeed = randomSeed();
-      void createGame(newId, newSeed, columns, rows, playerName(), id)
+      void createGame(newId, newSeed, columns, rows, difficulty, playerName(), id)
         .then(() => {
           hostedGame(newId);
           setIsHost(true);
@@ -509,6 +528,11 @@ function VibeTen() {
   function chooseRows(next: number) {
     setRows(next);
     localStorage.setItem(ROWS_KEY, String(next));
+  }
+
+  function chooseDifficulty(next: TenDifficulty) {
+    setDifficulty(next);
+    localStorage.setItem(DIFFICULTY_KEY, next);
   }
 
   function chooseStartFill(next: TenStartFill) {
@@ -655,6 +679,28 @@ function VibeTen() {
                 : 'Fewer columns and rows means bigger digits. Choose it before you start; in a room everybody plays the shape the host dealt.'
             }
           >
+            <p className="ten__setting-label">Difficulty</p>
+            <div className="game-sheet__choices" role="group" aria-label="Difficulty">
+              {DIFFICULTIES.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={difficulty === choice}
+                  aria-pressed={difficulty === choice}
+                  disabled={shapeLocked}
+                  onClick={() => chooseDifficulty(choice)}
+                >
+                  {DIFFICULTY_LABELS[choice].title}
+                </button>
+              ))}
+            </div>
+            <p>{DIFFICULTY_LABELS[difficulty].blurb}</p>
+            <p>
+              Every level can be cleared — the harder ones just hide more pairs behind other
+              digits. In a room everybody plays the level the host dealt.
+            </p>
+
             <p className="ten__setting-label">Start with</p>
             <div className="game-sheet__choices" role="group" aria-label="Start with">
               {(['full', 'third'] as TenStartFill[]).map((choice) => (

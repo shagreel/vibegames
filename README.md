@@ -776,15 +776,27 @@ top. Two digits pair when they are **equal** or **add up to ten**, on one line �
 a row, a column or a diagonal — with nothing in between. Take a pair and the
 digits below it rise into the space, so every take changes the board.
 
-**Every board can be cleared.** The digits are not a random shuffle — a random
-board is usually finishable in no order at all — so the deal is built out of
-pairs: the five kinds of pair are counted, each column is a run of them, and the
-two digits of a pair sit next to each other. Taking the bottom pair of a column
-and letting the next one rise into place clears the board, which is the guarantee
-that a solution always exists. The board still looks dealt rather than sorted
-(the pairs are shuffled, their order in a column is shuffled, and each pair can
-be either way round), and a part-filled start keeps whole pairs so it stays
-clearable.
+**Every board can be cleared, at three levels.** The digits are not a random
+shuffle — a random board is usually finishable in no order at all — so the deal
+is built the other way round: pairs are placed one at a time, each where it can
+be seen, and the order they were placed in, read backwards, is a solution. The
+difficulty changes where a pair ends up, because a row's pairs are nested inside
+one another:
+
+- **Easy** pairs each row in adjacent squares: every pair is already together.
+- **Medium** nests within a block of four, so an outer pair has two digits in
+  between it until they go.
+- **Hard** nests a whole row, so the pair at the edge of a row only comes
+  together once the row either side of it has been cleared.
+
+Nested pairs are why a board can need clearing before it opens up: the outer pair
+of a block is placed first, while the squares it spans are empty, and the inner
+pairs are then placed between its two halves. The board still looks dealt rather
+than sorted — the pair kinds are shuffled, the digits of a pair can be either way
+round, and a part-filled start keeps whole pairs so it stays clearable.
+
+A room stores the level with the seed, because every device has to deal the same
+board: the host chooses it and everybody plays it.
 
 Solo or a room, and the room works the way the other races do: one seed, so
 every device deals the identical 162 digits, and only each player's score

@@ -1,12 +1,19 @@
 import { get, onDisconnect, onValue, ref, remove, set, update } from 'firebase/database';
 import { database } from '../../firebase';
-import { COLUMN_OPTIONS, COLUMNS, ROW_OPTIONS, ROWS } from './engine';
+import {
+  COLUMN_OPTIONS,
+  COLUMNS,
+  DIFFICULTIES,
+  ROW_OPTIONS,
+  ROWS,
+  type TenDifficulty,
+} from './engine';
 
 /**
  * A shared Vibe Ten room.
  *
  *   ten/{gameId}
- *     meta/                { seed, columns, rows, creator, createdAt, started }
+ *     meta/                { seed, columns, rows, difficulty, creator, createdAt, started }
  *     players/{playerId}   { name, joinedAt }
  *     scores/{playerId}    { score, finishedAt }
  *
@@ -29,6 +36,8 @@ export interface TenSnapshot {
   /** The board's shape. Rooms made before the choice existed read as 9x18. */
   columns: number;
   rows: number;
+  /** How hard the board is to take apart. Rooms without one read as medium. */
+  difficulty: TenDifficulty;
   creator: string | null;
   started: boolean;
   players: Record<string, string>;
@@ -40,6 +49,7 @@ export const EMPTY_SNAPSHOT: TenSnapshot = {
   seed: null,
   columns: COLUMNS,
   rows: ROWS,
+  difficulty: 'medium',
   creator: null,
   started: false,
   players: {},
@@ -56,6 +66,10 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
   const rawRows = typeof meta.rows === 'number' ? Math.trunc(meta.rows) : ROWS;
   const columns = (COLUMN_OPTIONS as readonly number[]).includes(rawColumns) ? rawColumns : COLUMNS;
   const rows = (ROW_OPTIONS as readonly number[]).includes(rawRows) ? rawRows : ROWS;
+  const rawDifficulty = typeof meta.difficulty === 'string' ? meta.difficulty : 'medium';
+  const difficulty = (DIFFICULTIES as readonly string[]).includes(rawDifficulty)
+    ? (rawDifficulty as TenDifficulty)
+    : 'medium';
 
   const players: Record<string, string> = {};
   const rawPlayers = (value.players ?? {}) as Record<string, unknown>;
@@ -78,6 +92,7 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
     seed: seedValue,
     columns,
     rows,
+    difficulty,
     creator: typeof meta.creator === 'string' ? meta.creator : null,
     started: meta.started === true,
     players,
@@ -122,13 +137,22 @@ export async function createGame(
   seed: number,
   columns: number,
   rows: number,
+  difficulty: TenDifficulty,
   creatorName: string,
   playerId: string,
 ): Promise<void> {
   // One write: the rules only let a room be created while it does not exist, so
   // the meta and the creator's place go in together.
   await set(ref(database, `ten/${gameId}`), {
-    meta: { seed, columns, rows, creator: creatorName, createdAt: Date.now(), started: false },
+    meta: {
+      seed,
+      columns,
+      rows,
+      difficulty,
+      creator: creatorName,
+      createdAt: Date.now(),
+      started: false,
+    },
     players: { [playerId]: { name: creatorName, joinedAt: Date.now() } },
   });
   registerPresence(gameId, playerId);

@@ -79,6 +79,18 @@ final class VibeTenModel: ObservableObject {
     static let columnsKey = "vibeten.columns"
     static let rowsKey = "vibeten.rows"
 
+    /// How hard the next board is to take apart. Part of the deal, like the
+    /// shape: the pairs are placed differently, so a room has one difficulty for
+    /// everybody, chosen by the host.
+    @Published var difficulty: VibeTenDifficulty {
+        didSet {
+            guard difficulty != oldValue else { return }
+            UserDefaults.standard.set(difficulty.rawValue, forKey: Self.difficultyKey)
+        }
+    }
+
+    static let difficultyKey = "vibeten.difficulty"
+
     /// How much of the grid a game starts with. A part-filled board is only
     /// offered with the new-row setting on, because the rows are what fills it.
     @Published var startFill: VibeTenStartFill {
@@ -204,6 +216,8 @@ final class VibeTenModel: ObservableObject {
         rowsPerAdd = (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
             .contains(savedPerAdd) ? savedPerAdd : VibeTenBoard.minimumRowsPerAdd
         wrapRows = defaults.bool(forKey: Self.wrapRowsKey)
+        difficulty = VibeTenDifficulty(rawValue: defaults.string(forKey: Self.difficultyKey) ?? "")
+            ?? .medium
     }
 
     var remaining: Int { board?.remaining ?? 0 }
@@ -283,6 +297,7 @@ final class VibeTenModel: ObservableObject {
         var columns: Int
         var rows: Int
         var wrapRows: Bool
+        var difficulty: VibeTenDifficulty
         var mode: VibeTenMode
         var cells: [[VibeTenCell]]
         var score: Int
@@ -298,6 +313,7 @@ final class VibeTenModel: ObservableObject {
                      columns: board.columns,
                      rows: board.rows,
                      wrapRows: board.wrapRows,
+                     difficulty: board.difficulty,
                      mode: mode,
                      cells: board.stacks,
                      score: score,
@@ -338,7 +354,8 @@ final class VibeTenModel: ObservableObject {
                              seed: saved.seed,
                              columns: saved.columns,
                              rows: saved.rows,
-                             wrapRows: saved.wrapRows)
+                             wrapRows: saved.wrapRows,
+                             difficulty: saved.difficulty)
         boardToken += 1
         score = saved.score
         finished = saved.finished
@@ -364,15 +381,29 @@ final class VibeTenModel: ObservableObject {
                                          seed: seed,
                                          columns: columns,
                                          rows: rows,
+                                         difficulty: difficulty,
                                          creatorName: playerName,
                                          playerID: PlayerIdentity.id)
             UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
             session = .shared(gameID: gameID, isHost: true)
             previousSeed = seed
-            // Dealt with the shape this room was just made with: the observer
-            // for the room arrives a moment later, and the first board must not
-            // be the wrong size for a heartbeat.
-            deal(seed: seed, shape: (columns, rows))
+            // Dealt with the shape and difficulty this room was just made with:
+            // the observer for the room arrives a moment later, and the first
+            // board must not be the wrong size or level for a heartbeat.
+            board = VibeTenBoard(seed: seed,
+                                 columns: columns,
+                                 rows: rows,
+                                 startRows: rows,
+                                 wrapRows: wrapRows,
+                                 difficulty: difficulty)
+            boardToken += 1
+            startedAt = Date()
+            selected = nil
+            score = 0
+            finished = false
+            cleared = false
+            finishedAt = nil
+            message = nil
             beginObserving(gameID: gameID)
         } catch {
             FirebaseBootstrapper.record(error, during: "Could not create the game")
@@ -480,13 +511,20 @@ final class VibeTenModel: ObservableObject {
 
     var startingRows: Int { startRows(for: boardShape) }
 
-    private func deal(seed: UInt32, shape: (columns: Int, rows: Int)? = nil) {
-        let shape = shape ?? boardShape
+    /// The difficulty the next board is dealt with: the room's when playing in
+    /// one, otherwise the player's own choice.
+    var boardDifficulty: VibeTenDifficulty {
+        isShared ? snapshot.difficulty : difficulty
+    }
+
+    private func deal(seed: UInt32) {
+        let shape = boardShape
         board = VibeTenBoard(seed: seed,
                              columns: shape.columns,
                              rows: shape.rows,
                              startRows: startRows(for: shape),
-                             wrapRows: wrapRows)
+                             wrapRows: wrapRows,
+                             difficulty: boardDifficulty)
         boardToken += 1
         startedAt = Date()
         selected = nil
