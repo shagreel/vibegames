@@ -110,6 +110,7 @@ check(state.modeDisabled === false, 'the host can choose the pair mode before th
 check(state.wrapDisabled === false, 'and whether the rows join');
 await choose(host, 'When a pair is matched', 'Dim');
 await choose(host, 'Rows', 12);
+await choose(host, 'Rows per press', 2);
 await host.evaluate(() => {
   const toggle = [...document.querySelectorAll('.game-sheet__switch')]
     .find((node) => node.getAttribute('aria-label') === 'Rows join end to end');
@@ -134,7 +135,8 @@ const meta = await fetch(
 ).then((response) => response.json());
 check(meta?.wrap === true, 'the room remembers that the rows join');
 check(meta?.mode === 'dim', 'and that a pair dims');
-check(meta?.rows === 12, 'and the rows');
+check(meta?.rows === 12, 'and the starting rows');
+check(meta?.rowsPerAdd === 2, 'and how many rows a press adds');
 check(!('columns' in (meta ?? {})) && !('difficulty' in (meta ?? {})),
   'the columns are always nine and there are no levels, so neither is in the room');
 
@@ -161,7 +163,7 @@ await wait(1400);
 
 const hostCells = await cells(host);
 const guestCells = await cells(guest);
-check(hostCells.length === 108, `the room is nine by twelve (${hostCells.length} cells)`);
+check(hostCells.length === 108, `the room starts nine by twelve (${hostCells.length} cells)`);
 check(JSON.stringify(hostCells) === JSON.stringify(guestCells),
   'the guest deals the identical board');
 
@@ -188,6 +190,25 @@ if (pair) {
   const scoreline = await guest.evaluate(() =>
     document.querySelector('.ten__scoreline')?.textContent ?? '');
   check(/Guest\s*1/.test(scoreline), `the room counts the guest's pair: ${JSON.stringify(scoreline)}`);
+}
+
+// ── every player can grow their own board, by the host's rows per press ─────
+const guestAddRow = await guest.$('.ten__add-row');
+check(Boolean(guestAddRow), 'the guest is offered a new row in the room');
+const hostAddRow = await host.$('.ten__add-row');
+check(Boolean(hostAddRow), 'and so is the host');
+if (guestAddRow) {
+  const before = (await cells(guest)).length;
+  await guestAddRow.click();
+  await wait(500);
+  const after = await cells(guest);
+  check(after.length === before + 18,
+    `a press adds the host's two rows of nine (${before} → ${after.length})`);
+  check(after.filter((cell) => cell.dimmed).length === 2,
+    'and the taken pair stays dimmed as the board grows');
+  const hostAfter = await cells(host);
+  check(hostAfter.length === 108, `the host's board did not grow (${hostAfter.length})`);
+  check(Boolean(await guest.$('.ten__add-row')), 'and the guest can grow again');
 }
 
 await guest.screenshot({ path: '/tmp/ten_room_rules_guest.png' });

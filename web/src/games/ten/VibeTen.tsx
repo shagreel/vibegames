@@ -88,37 +88,33 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: "The board's size",
-      body: 'The board is **nine columns** wide and **twelve to eighteen rows** tall: fewer rows means bigger digits, and the grid always fills the screen. Choose the rows on the start screen; once a game is under way the board keeps them, and a room plays the rows the host dealt.',
+      body: 'The board is **nine columns** wide and starts with **twelve to eighteen rows** of digits. It always has room for eighteen: the rows beneath the start are where fresh rows grow into, and fewer starting rows means bigger digits. Choose the starting rows on the start screen; once a game is under way the board keeps them, and a room plays the start the host dealt.',
     },
     {
-      title: 'New rows, solo',
-      body: 'Playing alone, you can hang fresh rows under the board — but only while the bottom row of the grid is empty. A button appears on that empty row when there is room: a press adds one to four rows, as you choose in the settings. It is a solo-only button: in a room everybody plays the board they were dealt.',
+      title: 'New rows',
+      body: 'You can hang fresh rows under the board — solo or in a room — but only while the bottom row of the grid is empty. A button appears on that empty row when there is room: a press adds one to four rows, as the settings choose. The board always has room for eighteen rows; when it is full and nothing pairs, the round is over.',
     },
     {
       title: 'Playing as a room',
-      body: "Everyone gets the identical board, dealt from a seed and played by the host's rules — the rows, whether the rows join end to end and how a taken pair leaves the board — and plays their own copy at their own pace. One point a pair. When everybody has run out of moves the most pairs wins, and a tie goes to whoever ran out first.",
+      body: "Everyone gets the identical board, dealt from a seed and played by the host's rules — the starting rows, whether the rows join end to end and how a taken pair leaves the board — and plays their own copy at their own pace. The first person to clear the board wins. One point a pair is the running total behind the race.",
     },
   ],
   bullets: [
     { lead: 'Solo', text: 'A fresh board whenever you want one, and a new row whenever the top of the grid is free.' },
-    { lead: 'Room', text: 'The same board for everyone. Most pairs wins.' },
+    { lead: 'Room', text: 'The same board for everyone. First to clear it wins.' },
   ],
 };
 
 /** The properties, kept per device: a room's board is everybody's, but these
     are how this player likes to play it. */
 const MODE_KEY = 'vibegames.ten.mode';
-const ADD_ROW_KEY = 'vibegames.ten.addRow';
+/** The starting rows. The key predates the board being able to grow. */
 const ROWS_KEY = 'vibegames.ten.rows';
 const ROWS_PER_ADD_KEY = 'vibegames.ten.rowsPerAdd';
 const WRAP_ROWS_KEY = 'vibegames.ten.wrapRows';
 
 function savedMode(): TenMode {
   return localStorage.getItem(MODE_KEY) === 'dim' ? 'dim' : 'remove';
-}
-
-function savedAddRow(): boolean {
-  return localStorage.getItem(ADD_ROW_KEY) !== 'false';
 }
 
 function savedRows(): number {
@@ -143,7 +139,10 @@ interface TenSaved {
   seed: number;
   /** Kept for a game saved before the board became always nine columns. */
   columns: number;
+  /** The board's capacity. Saves made before the board could grow used this as
+      the start too, which is why `startRows` is optional. */
   rows: number;
+  startRows?: number;
   wrapRows: boolean;
   stacks: TenCell[][];
   score: number;
@@ -172,11 +171,10 @@ function VibeTen() {
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
   const [cleared, setCleared] = useState(false);
-  const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<TenMode>(savedMode);
-  const [addRowEnabled, setAddRowEnabled] = useState(savedAddRow);
+  /** How many rows the board starts with; it always has room for eighteen. */
   const [rows, setRows] = useState(savedRows);
   /** A solo board already saved in this browser, waiting to be continued. */
   const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
@@ -192,6 +190,7 @@ function VibeTen() {
   const shownMode = gameId ? snapshot.mode : mode;
   const shownWrapRows = gameId ? snapshot.wrapRows : wrapRows;
   const shownRows = gameId ? snapshot.rows : rows;
+  const shownRowsPerAdd = gameId ? snapshot.rowsPerAdd : rowsPerAdd;
 
   // The board is a pure function of the seed: dealt once, then held in state so
   // tapping can take pairs out of it.
@@ -210,7 +209,6 @@ function VibeTen() {
     setScore(0);
     setFinished(false);
     setCleared(false);
-    setFinishedAt(null);
     setNotice('');
     trackGameStart(GAMES.ten, { mode: gameId ? 'shared' : 'solo' });
     // The shape is read as the board is dealt, like the mode: changing it must
@@ -230,6 +228,7 @@ function VibeTen() {
       seed: board.seed,
       columns: board.columns,
       rows: board.rows,
+      startRows: rows,
       wrapRows: board.wrapRows,
       stacks: board.stacks.map((column) => column.map((entry) => ({ ...entry }))),
       score,
@@ -290,9 +289,37 @@ function VibeTen() {
         name: playerLabel,
         score: snapshot.scores[player]?.score ?? 0,
         finishedAt: snapshot.scores[player]?.finishedAt ?? null,
+        clearedAt: snapshot.scores[player]?.clearedAt ?? null,
       })),
     );
   }, [snapshot]);
+
+  /** The first player to clear the board, once there is one. */
+  const roomWinner = useMemo(() => {
+    const cleared = standings.filter((standing) => standing.clearedAt !== null);
+    if (cleared.length === 0) return null;
+    const earliest = Math.min(...cleared.map((standing) => standing.clearedAt as number));
+    return cleared.find((standing) => standing.clearedAt === earliest) ?? null;
+  }, [standings]);
+  const amITheWinner = roomWinner !== null && roomWinner.id === id;
+  const everyoneFinished = Object.keys(snapshot.players).length > 0
+    && Object.keys(snapshot.players).every((player) => {
+      const record = snapshot.scores[player];
+      return record !== undefined && (record.finishedAt !== null || record.clearedAt !== null);
+    });
+
+  // A clear ends the round for the room: the first one wins, and everybody
+  // else's board stops.
+  useEffect(() => {
+    if (!gameId || finished) return;
+    if (roomWinner && roomWinner.id !== id) {
+      setFinished(true);
+      setSelected(null);
+      // The room should know this player is out of the round too, not still
+      // "playing" in the standings.
+      void recordScore(gameId, id, score, Date.now(), null).catch(() => undefined);
+    }
+  }, [gameId, finished, roomWinner, id, score]);
 
   function withName(action: () => void) {
     if (playerName().trim()) {
@@ -340,7 +367,7 @@ function VibeTen() {
     setBoard({
       seed: data.seed,
       columns: data.columns ?? COLUMNS,
-      rows: data.rows,
+      rows: ROWS,
       wrapRows: data.wrapRows,
       stacks: data.stacks,
     });
@@ -348,12 +375,12 @@ function VibeTen() {
     // choices for the next one.
     setMode(data.mode);
     setWrapRows(data.wrapRows);
-    setRows(data.rows);
+    setRows(data.startRows
+      ?? ((ROW_OPTIONS as readonly number[]).includes(data.rows) ? data.rows : ROWS));
     setScore(data.score);
     setFinished(data.finished);
     setCleared(data.cleared);
     setSelected(null);
-    setFinishedAt(null);
     setNotice('');
     window.history.replaceState({}, '', '/ten');
   }
@@ -371,7 +398,7 @@ function VibeTen() {
     withName(() => {
       const newId = makeGameCode();
       const newSeed = randomSeed();
-      void createGame(newId, newSeed, rows, wrapRows, mode, playerName(), id)
+      void createGame(newId, newSeed, rows, rowsPerAdd, wrapRows, mode, playerName(), id)
         .then(() => {
           hostedGame(newId);
           setIsHost(true);
@@ -436,26 +463,30 @@ function VibeTen() {
     setSelected(null);
     setNotice('');
 
-    const over = isCleared(next) || availableMatches(next).length === 0;
+    // Clearing wins. Running out of moves only loses once there is no room for
+    // a new row either; while the grid has space, the board is one to grow.
+    const wonNow = isCleared(next);
+    const over = wonNow || (!availableMatches(next).length && !canAddRow(next));
     if (over) {
       setFinished(true);
-      setCleared(isCleared(next));
-      setFinishedAt(Date.now());
+      setCleared(wonNow);
     }
 
     if (gameId) {
-      void recordScore(gameId, id, taken, over ? Date.now() : null).catch(() =>
+      const at = Date.now();
+      void recordScore(gameId, id, taken, over ? at : null, wonNow ? at : null).catch(() =>
         setNotice('Could not tell the room that one.'),
       );
     }
   }
 
   /** Hangs fresh rows under the digits: as many as a press deals, or as many
-      as the grid still has room for. */
+      as the grid still has room for. Solo or in a room — each player's board
+      grows on their own device. */
   function dealRow() {
     if (!board || !canPlay) return;
     let next = board;
-    const wanted = Math.min(rowsPerAdd, roomForRows(next));
+    const wanted = Math.min(shownRowsPerAdd, roomForRows(next));
     for (let index = 0; index < wanted; index += 1) {
       const digits = Array.from({ length: next.columns }, () => 1 + Math.floor(Math.random() * 9));
       const moved = addRow(next, digits);
@@ -466,16 +497,23 @@ function VibeTen() {
     setBoard(next);
     setSelected(null);
     setNotice('');
+
+    // The new rows may still leave nothing to take, and if they filled the
+    // last of the room then the round is over.
+    if (!availableMatches(next).length && !canAddRow(next)) {
+      setFinished(true);
+      setCleared(false);
+      if (gameId) {
+        void recordScore(gameId, id, score, Date.now(), null).catch(() =>
+          setNotice('Could not tell the room that one.'),
+        );
+      }
+    }
   }
 
   function chooseMode(next: TenMode) {
     setMode(next);
     localStorage.setItem(MODE_KEY, next);
-  }
-
-  function chooseAddRow(on: boolean) {
-    setAddRowEnabled(on);
-    localStorage.setItem(ADD_ROW_KEY, String(on));
   }
 
   /** The shape is a choice for a new game, not for one under way. */
@@ -487,9 +525,9 @@ function VibeTen() {
       comes and goes during play. */
   const modeLocked = Boolean(gameId) || (board !== null && !finished && !waitingForHost);
 
-  /** How many rows a press deals is a solo choice, and only with the new-row
-      offer on: the offer is what uses it. */
-  const rowSupplyEditable = !gameId && !modeLocked && addRowEnabled;
+  /** How many rows a press deals is a choice for a new game; in a room it is
+      the host's rule. */
+  const rowSupplyEditable = !gameId && !modeLocked;
 
   function chooseRows(next: number) {
     setRows(next);
@@ -515,6 +553,10 @@ function VibeTen() {
   }
 
   if (rulesOpen) return <HowToPlay content={TEN_INSTRUCTIONS} onClose={() => setRulesOpen(false)} />;
+
+  const roundOverTitle = roundOverTitleFor({
+    cleared, gameId, roomWinner, amITheWinner, everyoneFinished,
+  });
 
   const subtitle = !board
     ? undefined
@@ -555,7 +597,7 @@ function VibeTen() {
           />
           <LobbyCard
             title="Play with others"
-            blurb="The same board for everyone. Most pairs wins."
+            blurb="The same board for everyone. First to clear it wins."
             onClick={create}
             alt
           />
@@ -572,8 +614,10 @@ function VibeTen() {
           {gameId && !finished && standings.length > 0 && (
             <p className="ten__scoreline">
               {standings.map((standing) => (
-                <span key={standing.id} data-done={standing.finishedAt !== null}>
+                <span key={standing.id}
+                      data-done={standing.finishedAt !== null || standing.clearedAt !== null}>
                   {standing.name} <strong>{standing.score}</strong>
+                  {standing.clearedAt !== null && <span aria-label="cleared"> ✓</span>}
                 </span>
               ))}
             </p>
@@ -584,24 +628,26 @@ function VibeTen() {
             selected={selected}
             onTap={tapCell}
             disabled={!canPlay}
-            onAddRow={
-              !gameId && !finished && addRowEnabled && canAddRow(board) ? dealRow : undefined
-            }
-            rowsPerAdd={rowsPerAdd}
+            onAddRow={!finished && canAddRow(board) ? dealRow : undefined}
+            rowsPerAdd={shownRowsPerAdd}
           />
 
           {finished && (
             <RoundOver
-              title={cleared ? 'Cleared it!' : 'No moves left'}
-              detail={detailFor({ cleared, score, gameId, standings, finishedAt })}
+              title={roundOverTitle}
+              detail={detailFor({
+                cleared, score, gameId, roomWinner, amITheWinner, everyoneFinished,
+              })}
               onPrimary={playAgain}
             >
               {gameId && standings.length > 0 && (
                 <ol className="ten__standings">
                   {standings.map((standing) => (
-                    <li key={standing.id} data-playing={standing.finishedAt === null}>
+                    <li key={standing.id}
+                        data-playing={standing.finishedAt === null && standing.clearedAt === null}>
                       <span>{standing.name}</span>
                       <strong>{standing.score}</strong>
+                      {standing.clearedAt !== null && <em>cleared</em>}
                     </li>
                   ))}
                 </ol>
@@ -631,11 +677,11 @@ function VibeTen() {
             title="The board"
             note={
               shapeLocked
-                ? 'The board is set for this game. Leave it, and choose the rows on the start screen before the next one.'
-                : 'Nine columns, always. Fewer rows means bigger digits; in a room everybody plays the board the host dealt.'
+                ? 'The board is set for this game. Leave it, and choose the starting rows on the start screen before the next one.'
+                : 'Nine columns, always. Choose how many rows start full; the board has room for eighteen.'
             }
           >
-            <p className="ten__setting-label">Rows</p>
+            <p className="ten__setting-label">Start with</p>
             <div className="game-sheet__choices" role="group" aria-label="Rows">
               {ROW_OPTIONS.map((choice) => (
                 <button
@@ -659,8 +705,8 @@ function VibeTen() {
                   key={choice}
                   type="button"
                   className="game-sheet__choice"
-                  data-on={rowsPerAdd === choice}
-                  aria-pressed={rowsPerAdd === choice}
+                  data-on={shownRowsPerAdd === choice}
+                  aria-pressed={shownRowsPerAdd === choice}
                   disabled={!rowSupplyEditable}
                   onClick={() => chooseRowsPerAdd(choice)}
                 >
@@ -669,7 +715,8 @@ function VibeTen() {
               ))}
             </div>
             <p>
-              How many rows a press of the new-row offer hangs under a solo board.
+              How many rows a press of the new-row offer hangs under the board.
+              In a room it is the host's rule.
             </p>
           </SettingsSection>
 
@@ -709,12 +756,12 @@ function VibeTen() {
           </SettingsSection>
 
           <SettingsSection title="Adding rows">
-            <SettingsToggle
-              label="Offer a new row"
-              note="Solo games only: the button on the empty bottom row hangs fresh rows underneath"
-              on={addRowEnabled}
-              onChange={chooseAddRow}
-            />
+            <p>
+              When the bottom row of the grid is empty, a button appears there to
+              hang fresh rows underneath. Every game offers it — solo or in a room —
+              up to eighteen rows. When the grid is full and nothing pairs, the
+              round is over.
+            </p>
           </SettingsSection>
         </GameSettings>
       )}
@@ -722,23 +769,44 @@ function VibeTen() {
   );
 }
 
-/** What the panel says under the result. */
+/** What the panel says over the result. */
+function roundOverTitleFor(props: {
+  cleared: boolean;
+  gameId: string | null;
+  roomWinner: TenStanding | null;
+  amITheWinner: boolean;
+  everyoneFinished: boolean;
+}): string {
+  if (props.gameId && props.roomWinner) {
+    return props.amITheWinner ? 'Cleared it!' : `${props.roomWinner.name} cleared it first`;
+  }
+  if (props.cleared) return 'Cleared it!';
+  if (props.gameId && props.everyoneFinished) return 'No one cleared it';
+  return 'No moves left';
+}
+
+/** And what the panel says under the title. */
 function detailFor(props: {
   cleared: boolean;
   score: number;
   gameId: string | null;
-  standings: TenStanding[];
-  finishedAt: number | null;
+  roomWinner: TenStanding | null;
+  amITheWinner: boolean;
+  everyoneFinished: boolean;
 }): string {
   const pairs = `${props.score} ${props.score === 1 ? 'pair' : 'pairs'}`;
   if (props.gameId) {
-    const leader = props.standings[0];
-    if (!leader) return `${pairs} taken.`;
-    return `${leader.name} wins with ${leader.score}.`;
+    if (props.roomWinner) {
+      return props.amITheWinner
+        ? `You cleared the board first. ${pairs} taken.`
+        : `${props.roomWinner.name} cleared the board first. ${pairs} taken.`;
+    }
+    if (props.everyoneFinished) return `${pairs} taken, and nobody cleared the board.`;
+    return `${pairs} taken. The room is still playing.`;
   }
   return props.cleared
     ? `Every digit gone. ${pairs} taken.`
-    : `${pairs} taken, and nothing left that pairs.`;
+    : `${pairs} taken, with no pairs left and no room for a new row.`;
 }
 
 function Board(props: {

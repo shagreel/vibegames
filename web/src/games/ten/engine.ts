@@ -13,7 +13,8 @@ import { SeededGenerator, shuffle } from '../../lib/seeded';
  * identical digits and neither can see the other's board.
  */
 
-/** The board is always nine columns; only the rows are a choice. */
+/** The board is always nine columns and always has room for eighteen rows.
+    The settings choose how many rows start full of digits. */
 export const COLUMNS = 9;
 export const ROWS = 18;
 export const ROW_OPTIONS = [12, 14, 16, 18] as const;
@@ -126,15 +127,15 @@ export function deal(seed: number, columns: number, rows: number): TenCell[][] {
 export function newBoard(
   seed: number,
   columns = COLUMNS,
-  rows = ROWS,
+  startRows = ROWS,
   wrapRows = false,
 ): TenBoard {
   return {
     seed,
     columns,
-    rows,
+    rows: ROWS,
     wrapRows,
-    stacks: deal(seed, columns, rows),
+    stacks: deal(seed, columns, startRows),
   };
 }
 

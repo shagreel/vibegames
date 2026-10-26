@@ -110,7 +110,7 @@ struct VibeTenView: View {
                 }
 
                 actionCard(title: "Race your friends",
-                           subtitle: "The same board for everyone. Most pairs wins.",
+                           subtitle: "The same board for everyone. First to clear it wins.",
                            symbol: "person.2.fill",
                            identifier: "ten.createGame",
                            isEnabled: model.backendUnavailableMessage == nil) {
@@ -282,7 +282,8 @@ struct VibeTenView: View {
             Haptics.shared.tap()
             model.addRows()
         } label: {
-            Label(model.rowsPerAdd == 1 ? "Add a row" : "Add \(model.rowsPerAdd) rows",
+            Label(model.boardRowsPerAdd == 1 ? "Add a row"
+                                            : "Add \(model.boardRowsPerAdd) rows",
                   systemImage: "plus")
                 .font(.system(size: max(10, height * 0.34), weight: .bold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
@@ -298,9 +299,9 @@ struct VibeTenView: View {
                 }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(model.rowsPerAdd == 1
+        .accessibilityLabel(model.boardRowsPerAdd == 1
                             ? "Add a row at the bottom"
-                            : "Add \(model.rowsPerAdd) rows at the bottom")
+                            : "Add \(model.boardRowsPerAdd) rows at the bottom")
         .accessibilityIdentifier("ten.addRow")
     }
 
@@ -315,8 +316,13 @@ struct VibeTenView: View {
                         .lineLimit(1)
                     Text("\(standing.score)")
                         .font(.system(size: 14, weight: .black, design: .rounded))
-                        .foregroundStyle(standing.finishedAt == nil ? VibeTheme.primaryText
-                                                                    : VibeTheme.tertiaryText)
+                        .foregroundStyle(standing.isFinished ? VibeTheme.tertiaryText
+                                                             : VibeTheme.primaryText)
+                    if standing.hasCleared {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(VibeTheme.vibeTenBorder)
+                    }
                 }
             }
         }
@@ -328,7 +334,7 @@ struct VibeTenView: View {
             // The board's own shape, so a six-column game draws six columns and
             // the digits grow into the space that leaves.
             let columns = model.board?.columns ?? VibeTenBoard.defaultColumns
-            let rows = model.board?.rows ?? VibeTenBoard.defaultRows
+            let rows = model.board?.rows ?? VibeTenBoard.maximumRows
             let gap: CGFloat = 2
             let width = (geo.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
             let height = (geo.size.height - gap * CGFloat(rows - 1)) / CGFloat(rows)
@@ -422,7 +428,7 @@ struct VibeTenView: View {
     // MARK: - Round over
 
     private var roundOver: some View {
-        RoundOverPanel(title: model.cleared ? "Cleared it!" : "No moves left",
+        RoundOverPanel(title: roundOverTitle,
                        detail: detail,
                        accent: AnyShapeStyle(VibeTheme.vibeTen),
                        primaryIdentifier: "ten.playAgain",
@@ -434,17 +440,32 @@ struct VibeTenView: View {
         .padding(.horizontal, 16)
     }
 
+    private var roundOverTitle: String {
+        if model.isShared, let winner = model.roomWinner {
+            return model.amITheWinner ? "Cleared it!" : "\(winner.name) cleared it first"
+        }
+        if model.cleared { return "Cleared it!" }
+        if model.isShared, model.isEveryoneFinished { return "No one cleared it" }
+        return "No moves left"
+    }
+
     private var detail: String {
         let pairs = "\(model.score) \(model.score == 1 ? "pair" : "pairs")"
         if model.isShared {
-            if let best = model.winners.first {
-                return "\(best.name) wins with \(best.score)."
+            if let winner = model.roomWinner {
+                if model.amITheWinner {
+                    return "You cleared the board first. \(pairs) taken."
+                }
+                return "\(winner.name) cleared the board first. \(pairs) taken."
             }
-            return "\(pairs) taken. Waiting for the rest of the room."
+            if model.isEveryoneFinished {
+                return "\(pairs) taken, and nobody cleared the board."
+            }
+            return "\(pairs) taken. The room is still playing."
         }
         return model.cleared
             ? "Every digit gone. \(pairs) taken."
-            : "\(pairs) taken, and nothing left that pairs."
+            : "\(pairs) taken, with no pairs left and no room for a new row."
     }
 
     private var standingsList: some View {
@@ -458,7 +479,11 @@ struct VibeTenView: View {
                     Text("\(standing.score)")
                         .font(.system(size: 15, weight: .black, design: .rounded))
                         .foregroundStyle(VibeTheme.primaryText)
-                    if standing.finishedAt == nil {
+                    if standing.hasCleared {
+                        Text("cleared")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(VibeTheme.vibeTenBorder)
+                    } else if !standing.isFinished {
                         Text("playing")
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(VibeTheme.tertiaryText)
@@ -565,7 +590,11 @@ struct VibeTenSettingsView: View {
     }
 
     private var rowsBinding: Binding<Int> {
-        Binding(get: { model.boardRows }, set: { model.rows = $0 })
+        Binding(get: { model.boardStartRows }, set: { model.startRows = $0 })
+    }
+
+    private var rowsPerAddBinding: Binding<Int> {
+        Binding(get: { model.boardRowsPerAdd }, set: { model.rowsPerAdd = $0 })
     }
 
     private var modeSection: some View {
@@ -613,18 +642,7 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("Adding rows")
 
-            SettingsCard {
-                SettingsRow(symbol: "plus.rectangle.on.rectangle",
-                            title: "Offer a new row",
-                            subtitle: "Solo games only") {
-                    Toggle("", isOn: $model.addRowEnabled)
-                        .labelsHidden()
-                        .tint(VibeTheme.vibeTenBorder)
-                        .accessibilityIdentifier("tenSettings.addRow")
-                }
-            }
-
-            Text("When the bottom row of the grid is empty, a button appears there: tap it to hang fresh rows underneath, and the board grows down into the space.")
+            Text("When the bottom row of the grid is empty, a button appears there: tap it to hang fresh rows underneath, and the board grows down into the space. Every game offers it — solo and in a room — up to eighteen rows.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -635,23 +653,23 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("The board")
 
-            Text("Nine columns, always. The rows are the choice.")
+            Text("Nine columns, always. Choose how many rows start full; the board has room for eighteen.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Picker("Rows", selection: rowsBinding) {
+            Picker("Start with", selection: rowsBinding) {
                 ForEach(VibeTenBoard.rowOptions, id: \.self) { count in
                     Text("\(count)").tag(count)
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(!model.canChooseBoardShape)
+            .disabled(!model.canChooseStartRows)
             .accessibilityIdentifier("tenSettings.rows")
 
-            Text(model.canChooseBoardShape
-                 ? "Fewer rows means bigger digits. Choose it before you start; in a room everybody plays the board the host dealt."
-                 : "The board is set for this game. Leave it, and choose the rows on the start screen before the next one.")
+            Text(model.canChooseStartRows
+                 ? "Fewer starting rows means bigger digits and more room to grow. Choose it before you start; in a room everybody plays the start the host dealt."
+                 : "The board is set for this game. Leave it, and choose the starting rows on the start screen before the next one.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -662,18 +680,20 @@ struct VibeTenSettingsView: View {
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 
-            Picker("Rows per press", selection: $model.rowsPerAdd) {
+            Picker("Rows per press", selection: rowsPerAddBinding) {
                 ForEach(VibeTenBoard.rowsPerAddOptions, id: \.self) { count in
                     Text("\(count)").tag(count)
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(!model.canChooseRowSupply)
+            .disabled(!model.canChooseRowsPerAdd)
             .accessibilityIdentifier("tenSettings.rowsPerAdd")
 
-            Text(model.canChooseRowSupply
+            Text(model.canChooseRowsPerAdd
                  ? "How many rows a press of the new-row offer hangs under the board."
-                 : "Solo games with the new-row offer turned on can choose how many rows a press adds.")
+                 : model.isShared
+                    ? "In a room the host set how many rows a press adds."
+                    : "This game is using the number it started with.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)

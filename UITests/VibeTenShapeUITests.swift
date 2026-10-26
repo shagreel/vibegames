@@ -10,7 +10,7 @@ final class VibeTenShapeUITests: XCTestCase {
 
     func testAShorterBoardIsDealtWithFewerRows() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.rows", "12"]
+        app.launchArguments += ["-vibeten.startRows", "12"]
         app.launch(withName: "Tester")
         openSoloBoard(app)
 
@@ -25,7 +25,7 @@ final class VibeTenShapeUITests: XCTestCase {
     /// once a board is in play the sheet shows the choice without offering it.
     func testTheRowsAreChosenBeforeTheGameAndLockedOnceItStarts() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.rows", "18"]
+        app.launchArguments += ["-vibeten.startRows", "18"]
         app.launch(withName: "Tester")
         openLobby(app)
 
@@ -59,7 +59,7 @@ final class VibeTenShapeUITests: XCTestCase {
         let lockedRows = app.segmentedControls["tenSettings.rows"].firstMatch
         XCTAssertTrue(lockedRows.waitForExistence(timeout: 5))
         XCTAssertFalse(lockedRows.isEnabled, "a started game keeps its board")
-        XCTAssertTrue(app.staticTexts["The board is set for this game. Leave it, and choose the rows on the start screen before the next one."]
+        XCTAssertTrue(app.staticTexts["The board is set for this game. Leave it, and choose the starting rows on the start screen before the next one."]
                         .waitForExistence(timeout: 3),
                       "and the sheet says why")
         tenAttach(app, named: "49f-ten-rows-locked")

@@ -345,6 +345,10 @@
             ".write": "!data.exists()",
             ".validate": "newData.isNumber() && newData.val() >= 12 && newData.val() <= 18 && newData.val() % 1 === 0"
           },
+          "rowsPerAdd": {
+            ".write": "!data.exists()",
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4 && newData.val() % 1 === 0"
+          },
           "difficulty": {
             ".write": "!data.exists()",
             ".validate": "newData.val() === 'easy' || newData.val() === 'medium' || newData.val() === 'hard'"
@@ -384,6 +388,9 @@
               ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0"
             },
             "finishedAt": {
+              ".validate": "newData.isNumber() || newData.val() === null"
+            },
+            "clearedAt": {
               ".validate": "newData.isNumber() || newData.val() === null"
             },
             "$other": {

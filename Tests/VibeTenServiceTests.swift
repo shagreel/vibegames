@@ -23,6 +23,7 @@ final class VibeTenServiceTests: XCTestCase {
         try await service.createGame(gameID: room,
                                      seed: 777,
                                      rows: 18,
+                                     rowsPerAdd: 2,
                                      wrapRows: true,
                                      mode: .dim,
                                      creatorName: "Tester",
@@ -30,7 +31,8 @@ final class VibeTenServiceTests: XCTestCase {
         try await service.recordScore(gameID: room,
                                       playerID: PlayerIdentity.id,
                                       score: 4,
-                                      finishedAt: Date())
+                                      finishedAt: Date(),
+                                      clearedAt: Date())
 
         let contents = try await read("ten/\(room)")
         XCTAssertEqual(Set(contents.keys), ["meta", "players", "scores"],
@@ -42,6 +44,8 @@ final class VibeTenServiceTests: XCTestCase {
                        "and whether the rows join, because it changes the way through")
         XCTAssertEqual(meta["mode"] as? String, "dim",
                        "and how a pair leaves the board, because a room is played one way")
+        XCTAssertEqual(meta["rowsPerAdd"] as? Int, 2,
+                       "and how many rows a press adds, since everybody can grow the board")
         XCTAssertNil(meta["columns"], "the columns are always nine, so they are not a setting")
         XCTAssertNil(meta["difficulty"], "there are no levels any more")
 
@@ -58,6 +62,7 @@ final class VibeTenServiceTests: XCTestCase {
         try await service.createGame(gameID: room,
                                      seed: 778,
                                      rows: 12,
+                                     rowsPerAdd: 1,
                                      wrapRows: false,
                                      mode: .remove,
                                      creatorName: "Tester",
@@ -81,6 +86,45 @@ final class VibeTenServiceTests: XCTestCase {
         XCTAssertNotEqual(changedWrap, 200, "the host's rules are the room's rules")
         let changedMode = try await put("ten/\(room)/meta/mode", ["value": "dim"])
         XCTAssertNotEqual(changedMode, 200, "and they are decided once")
+        let changedPress = try await put("ten/\(room)/meta/rowsPerAdd", ["value": 4])
+        XCTAssertNotEqual(changedPress, 200, "nor can a joiner change how many rows a press adds")
+    }
+
+    /// A clear is a fact about the round, and it is never taken away by a later
+    /// score update: the first one is the winner.
+    func testAClearIsWrittenAndKept() async throws {
+        let service = VibeTenService.shared
+        try XCTSkipUnless(service.isAvailable, "needs a configured Firebase project")
+
+        let room = GameCode.make()
+        try await service.createGame(gameID: room,
+                                     seed: 779,
+                                     rows: 18,
+                                     rowsPerAdd: 1,
+                                     wrapRows: false,
+                                     mode: .remove,
+                                     creatorName: "Tester",
+                                     playerID: PlayerIdentity.id)
+
+        let clearedAt = Date()
+        try await service.recordScore(gameID: room,
+                                      playerID: PlayerIdentity.id,
+                                      score: 40,
+                                      finishedAt: clearedAt,
+                                      clearedAt: clearedAt)
+        let score = try await read("ten/\(room)/scores/\(PlayerIdentity.id)")
+        XCTAssertEqual(score["clearedAt"] as? Int64 ?? (score["clearedAt"] as? Int).map(Int64.init),
+                       Int64(clearedAt.timeIntervalSince1970 * 1000),
+                       "the clear is in the room and it is the time it happened")
+
+        // A later report of the same round does not take the win away.
+        try await service.recordScore(gameID: room,
+                                      playerID: PlayerIdentity.id,
+                                      score: 41,
+                                      finishedAt: nil,
+                                      clearedAt: nil)
+        let after = try await read("ten/\(room)/scores/\(PlayerIdentity.id)")
+        XCTAssertNotNil(after["clearedAt"], "the clear survives an update without one")
     }
 
     /// The rows, the join and the pair mode are in the room too, so every device
@@ -88,21 +132,22 @@ final class VibeTenServiceTests: XCTestCase {
     /// remove.
     func testASnapshotCarriesTheRoomsRules() {
         let plain = VibeTenSnapshot(meta: ["seed": 1], players: nil, scores: nil)
-        XCTAssertEqual(plain.rows, VibeTenBoard.defaultRows)
+        XCTAssertEqual(plain.rows, VibeTenBoard.defaultStartRows)
         XCTAssertFalse(plain.wrapRows, "the rows do not join unless the host says so")
         XCTAssertEqual(plain.mode, .remove, "and a room without a mode removes")
 
-        let joined = VibeTenSnapshot(meta: ["seed": 1, "rows": 12, "wrap": true,
-                                            "mode": "dim"],
+        let joined = VibeTenSnapshot(meta: ["seed": 1, "rows": 12, "rowsPerAdd": 3,
+                                            "wrap": true, "mode": "dim"],
                                      players: nil, scores: nil)
         XCTAssertEqual(joined.rows, 12)
+        XCTAssertEqual(joined.rowsPerAdd, 3)
         XCTAssertTrue(joined.wrapRows)
         XCTAssertEqual(joined.mode, .dim)
 
         let nonsense = VibeTenSnapshot(meta: ["seed": 1, "rows": 3, "mode": "vanish",
                                               "columns": 6, "difficulty": "hard"],
                                        players: nil, scores: nil)
-        XCTAssertEqual(nonsense.rows, VibeTenBoard.defaultRows,
+        XCTAssertEqual(nonsense.rows, VibeTenBoard.defaultStartRows,
                        "a row count that is not a board is not played")
         XCTAssertEqual(nonsense.mode, .remove, "a mode that does not exist is remove")
     }

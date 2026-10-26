@@ -7,7 +7,6 @@ import XCTest
 final class VibeTenModelTests: XCTestCase {
 
     private var savedMode: Any?
-    private var savedRow: Any?
     private var savedRows: Any?
     private var savedPerAdd: Any?
     private var savedWrap: Any?
@@ -16,12 +15,11 @@ final class VibeTenModelTests: XCTestCase {
         super.setUp()
         let defaults = UserDefaults.standard
         savedMode = defaults.object(forKey: VibeTenModel.modeKey)
-        savedRow = defaults.object(forKey: VibeTenModel.addRowKey)
-        savedRows = defaults.object(forKey: VibeTenModel.rowsKey)
+        savedRows = defaults.object(forKey: VibeTenModel.startRowsKey)
         savedPerAdd = defaults.object(forKey: VibeTenModel.rowsPerAddKey)
         savedWrap = defaults.object(forKey: VibeTenModel.wrapRowsKey)
-        for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
-                    VibeTenModel.rowsKey, VibeTenModel.rowsPerAddKey,
+        for key in [VibeTenModel.modeKey, VibeTenModel.startRowsKey,
+                    VibeTenModel.legacyRowsKey, VibeTenModel.rowsPerAddKey,
                     VibeTenModel.wrapRowsKey] {
             defaults.removeObject(forKey: key)
         }
@@ -33,55 +31,66 @@ final class VibeTenModelTests: XCTestCase {
         // `set(nil, forKey:)` removes the key, which is what "there was nothing
         // here before" has to mean.
         defaults.set(savedMode, forKey: VibeTenModel.modeKey)
-        defaults.set(savedRow, forKey: VibeTenModel.addRowKey)
-        defaults.set(savedRows, forKey: VibeTenModel.rowsKey)
+        defaults.set(savedRows, forKey: VibeTenModel.startRowsKey)
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
         defaults.set(savedPerAdd, forKey: VibeTenModel.rowsPerAddKey)
         defaults.set(savedWrap, forKey: VibeTenModel.wrapRowsKey)
         super.tearDown()
     }
 
-    func testTheDefaultsAreToRemovePairsAndToOfferANewRow() {
+    func testTheDefaultsAreToRemovePairsAndToStartFull() {
         let model = VibeTenModel()
         XCTAssertEqual(model.mode, .remove)
-        XCTAssertTrue(model.addRowEnabled, "solo players get the extra row unless they turn it off")
-        XCTAssertEqual(model.rows, 18, "the board the game shipped with")
+        XCTAssertEqual(model.startRows, 18, "the board the game shipped with")
+        XCTAssertEqual(model.rowsPerAdd, 1, "one row a press unless it is chosen")
     }
 
-    /// The rows are the setting, so a solo board is dealt the number it says —
-    /// and a number that is not on offer is not a board this game has.
-    func testASoloBoardIsDealtTheChosenRows() {
-        UserDefaults.standard.set(12, forKey: VibeTenModel.rowsKey)
+    /// The starting rows are the setting, so a solo board starts that deep — the
+    /// board itself always has room for eighteen.
+    func testASoloBoardStartsWithTheChosenRows() {
+        UserDefaults.standard.set(12, forKey: VibeTenModel.startRowsKey)
         let model = VibeTenModel()
         model.playSolo()
 
         XCTAssertEqual(model.board?.columns, 9, "the columns are always nine")
-        XCTAssertEqual(model.board?.rows, 12)
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 12)
+        XCTAssertEqual(model.board?.rows, 18, "and room for eighteen underneath")
         XCTAssertEqual(model.board?.remaining, 108)
+        XCTAssertEqual(model.board?.roomForRows, 6)
 
-        model.rows = 14
-        XCTAssertEqual(model.board?.rows, 12, "the board in play keeps the rows it was dealt")
+        model.startRows = 14
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 12,
+                       "the board in play keeps the start it was dealt")
         model.playSolo()
-        XCTAssertEqual(model.board?.rows, 14, "and the next one follows the setting")
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 14, "and the next one follows it")
     }
 
-    /// The rows are a choice for a new game: the start screen offers them, and
-    /// once a board is in play the sheet shows them without offering them.
-    func testTheBoardRowsAreChosenBeforeTheGameStarts() {
+    /// The starting rows are a choice for a new game: the start screen offers
+    /// them, and once a board is in play the sheet shows them without offering
+    /// them.
+    func testTheStartingRowsAreChosenBeforeTheGameStarts() {
         let model = VibeTenModel()
-        XCTAssertTrue(model.canChooseBoardShape, "the start screen is where it is chosen")
+        XCTAssertTrue(model.canChooseStartRows, "the start screen is where it is chosen")
 
         model.playSolo()
-        XCTAssertFalse(model.canChooseBoardShape, "a dealt board keeps its rows")
+        XCTAssertFalse(model.canChooseStartRows, "a dealt board keeps its start")
 
         model.leaveGame()
-        XCTAssertTrue(model.canChooseBoardShape, "and leaving the game offers it again")
+        XCTAssertTrue(model.canChooseStartRows, "and leaving the game offers it again")
     }
 
-    func testARowCountThatIsNotOfferedIsIgnored() {
-        UserDefaults.standard.set(20, forKey: VibeTenModel.rowsKey)
+    func testAStartRowCountThatIsNotOfferedIsIgnored() {
+        UserDefaults.standard.set(20, forKey: VibeTenModel.startRowsKey)
         let model = VibeTenModel()
-        XCTAssertEqual(model.rows, 18)
+        XCTAssertEqual(model.startRows, 18)
+    }
+
+    /// The old key was the board's whole height, and the four values are the
+    /// same, so a player who had chosen twelve still starts with twelve.
+    func testTheOldRowsSettingIsReadAsTheStart() {
+        UserDefaults.standard.set(14, forKey: VibeTenModel.legacyRowsKey)
+        let model = VibeTenModel()
+        XCTAssertEqual(model.startRows, 14)
     }
 
     func testDimModeLeavesThePairOnTheBoard() {
@@ -132,7 +141,6 @@ final class VibeTenModelTests: XCTestCase {
     }
 
     func testANewRowIsOfferedOnlyOnceTheBottomRowIsFree() {
-        UserDefaults.standard.set(true, forKey: VibeTenModel.addRowKey)
         let model = VibeTenModel()
         model.playSolo()
 
@@ -145,20 +153,6 @@ final class VibeTenModelTests: XCTestCase {
         model.addRows()
         XCTAssertEqual(model.board?.height(ofColumn: 0), height + 1,
                        "a row of digits arrives underneath, and the board grows")
-    }
-
-    func testTheSettingOffMeansNoNewRowIsEverOffered() {
-        UserDefaults.standard.set(false, forKey: VibeTenModel.addRowKey)
-        let model = VibeTenModel()
-        model.playSolo()
-
-        XCTAssertTrue(playUntilTheBottomRowIsFree(model), "taking pairs should free the bottom row")
-        XCTAssertEqual(model.board?.canAddRow, true, "the grid itself has room")
-        XCTAssertFalse(model.canAddRow, "but the player has asked for no new rows")
-
-        let height = model.board?.height(ofColumn: 0) ?? 0
-        model.addRows()
-        XCTAssertEqual(model.board?.height(ofColumn: 0), height, "nothing moves")
     }
 
     /// Taking pairs until every column has lost a digit, which is what frees the
@@ -213,8 +207,8 @@ final class VibeTenSoloProgressTests: XCTestCase {
     override func setUp() {
         super.setUp()
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
-        for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
-                    VibeTenModel.rowsKey, VibeTenModel.rowsPerAddKey,
+        for key in [VibeTenModel.modeKey, VibeTenModel.startRowsKey,
+                    VibeTenModel.legacyRowsKey, VibeTenModel.rowsPerAddKey,
                     VibeTenModel.wrapRowsKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }
@@ -225,8 +219,8 @@ final class VibeTenSoloProgressTests: XCTestCase {
         // The saved rules become the preferences when a game is resumed, and
         // these defaults are the app's: put them back so a UI test that runs
         // after this one is not handed somebody else's board.
-        for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
-                    VibeTenModel.rowsKey, VibeTenModel.rowsPerAddKey,
+        for key in [VibeTenModel.modeKey, VibeTenModel.startRowsKey,
+                    VibeTenModel.legacyRowsKey, VibeTenModel.rowsPerAddKey,
                     VibeTenModel.wrapRowsKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }
@@ -272,36 +266,74 @@ final class VibeTenSoloProgressTests: XCTestCase {
         XCTAssertEqual(model.score, 0)
     }
 
+    /// A finished round is not something to come back to, whichever way it
+    /// finished. This one is finished by clearing it: a two-digit board left in
+    /// progress, resumed and taken.
     func testAFinishedBoardIsNotSomethingToComeBackTo() {
+        var cells = [[VibeTenCell]](repeating: [], count: 9)
+        cells[0] = [VibeTenCell(value: 3)]
+        cells[1] = [VibeTenCell(value: 7)]
+        let saved = VibeTenModel.Saved(seed: 1, columns: 9, rows: 18, startRows: 18,
+                                       wrapRows: false, mode: .remove, cells: cells,
+                                       score: 0, finished: false, cleared: false,
+                                       elapsed: 0)
+        SoloProgressStore.save(saved, game: VibeTenModel.progressGame, summary: "one pair left")
+
         let model = VibeTenModel()
-        model.playSolo()
-        guard let board = model.board, let pair = board.availableMatches().first else {
-            return XCTFail("a full board should have a pair")
+        XCTAssertTrue(model.resumeSolo())
+        guard let pair = model.board?.availableMatches().first else {
+            return XCTFail("the saved board should have its last pair")
         }
         model.tap(pair.0)
         model.tap(pair.1)
-        // Finish the round by playing it out.
-        var guardCount = 0
-        while !(model.finished), guardCount < 200 {
-            guard let current = model.board, let next = current.availableMatches().first else { break }
-            model.tap(next.0)
-            model.tap(next.1)
-            guardCount += 1
-        }
-        guard model.finished else {
-            XCTFail("this board should run out of moves")
-            return
-        }
+        XCTAssertTrue(model.cleared)
+        XCTAssertTrue(model.finished)
+
         model.leaveGame()
         XCTAssertNil(SoloProgressStore.saved(game: VibeTenModel.progressGame),
                      "a finished game is not a game in progress")
+    }
+
+    /// Losing needs both: nothing left that pairs, and no room for a new row.
+    func testNoMovesWithRoomForANewRowIsNotTheEnd() {
+        var cells = [[VibeTenCell]](repeating: [], count: 9)
+        // One column, alternating 1 and 2: neighbours never pair.
+        cells[0] = (0..<17).map { VibeTenCell(value: $0 % 2 == 0 ? 1 : 2) }
+        let saved = VibeTenModel.Saved(seed: 1, columns: 9, rows: 18, startRows: 18,
+                                       wrapRows: false, mode: .remove, cells: cells,
+                                       score: 0, finished: false, cleared: false,
+                                       elapsed: 0)
+        SoloProgressStore.save(saved, game: VibeTenModel.progressGame, summary: "stuck")
+
+        let model = VibeTenModel()
+        XCTAssertTrue(model.resumeSolo())
+        XCTAssertFalse(model.board?.hasMoves ?? true, "nothing pairs")
+        XCTAssertTrue(model.canAddRow, "and the grid has room")
+        XCTAssertFalse(model.finished, "so the round is not over: it can grow")
+    }
+
+    func testNoMovesAndNoRoomIsTheEnd() {
+        var cells = [[VibeTenCell]](repeating: [], count: 9)
+        cells[0] = (0..<18).map { VibeTenCell(value: $0 % 2 == 0 ? 1 : 2) }
+        let saved = VibeTenModel.Saved(seed: 1, columns: 9, rows: 18, startRows: 18,
+                                       wrapRows: false, mode: .remove, cells: cells,
+                                       score: 0, finished: false, cleared: false,
+                                       elapsed: 0)
+        SoloProgressStore.save(saved, game: VibeTenModel.progressGame, summary: "stuck")
+
+        let model = VibeTenModel()
+        XCTAssertTrue(model.resumeSolo())
+        XCTAssertFalse(model.board?.hasMoves ?? true, "nothing pairs")
+        XCTAssertFalse(model.canAddRow, "and the grid is full")
+        XCTAssertTrue(model.finished, "so the round is over")
+        XCTAssertFalse(model.cleared, "and it was not a clear")
     }
 
     /// A resumed game is played by the rules it was dealt by, and those rules
     /// become the choices for the next game.
     func testTheResumedGameBringsItsRulesBack() {
         let model = VibeTenModel()
-        model.rows = 12
+        model.startRows = 12
         model.wrapRows = true
         model.mode = .dim
         model.playSolo()
@@ -315,15 +347,15 @@ final class VibeTenSoloProgressTests: XCTestCase {
 
         // A new model, with the preferences back at their defaults, as if the
         // game had been left on another day.
-        for key in [VibeTenModel.rowsKey, VibeTenModel.wrapRowsKey,
-                    VibeTenModel.modeKey] {
+        for key in [VibeTenModel.startRowsKey, VibeTenModel.legacyRowsKey,
+                    VibeTenModel.wrapRowsKey, VibeTenModel.modeKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }
         let resumed = VibeTenModel()
-        XCTAssertEqual(resumed.rows, 18, "the defaults are the defaults")
+        XCTAssertEqual(resumed.startRows, 18, "the defaults are the defaults")
         XCTAssertTrue(resumed.resumeSolo())
         XCTAssertEqual(resumed.board, dealt, "the same digits, and the same rules")
-        XCTAssertEqual(resumed.rows, 12, "the game comes back with its rows")
+        XCTAssertEqual(resumed.startRows, 12, "the game comes back with its start")
         XCTAssertEqual(resumed.wrapRows, true)
         XCTAssertEqual(resumed.mode, .dim)
     }

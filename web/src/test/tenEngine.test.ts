@@ -19,6 +19,7 @@ import {
   pairChoices,
   remaining,
   remove,
+  roomForRows,
   take,
   valueAt,
   values,
@@ -251,7 +252,8 @@ describe('the board', () => {
     for (const rows of ROW_OPTIONS) {
       const grid = newBoard(31337, COLUMNS, rows);
       expect(grid.columns).toBe(COLUMNS);
-      expect(grid.rows).toBe(rows);
+      expect(grid.rows, 'the board always has room for eighteen rows').toBe(ROWS);
+      expect(heightOf(grid, 0), 'and starts with the chosen rows').toBe(rows);
       expect(grid.stacks).toHaveLength(COLUMNS);
       grid.stacks.forEach((column) => {
         expect(column).toHaveLength(rows);
@@ -264,10 +266,23 @@ describe('the board', () => {
     }
   });
 
-  it('is part of the deal: the rows and the seed', () => {
+  it('is part of the deal: the starting rows and the seed', () => {
     expect(values(newBoard(7, 6, 12))).toEqual(values(newBoard(7, 6, 12)));
     expect(values(newBoard(7, 6, 12))).not.toEqual(values(newBoard(7, 6, 14)));
     expect(values(newBoard(7, 6, 12))).not.toEqual(values(newBoard(8, 6, 12)));
+  });
+
+  it('grows from the starting rows up to eighteen', () => {
+    let grid = newBoard(1234, COLUMNS, 12);
+    expect(canAddRow(grid)).toBe(true);
+    expect(roomForRows(grid)).toBe(6);
+    let guard = 0;
+    while (canAddRow(grid) && guard < 10) {
+      grid = addRow(grid, Array(COLUMNS).fill(1))!;
+      guard += 1;
+    }
+    expect(heightOf(grid, 0)).toBe(ROWS);
+    expect(canAddRow(grid)).toBe(false);
   });
 
   it('counts the top row of its own shape, not of the full board', () => {

@@ -62,7 +62,7 @@ final class VibeTenScreenshots: XCTestCase {
 
     /// The offer of a new row, on the row it pushes up into.
     private func newRowOffer(appearance: String) throws {
-        let app = launch(appearance: appearance, extra: ["-vibeten.addRow", "YES"])
+        let app = launch(appearance: appearance, extra: ["-vibeten.startRows", "18"])
         openSoloBoard(app)
 
         let addRow = app.buttons["ten.addRow"]
@@ -79,7 +79,7 @@ final class VibeTenScreenshots: XCTestCase {
         let app = XCUIApplication()
         // The full board, whatever shape a previous run left in the defaults.
         app.launchArguments += ["-vibegames.appearance", appearance,
-                                "-vibeten.rows", "18"] + extra
+                                "-vibeten.startRows", "18"] + extra
         app.launch(withName: "Tester")
         return app
     }

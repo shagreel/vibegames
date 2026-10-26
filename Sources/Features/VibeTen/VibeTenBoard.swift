@@ -44,11 +44,13 @@ struct VibeTenCell: Equatable, Codable {
 /// top row — so a row that clears closes upward.
 struct VibeTenBoard: Equatable {
 
-    /// The board is always nine columns; only the rows are a choice. Twelve to
-    /// eighteen rows means a grid that still fills the screen with bigger
-    /// digits.
+    /// The board is always nine columns and always has room for eighteen rows.
+    /// What the settings choose is how many of those rows start full of digits:
+    /// twelve, fourteen, sixteen or eighteen. The rest is room to grow into.
     static let defaultColumns = 9
-    static let defaultRows = 18
+    static let minimumRows = 12
+    static let maximumRows = 18
+    static let defaultStartRows = 18
     static let rowOptions = [12, 14, 16, 18]
     /// One press of the new-row offer adds this many rows, at most.
     static let rowsPerAddOptions = [1, 2, 3, 4]
@@ -62,8 +64,9 @@ struct VibeTenBoard: Equatable {
         (1, 9), (2, 8), (3, 7), (4, 6)
     ]
 
-    /// How many columns and rows this board has. A room's board is dealt from
-    /// the seed and its rows, so the rows are part of the deal.
+    /// How many columns this board has, and how many rows it has room for. The
+    /// capacity is always eighteen; `startRows` decides how many of them the
+    /// deal fills.
     let columns: Int
     let rows: Int
 
@@ -91,23 +94,33 @@ struct VibeTenBoard: Equatable {
 
     // MARK: - Building
 
-    /// Deals a full board of the given shape.
+    /// Deals a board that starts with `startRows` rows of digits.
     ///
-    /// The deal is two steps. First a set of valid pairs is drawn — pairs of the
-    /// same number or pairs that add up to ten — enough of them to fill the
-    /// grid. Then all of those digits are shuffled and laid out, so where a
-    /// pair's two halves end up is chance. It makes a board that reads as dealt
-    /// rather than sorted; it does not promise a way through, so a round can end
-    /// with no moves left instead of a cleared board.
+    /// The board still has room for eighteen rows; the rows the deal fills hang
+    /// from the top, and the space beneath is where the new-row offer grows the
+    /// board. The deal is two steps: a set of valid pairs is drawn — pairs of
+    /// the same number or pairs that add up to ten — enough of them to fill the
+    /// starting rows, and then all of those digits are shuffled and laid out.
+    /// So a pair's two halves land anywhere; the board reads as dealt rather
+    /// than sorted, and clearing every digit is the aim, not a promise.
     init(seed: UInt32,
          columns: Int = VibeTenBoard.defaultColumns,
-         rows: Int = VibeTenBoard.defaultRows,
+         startRows: Int = VibeTenBoard.defaultStartRows,
          wrapRows: Bool = false) {
+        let dealtRows = VibeTenBoard.validStartRows(startRows)
         self.seed = seed
         self.columns = columns
-        self.rows = rows
+        self.rows = VibeTenBoard.maximumRows
         self.wrapRows = wrapRows
-        self.stacks = VibeTenBoard.deal(seed: seed, columns: columns, rows: rows)
+        self.stacks = VibeTenBoard.deal(seed: seed, columns: columns, rows: dealtRows)
+    }
+
+    /// A starting row count that is a board this game can deal: twelve to
+    /// eighteen, and even so every digit has a pair.
+    static func validStartRows(_ rows: Int) -> Int {
+        var value = min(max(rows, minimumRows), maximumRows)
+        if value % 2 == 1 { value -= 1 }
+        return value
     }
 
     /// The pairs a board is dealt from, before their digits are shuffled onto
@@ -153,7 +166,7 @@ struct VibeTenBoard: Equatable {
     init(stacks: [[Int]],
          seed: UInt32 = 0,
          columns: Int = VibeTenBoard.defaultColumns,
-         rows: Int = VibeTenBoard.defaultRows,
+         rows: Int = VibeTenBoard.maximumRows,
          wrapRows: Bool = false) {
         self.seed = seed
         self.columns = columns
@@ -169,7 +182,7 @@ struct VibeTenBoard: Equatable {
     init(cells: [[VibeTenCell]],
          seed: UInt32 = 0,
          columns: Int = VibeTenBoard.defaultColumns,
-         rows: Int = VibeTenBoard.defaultRows,
+         rows: Int = VibeTenBoard.maximumRows,
          wrapRows: Bool = false) {
         self.seed = seed
         self.columns = columns

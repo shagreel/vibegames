@@ -93,10 +93,10 @@ final class VibeTenUITests: XCTestCase {
     }
 
     func testANewRowIsOfferedInTheEmptyBottomRowAndHangsOne() throws {
-        // Stated rather than inherited: the settings outlive the app, and one
-        // earlier test turning the new row off, or dealing itself a smaller
-        // board, would make this one fail for no reason.
-        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES"])
+        // Stated rather than inherited: the settings outlive the app, and an
+        // earlier test dealing itself a smaller start would make this one fail
+        // for no reason.
+        let app = fullBoardApp(extra: [])
         openSoloBoard(app)
 
         let addRow = app.buttons["ten.addRow"]
@@ -142,10 +142,10 @@ final class VibeTenUITests: XCTestCase {
     }
 
     /// The pair setting is a choice for before the game, like the board's size.
-    /// The new-row switch is not: it is an offer that comes and goes during
-    /// play, so its setting stays live.
+    /// How many rows a press adds belongs to the start too, and the new-row
+    /// offer itself has no switch: it is always there when the grid has room.
     func testThePairSettingIsLockedOnceTheGameStarts() throws {
-        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES", "-vibeten.mode", "remove"])
+        let app = fullBoardApp(extra: ["-vibeten.mode", "remove"])
         openLobby(app)
 
         // On the start screen it can be changed.
@@ -168,9 +168,11 @@ final class VibeTenUITests: XCTestCase {
         XCTAssertFalse(locked.isEnabled, "a board in play is being played one way")
         XCTAssertTrue(app.staticTexts["This game is using the setting it started with. Leave it to choose again."]
                         .waitForExistence(timeout: 3), "and the sheet says why")
-        // The offer of a new row is a different thing: it is for during play.
-        XCTAssertTrue(app.switches["tenSettings.addRow"].firstMatch.isEnabled,
-                      "the new-row setting stays live")
+        // How many rows a press adds belongs to the game too.
+        XCTAssertFalse(app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch.isEnabled,
+                       "the rows a press adds are part of the game's start")
+        XCTAssertFalse(app.switches["tenSettings.addRow"].firstMatch.exists,
+                       "there is no switch to turn the new-row offer off")
         tenAttach(app, named: "49g-ten-pair-locked")
         app.buttons["tenSettings.done"].tap()
     }
@@ -178,8 +180,7 @@ final class VibeTenUITests: XCTestCase {
     /// The settings that remain are the sheet's, and they are for a game that
     /// has not begun.
     func testTheNewRulesAreOnTheSheetAndLockedInAGame() throws {
-        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES",
-                                       "-vibeten.rowsPerAdd", "1", "-vibeten.wrapRows", "NO"])
+        let app = fullBoardApp(extra: ["-vibeten.rowsPerAdd", "1", "-vibeten.wrapRows", "NO"])
         openLobby(app)
         app.buttons["ten.settings"].tap()
 
@@ -224,19 +225,38 @@ final class VibeTenUITests: XCTestCase {
         app.buttons["tenSettings.done"].tap()
     }
 
-    func testTheNewRowSettingIsInTheSettingsSheet() throws {
-        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES"])
-        openSoloBoard(app)
+    /// How many rows a press adds is a start-screen choice, locked in play.
+    func testTheRowsPerPressIsChosenBeforeTheGameAndLockedOnceItStarts() throws {
+        let app = fullBoardApp(extra: ["-vibeten.rowsPerAdd", "1"])
+        openLobby(app)
 
         app.buttons["ten.settings"].tap()
-        let toggle = app.switches["tenSettings.addRow"].firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "the new row is a property of the game")
-        XCTAssertEqual(toggle.value as? String, "1", "it is on until it is turned off")
-        toggle.tap()
-        XCTAssertEqual(toggle.value as? String, "0", "and the switch is the setting")
-        // Put it back, so a later run on this simulator starts where this one did.
-        toggle.tap()
-        XCTAssertEqual(toggle.value as? String, "1")
+        let perPress = app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
+        XCTAssertTrue(perPress.waitForExistence(timeout: 5),
+                      "the sheet offers how many rows a press adds")
+        for count in [1, 2, 3, 4] {
+            XCTAssertTrue(perPress.buttons["\(count)"].exists, "\(count) rows should be on offer")
+        }
+        XCTAssertTrue(perPress.isEnabled, "on the start screen it can be chosen")
+        XCTAssertTrue(perPress.buttons["1"].isSelected)
+        perPress.buttons["3"].tap()
+        XCTAssertTrue(perPress.buttons["3"].isSelected)
+        app.buttons["tenSettings.done"].tap()
+
+        startSolo(app, button: "ten.playSolo")
+        XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
+                        .waitForExistence(timeout: 10))
+        app.buttons["ten.settings"].tap()
+        XCTAssertTrue(app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
+                        .waitForExistence(timeout: 5))
+        XCTAssertFalse(app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch.isEnabled,
+                       "a game in play keeps the number it started with")
+        // Put it back for the tests that run after this one.
+        app.buttons["tenSettings.done"].tap()
+        app.buttons["ten.back"].tap()
+        XCTAssertTrue(app.buttons["ten.playSolo"].waitForExistence(timeout: 5))
+        app.buttons["ten.settings"].tap()
+        app.segmentedControls["tenSettings.rowsPerAdd"].buttons["1"].tap()
         app.buttons["tenSettings.done"].tap()
     }
 
@@ -259,7 +279,7 @@ final class VibeTenUITests: XCTestCase {
     /// run on this simulator left behind.
     private func fullBoardApp(extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.rows", "18"] + extra
+        app.launchArguments += ["-vibeten.startRows", "18"] + extra
         app.launch(withName: "Tester")
         return app
     }

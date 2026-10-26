@@ -47,31 +47,23 @@ final class VibeTenModel: ObservableObject {
 
     static let modeKey = "vibeten.mode"
 
-    /// Whether a solo board offers a new row once the top of the grid is free.
-    /// Another preference rather than a room rule: a room's board has to be the
-    /// same for everybody, so this one only applies when playing alone.
-    @Published var addRowEnabled: Bool {
+    /// How many rows the next board starts with. The board always has room for
+    /// eighteen; the rest is space the new-row offer grows into. A room's board
+    /// is the starting rows the host dealt, so this applies to solo play and to
+    /// the rooms this player creates; a joiner plays what they were given. The
+    /// columns are always nine.
+    @Published var startRows: Int {
         didSet {
-            guard addRowEnabled != oldValue else { return }
-            UserDefaults.standard.set(addRowEnabled, forKey: Self.addRowKey)
+            guard startRows != oldValue else { return }
+            UserDefaults.standard.set(startRows, forKey: Self.startRowsKey)
         }
     }
 
-    static let addRowKey = "vibeten.addRow"
+    static let startRowsKey = "vibeten.startRows"
+    /// The key the setting lived under when it was the board's whole height.
+    static let legacyRowsKey = "vibeten.rows"
 
-    /// How many rows the next board has. A room's board is the rows the host
-    /// dealt, so this applies to solo play and to the rooms this player creates;
-    /// a joiner plays what they were given. The columns are always nine.
-    @Published var rows: Int {
-        didSet {
-            guard rows != oldValue else { return }
-            UserDefaults.standard.set(rows, forKey: Self.rowsKey)
-        }
-    }
-
-    static let rowsKey = "vibeten.rows"
-
-    /// How many rows one press of the offer adds: one to four.
+    /// How many rows one press of the new-row offer adds: one to four.
     @Published var rowsPerAdd: Int {
         didSet {
             let clamped = min(max(rowsPerAdd, VibeTenBoard.minimumRowsPerAdd),
@@ -121,11 +113,11 @@ final class VibeTenModel: ObservableObject {
         return false
     }
 
-    /// Whether the board's rows can still be chosen. They are a property of a
+    /// Whether the starting rows can still be chosen. They are a property of a
     /// *new* game: once a board is in play — or a room exists — they are fixed,
     /// and the settings sheet says so rather than offering a choice that would
     /// do nothing. The start screen is the one place they are offered.
-    var canChooseBoardShape: Bool {
+    var canChooseStartRows: Bool {
         if case .lobby = session { return true }
         return false
     }
@@ -142,10 +134,11 @@ final class VibeTenModel: ObservableObject {
         !isShared && !canPlay
     }
 
-    /// Whether how many rows a press adds can still be chosen: solo games only,
-    /// before the game begins, and only while the new-row offer is on.
-    var canChooseRowSupply: Bool {
-        !isShared && canChoosePairMode && addRowEnabled
+    /// Whether how many rows a press adds can still be chosen: before the game
+    /// begins. A room's rules belong to the host, so once a room exists it is
+    /// not this player's to change.
+    var canChooseRowsPerAdd: Bool {
+        canChoosePairMode
     }
 
     var sharedGameID: String? {
@@ -164,17 +157,16 @@ final class VibeTenModel: ObservableObject {
     init() {
         let defaults = UserDefaults.standard
         mode = VibeTenMode(rawValue: defaults.string(forKey: Self.modeKey) ?? "") ?? .remove
-        // On unless it has been turned off: a solo player who has never opened
-        // the settings should still get the extra row when the grid has room.
-        // `bool(forKey:)` rather than a cast, so `-vibeten.addRow NO` in a launch
-        // argument — a string, not a stored boolean — reads as the answer it is.
-        addRowEnabled = defaults.object(forKey: Self.addRowKey) == nil
-            ? true
-            : defaults.bool(forKey: Self.addRowKey)
         // `integer(forKey:)` rather than a cast: a launch argument arrives as a
-        // string, and a shape that is not one of the four is not a board.
-        let savedRows = defaults.integer(forKey: Self.rowsKey)
-        rows = VibeTenBoard.rowOptions.contains(savedRows) ? savedRows : VibeTenBoard.defaultRows
+        // string, and a row count that is not one of the four is not a start.
+        // The old key held the same four values while it meant the whole board.
+        var savedStartRows = defaults.integer(forKey: Self.startRowsKey)
+        if savedStartRows == 0 {
+            savedStartRows = defaults.integer(forKey: Self.legacyRowsKey)
+        }
+        startRows = VibeTenBoard.rowOptions.contains(savedStartRows)
+            ? savedStartRows
+            : VibeTenBoard.defaultStartRows
         let savedPerAdd = defaults.integer(forKey: Self.rowsPerAddKey)
         rowsPerAdd = (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
             .contains(savedPerAdd) ? savedPerAdd : VibeTenBoard.minimumRowsPerAdd
@@ -206,26 +198,35 @@ final class VibeTenModel: ObservableObject {
             return VibeTenStanding(id: playerID,
                                    name: name,
                                    score: record?.score ?? 0,
-                                   finishedAt: record?.finishedAt)
+                                   finishedAt: record?.finishedAt,
+                                   clearedAt: record?.clearedAt)
         }
         .sorted(by: vibeTenRank)
     }
 
-    /// The winner, once there is one: only settled when somebody has finished
-    /// and nobody who is behind can still catch them, so it is only shown when
-    /// the game is over for this player and for everybody else.
+    /// The winner: the first player to clear the board. Empty while nobody has
+    /// cleared yet — the round is not decided by running out of moves.
     var winners: [VibeTenStanding] {
-        guard finished else { return [] }
-        let ranked = standings
-        guard let best = ranked.first else { return [] }
-        // Everyone who can still score more than the leader keeps the game open.
-        let caughtUp = ranked.contains { !$0.isFinished && $0.score > best.score }
-        guard !caughtUp else { return [] }
-        return ranked.filter { $0.score == best.score }
+        let cleared = standings.filter(\.hasCleared)
+        guard let first = cleared.compactMap(\.clearedAt).min() else { return [] }
+        return cleared.filter { $0.clearedAt == first }
     }
 
+    /// The first player to clear the board, once there is one.
+    var roomWinner: VibeTenStanding? { winners.first }
+
+    /// Whether this player is the one who cleared first.
+    var amITheWinner: Bool {
+        guard let roomWinner else { return false }
+        return roomWinner.id == PlayerIdentity.id
+    }
+
+    /// Whether every player has either cleared the board or run out of moves.
     var isEveryoneFinished: Bool {
-        !snapshot.players.isEmpty && snapshot.players.keys.allSatisfy { snapshot.scores[$0]?.finishedAt != nil }
+        !snapshot.players.isEmpty && snapshot.players.keys.allSatisfy {
+            let record = snapshot.scores[$0]
+            return record?.finishedAt != nil || record?.clearedAt != nil
+        }
     }
 
     // MARK: - Name
@@ -257,7 +258,11 @@ final class VibeTenModel: ObservableObject {
         var seed: UInt32
         /// Kept for a game saved before the board became always nine columns.
         var columns: Int
+        /// The board's capacity, which is always eighteen now.
         var rows: Int
+        /// The rows the game started with. Absent from a save made before the
+        /// board could grow, where `rows` was the start.
+        var startRows: Int?
         var wrapRows: Bool
         var mode: VibeTenMode
         var cells: [[VibeTenCell]]
@@ -273,6 +278,7 @@ final class VibeTenModel: ObservableObject {
         return Saved(seed: board.seed,
                      columns: board.columns,
                      rows: board.rows,
+                     startRows: startRows,
                      wrapRows: board.wrapRows,
                      mode: mode,
                      cells: board.stacks,
@@ -314,11 +320,14 @@ final class VibeTenModel: ObservableObject {
         // started, and so is the game after it.
         mode = saved.mode
         wrapRows = saved.wrapRows
-        rows = saved.rows
+        let fallbackStart = VibeTenBoard.rowOptions.contains(saved.rows)
+            ? saved.rows
+            : VibeTenBoard.defaultStartRows
+        startRows = saved.startRows ?? fallbackStart
         board = VibeTenBoard(cells: saved.cells,
                              seed: saved.seed,
                              columns: saved.columns,
-                             rows: saved.rows,
+                             rows: VibeTenBoard.maximumRows,
                              wrapRows: saved.wrapRows)
         boardToken += 1
         score = saved.score
@@ -329,7 +338,18 @@ final class VibeTenModel: ObservableObject {
         finishedAt = nil
         lastRoundSeconds = saved.elapsed
         startedAt = Date()
+        // A saved board is normally one still in play, but a round that ended
+        // while the app was away — or a save from an older build — has to be
+        // judged by the rule as it stands now.
+        refreshRoundState()
         return true
+    }
+
+    /// Re-checks the end of the round against the board as it is, without
+    /// waiting for a tap. Only a board that is already a dead end changes.
+    func refreshRoundState() {
+        guard let board, !finished else { return }
+        checkForFinish(board)
     }
 
     func createSharedGame() async {
@@ -343,7 +363,8 @@ final class VibeTenModel: ObservableObject {
         do {
             try await service.createGame(gameID: gameID,
                                          seed: seed,
-                                         rows: rows,
+                                         rows: startRows,
+                                         rowsPerAdd: rowsPerAdd,
                                          wrapRows: wrapRows,
                                          mode: mode,
                                          creatorName: playerName,
@@ -356,7 +377,7 @@ final class VibeTenModel: ObservableObject {
             // must not be the wrong size for a heartbeat.
             board = VibeTenBoard(seed: seed,
                                  columns: VibeTenBoard.defaultColumns,
-                                 rows: rows,
+                                 startRows: startRows,
                                  wrapRows: wrapRows)
             boardToken += 1
             startedAt = Date()
@@ -452,12 +473,31 @@ final class VibeTenModel: ObservableObject {
             // A new seed is a new board for everybody, including whoever dealt it.
             deal(seed: seed)
         }
+
+        // The first clear wins, so once somebody has cleared it the round is
+        // over for this player too: their board stops, and the result panel
+        // says who won.
+        if isShared, let winner = winners.first,
+           winner.id != PlayerIdentity.id, !finished {
+            finished = true
+            finishedAt = Date()
+            selected = nil
+            // The room should know this player is out of the round too, not
+            // still "playing" in the standings.
+            reportScore()
+        }
     }
 
-    /// The rows the next board will be dealt with: the room's when playing in
-    /// one, otherwise the player's own choice. The columns are always nine.
-    var boardRows: Int {
-        isShared ? snapshot.rows : rows
+    /// The starting rows the next board will be dealt with: the room's when
+    /// playing in one, otherwise the player's own choice. The columns are always
+    /// nine and the board always has room for eighteen rows.
+    var boardStartRows: Int {
+        isShared ? snapshot.rows : startRows
+    }
+
+    /// How many rows a press adds in play: the room's when playing in one.
+    var boardRowsPerAdd: Int {
+        isShared ? snapshot.rowsPerAdd : rowsPerAdd
     }
 
     /// How a taken pair leaves the board in play: the room's when playing in
@@ -476,7 +516,7 @@ final class VibeTenModel: ObservableObject {
     private func deal(seed: UInt32) {
         board = VibeTenBoard(seed: seed,
                              columns: VibeTenBoard.defaultColumns,
-                             rows: boardRows,
+                             startRows: boardStartRows,
                              wrapRows: effectiveWrapRows)
         boardToken += 1
         startedAt = Date()
@@ -519,11 +559,14 @@ final class VibeTenModel: ObservableObject {
         }
     }
 
+    /// Clearing the board wins. Running out of moves only loses once there is
+    /// no way to add a row either: while the grid has room, a board with no
+    /// pairs on it is a board to grow, not the end of the round.
     private func checkForFinish(_ board: VibeTenBoard) {
         if board.isCleared {
             cleared = true
             finished = true
-        } else if !board.hasMoves {
+        } else if !board.hasMoves && !board.canAddRow {
             finished = true
         }
         guard finished else { return }
@@ -535,16 +578,12 @@ final class VibeTenModel: ObservableObject {
         reportScore()
     }
 
-    /// Hangs fresh rows under a solo board: as many as one press deals, or as
-    /// many as the grid still has room for.
-    ///
-    /// Only while the bottom row is free — the grid has a fixed number of rows
-    /// and the board hangs from the top — and only solo, because a room's board
-    /// is the same for everybody and one player dealing themselves new digits
-    /// would be a very different game.
+    /// Hangs fresh rows under the board: as many as one press deals, or as many
+    /// as the grid still has room for. Solo or in a room — each player's board
+    /// grows on their own device — and only while the bottom of the grid is free.
     func addRows() {
         guard canAddRow, var board else { return }
-        let wanted = min(rowsPerAdd, board.roomForRows)
+        let wanted = min(boardRowsPerAdd, board.roomForRows)
         for _ in 0..<max(0, wanted) {
             var digits: [Int] = []
             for _ in 0..<board.columns { digits.append(Int.random(in: 1...9)) }
@@ -553,14 +592,14 @@ final class VibeTenModel: ObservableObject {
         self.board = board
         selected = nil
         message = nil
+        checkForFinish(board)
         saveSoloProgress()
     }
 
-    /// Whether the board should offer the new-row button: the setting is on,
-    /// this is a solo game, and every column is clear of the top row.
+    /// Whether the board should offer the new-row button: the round is still
+    /// going and there is room under the digits for another row.
     var canAddRow: Bool {
-        addRowEnabled && !isShared && !finished && !isWaitingForHost
-            && (board?.canAddRow ?? false)
+        !finished && !isWaitingForHost && (board?.canAddRow ?? false)
     }
 
     /// Tells the room the score. Shared games only — a solo board is nobody
@@ -569,12 +608,14 @@ final class VibeTenModel: ObservableObject {
         guard let gameID = sharedGameID else { return }
         let score = score
         let finishedAt = finished ? (finishedAt ?? Date()) : nil
+        let clearedAt = cleared ? (finishedAt ?? Date()) : nil
         scoreTask?.cancel()
         scoreTask = Task { [service] in
             try? await service.recordScore(gameID: gameID,
                                            playerID: PlayerIdentity.id,
                                            score: score,
-                                           finishedAt: finishedAt)
+                                           finishedAt: finishedAt,
+                                           clearedAt: clearedAt)
         }
     }
 

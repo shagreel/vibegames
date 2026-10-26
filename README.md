@@ -771,25 +771,32 @@ the table instead of starting its own.
 
 ## Vibe Ten
 
-The sixth game: nine columns of digits, eighteen rows tall, hanging from the
-top. Two digits pair when they are **equal** or **add up to ten**, on one line —
-a row, a column or a diagonal — with nothing in between. Take a pair and the
-digits below it rise into the space, so every take changes the board.
+The sixth game: nine columns of digits, hanging from the top. Two digits pair
+when they are **equal** or **add up to ten**, on one line — a row, a column or a
+diagonal — with nothing in between. Take a pair and the digits below it rise into
+the space, so every take changes the board.
 
 **The board is a random deal of real pairs.** First a set of valid pairs is
 drawn — pairs of the same number or pairs that add up to ten — enough of them to
-fill the grid. Then all of those digits are shuffled and laid out, so where a
-pair's two halves end up is chance. The board therefore reads as dealt rather
-than sorted, and a round can open up or run out of moves: clearing every digit is
-the aim, not a promise. The two draws are the deal, and both clients reproduce
-them from the seed with the same generator and the same order.
+fill the starting rows. Then all of those digits are shuffled and laid out, so
+where a pair's two halves end up is chance. The board reads as dealt rather than
+sorted, and clearing every digit is the aim, not a promise. Both clients
+reproduce the deal from the seed with the same generator and the same order.
 
-The settings sheet is down to what a game needs:
+**The board always has room for eighteen rows of digits.** The settings choose
+how many of them start full: twelve, fourteen, sixteen or eighteen. A solo game
+is won by clearing the board. A round is only lost when nothing pairs *and* there
+is no room left to add a row; while there is room, the new-row offer appears on
+the empty bottom row and the round continues. In a room, the first player to
+clear the board wins, and a clear ends the round for everybody.
 
-- **Rows.** Nine columns are fixed; the rows run twelve to eighteen, the full
-  board by default. Fewer rows means bigger digits. The rows are part of the
-  deal, so a room plays the rows the host created it with, and the choice is made
-  on the start screen — a board in play keeps them.
+The settings sheet, with each setting a choice for a game that has not begun:
+
+- **Start with: 12, 14, 16 or 18 rows.** Nine columns are fixed. Fewer starting
+  rows means bigger digits and more room to grow. The starting rows are part of
+  the deal, so a room plays the start the host created it with.
+- **Rows per press: 1 to 4.** How much a press of the new-row offer adds. Also
+  the host's rule in a room.
 - **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
   leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
   digit cannot be picked again and a line can be drawn straight through it, so a
@@ -799,15 +806,15 @@ The settings sheet is down to what a game needs:
   line: the last square of a row is next to the first square of the row below,
   so a 5 at the end of a row matches a 5 at the start of the next — and, because
   a taken digit is not in the way, the one after that too.
-- **New rows (solo only).** While no column reaches the bottom of the grid, a
-  button appears *on that empty bottom row* — no strip of its own on screen — and
-  a press hangs one to four fresh rows underneath, as a setting chooses. In a
-  room the board is everybody's, so the offer is never there.
 
-A room stores its rules with the seed — the rows, the join and the pair mode —
-because every device has to deal the same board *and play it the same way*: the
-host chooses them when the room is made and everybody plays them. One point a
-pair, most pairs wins, a tie goes to whoever ran out of moves first.
+Adding rows is always offered — solo and in a room — so there is no switch for
+it. Each player's board grows on their own device once a room has started, which
+is why the room stores the starting rows and the rows per press but not a board.
+A room also stores the join and the pair mode, because every device has to deal
+the same board *and play it the same way*: the host chooses them when the room is
+made and everybody plays them. A player's score is their pairs, the running total
+behind the race; the winner is the first clear, written into the room's scores as
+a `clearedAt` that a later score update cannot take away.
 
 `VibeTenBoard` is the rules and knows nothing about screens or the database;
 `VibeTenModel` holds a board, a tapped cell and a score, and deals a shared
@@ -815,7 +822,7 @@ board from the room's seed. `web/src/games/ten/engine.ts` mirrors the board,
 including the deal, which is what makes a room's seed light up the same numbers
 in a browser — `Tests/VibeTenBoardTests.swift` and `web/src/test/tenEngine.test.ts`
 both pin themselves to `web/src/games/ten/board.fixtures.json`. That file is
-dumped from the Swift engine, one board per row count, by:
+dumped from the Swift engine, one board per starting row count, by:
 
 ```sh
 swiftc -O Sources/Model/SeededGenerator.swift \

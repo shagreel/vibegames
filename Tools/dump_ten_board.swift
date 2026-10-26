@@ -20,9 +20,9 @@ struct DumpTenBoard {
     static func main() {
         let seed: UInt32 = 1234
         var fixtures: [String: [[Int]]] = [:]
-        for rows in VibeTenBoard.rowOptions {
-            let board = VibeTenBoard(seed: seed, rows: rows)
-            fixtures["\(seed)-\(VibeTenBoard.defaultColumns)x\(rows)"] = values(board.stacks)
+        for startRows in VibeTenBoard.rowOptions {
+            let board = VibeTenBoard(seed: seed, startRows: startRows)
+            fixtures["\(seed)-\(VibeTenBoard.defaultColumns)x\(startRows)"] = values(board.stacks)
         }
 
         let encoder = JSONEncoder()

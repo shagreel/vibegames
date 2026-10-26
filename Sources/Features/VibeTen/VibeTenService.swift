@@ -7,6 +7,9 @@ struct VibeTenScore: Equatable {
     /// When that player's board ran out of moves, in milliseconds. Nil while
     /// they are still playing.
     var finishedAt: Int64?
+    /// When that player cleared the board, in milliseconds. The first clear is
+    /// the winner, so this is the only thing the result is decided on.
+    var clearedAt: Int64?
 }
 
 /// A shared Vibe Ten game.
@@ -15,6 +18,7 @@ struct VibeTenScore: Equatable {
 ///       meta/
 ///         seed        1234567890
 ///         rows        18
+///         rowsPerAdd  1
 ///         wrap        false
 ///         mode        "remove"
 ///         creator     "Alex"
@@ -24,9 +28,10 @@ struct VibeTenScore: Equatable {
 ///       scores/{playerId}  { score, finishedAt }
 ///
 /// The board is never stored: it is a pure function of the seed and the rules —
-/// the rows, whether the rows join end to end, and how a taken pair leaves the
-/// board — so every device — phone or browser — deals the identical digits and
-/// plays them the same way. Those rules are the host's choice, written once when
+/// the starting rows, whether the rows join end to end, and how a taken pair
+/// leaves the board — so every device — phone or browser — deals the identical
+/// digits and plays them the same way. Adding rows is always allowed, and each
+/// player's board grows on its own device once they do. Those rules are the host's choice, written once when
 /// the room is made and kept for the room's life; only the scores travel, and
 /// each player writes their own. The board is always nine columns.
 struct VibeTenSnapshot: Equatable {
@@ -34,7 +39,9 @@ struct VibeTenSnapshot: Equatable {
     var seed: UInt32?
     /// How many rows the board has. Rooms made before the choice existed read
     /// as the full board; the columns are always nine.
-    var rows = VibeTenBoard.defaultRows
+    var rows = VibeTenBoard.defaultStartRows
+    /// How many rows one press of the new-row offer adds, also the host's rule.
+    var rowsPerAdd = VibeTenBoard.minimumRowsPerAdd
     /// Whether the rows join end to end. A room rule, so every device plays the
     /// same board by the same lines.
     var wrapRows = false
@@ -67,6 +74,11 @@ struct VibeTenSnapshot: Equatable {
                VibeTenBoard.rowOptions.contains(rawRows) {
                 rows = rawRows
             }
+            if let rawPerAdd = (object["rowsPerAdd"] as? NSNumber)?.intValue,
+               (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
+                   .contains(rawPerAdd) {
+                rowsPerAdd = rawPerAdd
+            }
             wrapRows = (object["wrap"] as? Bool) ?? false
             if let raw = object["mode"] as? String,
                let value = VibeTenMode(rawValue: raw) {
@@ -87,7 +99,10 @@ struct VibeTenSnapshot: Equatable {
             guard let entry = value as? [String: Any] else { continue }
             let score = (entry["score"] as? NSNumber)?.intValue ?? 0
             let finishedAt = (entry["finishedAt"] as? NSNumber)?.int64Value
-            self.scores[key] = VibeTenScore(score: score, finishedAt: finishedAt)
+            let clearedAt = (entry["clearedAt"] as? NSNumber)?.int64Value
+            self.scores[key] = VibeTenScore(score: score,
+                                            finishedAt: finishedAt,
+                                            clearedAt: clearedAt)
         }
     }
 }
@@ -98,13 +113,23 @@ struct VibeTenStanding: Identifiable, Equatable {
     let name: String
     let score: Int
     let finishedAt: Int64?
+    let clearedAt: Int64?
 
-    var isFinished: Bool { finishedAt != nil }
+    var isFinished: Bool { finishedAt != nil || clearedAt != nil }
+    var hasCleared: Bool { clearedAt != nil }
 }
 
-/// Ranked by the rule the game is played by: most pairs wins, and a tie goes to
-/// whoever ran out of moves first.
+/// Ranked by the rule the game is played by: the first clear wins, so anybody
+/// who has cleared sorts above anybody who has not, earliest first. The pairs
+/// are the running total behind that.
 func vibeTenRank(_ a: VibeTenStanding, _ b: VibeTenStanding) -> Bool {
+    switch (a.clearedAt, b.clearedAt) {
+    case let (first?, second?):
+        if first != second { return first < second }
+    case (_?, nil): return true
+    case (nil, _?): return false
+    case (nil, nil): break
+    }
     if a.score != b.score { return a.score > b.score }
     switch (a.finishedAt, b.finishedAt) {
     case let (first?, second?): return first < second
@@ -200,6 +225,7 @@ final class VibeTenService {
     func createGame(gameID: String,
                     seed: UInt32,
                     rows: Int,
+                    rowsPerAdd: Int,
                     wrapRows: Bool,
                     mode: VibeTenMode,
                     creatorName: String,
@@ -209,6 +235,7 @@ final class VibeTenService {
         try await reference.child("meta").setValue([
             "seed": Int(seed),
             "rows": rows,
+            "rowsPerAdd": rowsPerAdd,
             "wrap": wrapRows,
             "mode": mode.rawValue,
             "creator": creatorName,
@@ -252,11 +279,17 @@ final class VibeTenService {
     func recordScore(gameID: String,
                      playerID: String,
                      score: Int,
-                     finishedAt: Date?) async throws {
+                     finishedAt: Date?,
+                     clearedAt: Date?) async throws {
         guard let reference = gameReference(gameID)?.child("scores").child(playerID) else { return }
         var value: [String: Any] = ["score": score]
         if let finishedAt {
             value["finishedAt"] = Self.milliseconds(finishedAt)
+        }
+        if let clearedAt {
+            // Written once and never removed: a later score update without it
+            // must not take the win away.
+            value["clearedAt"] = Self.milliseconds(clearedAt)
         }
         try await reference.updateChildValues(value)
     }
@@ -264,8 +297,10 @@ final class VibeTenService {
     /// Deals a new board to the whole room.
     func beginRestart(gameID: String, seed: UInt32) async throws {
         guard let reference = gameReference(gameID) else { return }
-        try await reference.child("meta/seed").setValue(Int(seed))
-        // The scores belong to the round, so they go with it.
+        // The scores go first, then the seed. The other order would leave a
+        // snapshot holding the new board with the old round's winner in it, and
+        // a client would end the fresh round before it started.
         try await reference.child("scores").removeValue()
+        try await reference.child("meta/seed").setValue(Int(seed))
     }
 }

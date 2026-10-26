@@ -1,6 +1,6 @@
 import { get, onDisconnect, onValue, ref, remove, set, update } from 'firebase/database';
 import { database } from '../../firebase';
-import { ROW_OPTIONS, ROWS, type TenMode } from './engine';
+import { ROWS_PER_ADD_OPTIONS, ROW_OPTIONS, ROWS, type TenMode } from './engine';
 
 /**
  * A shared Vibe Ten room.
@@ -22,14 +22,18 @@ export interface TenScore {
   score: number;
   /** When that player ran out of moves, in milliseconds since the epoch. */
   finishedAt: number | null;
+  /** When that player cleared the board. The first clear wins. */
+  clearedAt: number | null;
 }
 
 export interface TenSnapshot {
   exists: boolean;
   seed: number | null;
-  /** How many rows the board has. Rooms made before the choice existed read as
-      the full board; the columns are always nine. */
+  /** How many rows start full of digits. The board always has room for
+      eighteen; rooms made before the choice existed read as a full start. */
   rows: number;
+  /** How many rows a press of the new-row offer adds, the host's rule. */
+  rowsPerAdd: number;
   /** Whether the rows join end to end. A room rule, so every device plays the
       same board by the same lines. */
   wrapRows: boolean;
@@ -45,6 +49,7 @@ export const EMPTY_SNAPSHOT: TenSnapshot = {
   exists: false,
   seed: null,
   rows: ROWS,
+  rowsPerAdd: 1,
   wrapRows: false,
   mode: 'remove',
   creator: null,
@@ -61,6 +66,10 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
   const seedValue = typeof meta.seed === 'number' ? Math.trunc(meta.seed) : null;
   const rawRows = typeof meta.rows === 'number' ? Math.trunc(meta.rows) : ROWS;
   const rows = (ROW_OPTIONS as readonly number[]).includes(rawRows) ? rawRows : ROWS;
+  const rawPerAdd = typeof meta.rowsPerAdd === 'number' ? Math.trunc(meta.rowsPerAdd) : 1;
+  const rowsPerAdd = (ROWS_PER_ADD_OPTIONS as readonly number[]).includes(rawPerAdd)
+    ? rawPerAdd
+    : ROWS_PER_ADD_OPTIONS[0];
   const wrapRows = meta.wrap === true;
   const rawMode = typeof meta.mode === 'string' ? meta.mode : 'remove';
   const mode: TenMode = rawMode === 'dim' ? 'dim' : 'remove';
@@ -78,13 +87,15 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
     const record = entry as Record<string, unknown> | null;
     const score = typeof record?.score === 'number' ? Math.trunc(record.score) : 0;
     const finishedAt = typeof record?.finishedAt === 'number' ? record.finishedAt : null;
-    scores[id] = { score, finishedAt };
+    const clearedAt = typeof record?.clearedAt === 'number' ? record.clearedAt : null;
+    scores[id] = { score, finishedAt, clearedAt };
   });
 
   return {
     exists: true,
     seed: seedValue,
     rows,
+    rowsPerAdd,
     wrapRows,
     mode,
     creator: typeof meta.creator === 'string' ? meta.creator : null,
@@ -99,15 +110,21 @@ export interface TenStanding {
   name: string;
   score: number;
   finishedAt: number | null;
+  clearedAt: number | null;
 }
 
 /**
- * The rule: most pairs wins, and a tie goes to whoever ran out of moves first.
- * Somebody still playing sorts below anybody who has finished on the same
- * score, because they have not finished proving it.
+ * The rule: the first player to clear the board wins, so anybody who has
+ * cleared sorts above anybody who has not, earliest first. The pairs are the
+ * running total behind that.
  */
 export function rank(standings: TenStanding[]): TenStanding[] {
   return [...standings].sort((a, b) => {
+    if (a.clearedAt !== null && b.clearedAt !== null && a.clearedAt !== b.clearedAt) {
+      return a.clearedAt - b.clearedAt;
+    }
+    if (a.clearedAt !== null && b.clearedAt === null) return -1;
+    if (a.clearedAt === null && b.clearedAt !== null) return 1;
     if (a.score !== b.score) return b.score - a.score;
     if (a.finishedAt !== null && b.finishedAt !== null) return a.finishedAt - b.finishedAt;
     if (a.finishedAt !== null) return -1;
@@ -130,6 +147,7 @@ export async function createGame(
   gameId: string,
   seed: number,
   rows: number,
+  rowsPerAdd: number,
   wrapRows: boolean,
   mode: TenMode,
   creatorName: string,
@@ -141,6 +159,7 @@ export async function createGame(
     meta: {
       seed,
       rows,
+      rowsPerAdd,
       wrap: wrapRows,
       mode,
       creator: creatorName,
@@ -182,19 +201,24 @@ export async function recordScore(
   playerId: string,
   score: number,
   finishedAt: number | null,
+  clearedAt: number | null,
 ): Promise<void> {
   const path = `ten/${gameId}/scores/${playerId}`;
-  if (finishedAt === null) {
-    await update(ref(database, path), { score });
-  } else {
-    await update(ref(database, path), { score, finishedAt });
-  }
+  const value: Record<string, number> = { score };
+  if (finishedAt !== null) value.finishedAt = finishedAt;
+  // Written once and never removed: a later score update without it must not
+  // take the win away.
+  if (clearedAt !== null) value.clearedAt = clearedAt;
+  await update(ref(database, path), value);
 }
 
 /** Deals a new board to the whole room, and clears the scores with it. */
 export async function beginRestart(gameId: string, seed: number): Promise<void> {
-  await set(ref(database, `ten/${gameId}/meta/seed`), seed);
+  // The scores go first, then the seed: the other order can show a client the
+  // new board with the old round's winner still in it, which ends the round
+  // before it has started.
   await remove(ref(database, `ten/${gameId}/scores`)).catch(() => undefined);
+  await set(ref(database, `ten/${gameId}/meta/seed`), seed);
 }
 
 /** A seed for a new board. Unsigned 32-bit, the same range the app uses. */

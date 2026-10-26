@@ -137,11 +137,12 @@ struct GameInstructions {
                         + "deciding which pair to take first, because every take changes what is "
                         + "next to what."),
             Section(title: "The board's size",
-                    body: "The board is **nine columns** wide, and **twelve to eighteen rows** "
-                        + "tall — the full board unless you choose fewer rows. Fewer rows means "
-                        + "bigger digits, and the grid always fills the screen. Choose the rows "
-                        + "on the start screen: once a game is under way the board keeps them. "
-                        + "A room plays the rows the host dealt."),
+                    body: "The board is **nine columns** wide and starts with **twelve to "
+                        + "eighteen rows** of digits. It always has room for eighteen: the rows "
+                        + "underneath the start are where fresh rows grow into, and fewer "
+                        + "starting rows means bigger digits. Choose the starting rows on the "
+                        + "start screen: once a game is under way the board keeps them. A room "
+                        + "plays the start the host dealt."),
             Section(title: "Rows that join up",
                     body: "One setting lets the rows read end to end: the last square of a row "
                         + "is next to the first square of the row below it, so a 5 at the end of "
@@ -156,25 +157,26 @@ struct GameInstructions {
                         + "the whole row clears at once and everything below it rises one row. "
                         + "Choose it on the start screen: a game in play keeps the setting it "
                         + "started with, and in a room it is part of the host's rules."),
-            Section(title: "New rows, solo",
-                    body: "Playing alone, you can hang fresh rows of digits under the board. "
-                        + "It is only possible while the bottom row of the grid is empty — and "
-                        + "rather than taking up space of its own, the button appears on that "
-                        + "empty row. A press adds one to four rows, as you choose in the "
-                        + "settings. A room plays the board it was dealt, so the button is never "
-                        + "there in a shared game."),
+            Section(title: "New rows, and the end of a round",
+                    body: "You can hang fresh rows of digits under the board — solo or in a "
+                        + "room — while the bottom row of the grid is empty. Rather than taking "
+                        + "up space of its own, the button appears on that empty row; a press "
+                        + "adds one to four rows, as the settings choose. The board always has "
+                        + "room for eighteen. If nothing pairs but there is room, the round is "
+                        + "not over: add a row. It only ends when there is nothing to take and "
+                        + "no room left to add — or, in a solo game, when you clear the board."),
             Section(title: "Playing as a room",
                     body: "Everyone gets the identical board, dealt from a seed and played by "
-                        + "the host's rules — the rows, whether the rows join end to end, and how "
-                        + "a taken pair leaves the board. You each take pairs at your own pace on "
-                        + "your own device. One point per pair, and when everybody has run out of "
-                        + "moves, the most pairs wins. A tie goes to whoever ran out of moves "
-                        + "first."),
+                        + "the host's rules — the starting rows, how many rows a press adds, "
+                        + "whether the rows join end to end, and how a taken pair leaves the "
+                        + "board. You each take pairs at your own pace on your own device, and "
+                        + "your own board grows when you add to it. The first person to clear "
+                        + "the board wins."),
         ],
         bullets: [
             Bullet(lead: "Solo", text: "A fresh board whenever you want one, any number of "
                         + "rows you like, and a new row whenever the bottom of the grid is free."),
-            Bullet(lead: "Room", text: "The same board for everyone. Most pairs wins."),
+            Bullet(lead: "Room", text: "The same board for everyone. First to clear it wins."),
         ])
 
     static let blurt = GameInstructions(

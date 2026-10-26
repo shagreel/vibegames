@@ -99,7 +99,7 @@ export const GAMES: GameEntry[] = [
     id: 'ten',
     path: '/ten',
     title: 'Vibe Ten',
-    tagline: 'Pair the digits. Clear the board. Most pairs wins.',
+    tagline: 'Pair the digits. Clear the board. First to clear it wins.',
     accent: ['#2a8cf2', '#4dd9e6'],
     symbol: IconTen,
     available: true,

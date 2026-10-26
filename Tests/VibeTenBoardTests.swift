@@ -131,7 +131,7 @@ final class VibeTenBoardTests: XCTestCase {
                     XCTAssertTrue(VibeTenBoard.valuesPair(pair.0, pair.1),
                                   "\(seed) \(rows): \(pair) is not a pair")
                 }
-                let board = VibeTenBoard(seed: seed, rows: rows)
+                let board = VibeTenBoard(seed: seed, startRows: rows)
                 XCTAssertEqual(board.values.flatMap { $0 }.sorted(),
                                pairs.flatMap { [$0.0, $0.1] }.sorted(),
                                "the board is those digits, laid out at random")
@@ -167,7 +167,8 @@ final class VibeTenBoardTests: XCTestCase {
             let shape = parts[1].split(separator: "x")
             let columns = Int(shape[0]) ?? 9
             let rows = Int(shape[1]) ?? 18
-            XCTAssertEqual(VibeTenBoard(seed: 1234, columns: columns, rows: rows).values,
+            XCTAssertEqual(VibeTenBoard(seed: 1234, columns: columns,
+                                        startRows: rows).values,
                            expected, name)
         }
     }
@@ -221,26 +222,37 @@ final class VibeTenBoardTests: XCTestCase {
     ]
 }
 
-/// The scoreboard rule: most pairs wins, and a tie goes to whoever ran out of
-/// moves first.
+/// The scoreboard rule: the first player to clear the board wins, and the pairs
+/// are the running total behind that.
 final class VibeTenStandingTests: XCTestCase {
 
-    private func standing(_ name: String, _ score: Int, finished: Int64?) -> VibeTenStanding {
-        VibeTenStanding(id: name, name: name, score: score, finishedAt: finished)
+    private func standing(_ name: String, _ score: Int,
+                          cleared: Int64? = nil,
+                          finished: Int64? = nil) -> VibeTenStanding {
+        VibeTenStanding(id: name, name: name, score: score,
+                        finishedAt: finished, clearedAt: cleared)
     }
 
-    func testMorePairsWins() {
-        let ranked = [standing("Alex", 12, finished: 100),
-                      standing("Sam", 18, finished: 200)].sorted(by: vibeTenRank)
+    func testTheFirstClearWinsWhateverThePairsSay() {
+        let ranked = [standing("Alex", 40, cleared: 200, finished: 200),
+                      standing("Sam", 5, cleared: 100, finished: 100),
+                      standing("Kit", 60)].sorted(by: vibeTenRank)
+        XCTAssertEqual(ranked.map(\.name), ["Sam", "Alex", "Kit"],
+                       "the earliest clear is the winner; a big pile of pairs is not")
+    }
+
+    func testSomebodyStillPlayingSortsAfterSomebodyWhoHasCleared() {
+        let ranked = [standing("Alex", 60),
+                      standing("Sam", 4, cleared: 100)].sorted(by: vibeTenRank)
         XCTAssertEqual(ranked.map(\.name), ["Sam", "Alex"])
     }
 
-    func testATieGoesToWhoeverFinishedFirst() {
+    func testPairsDecideWhenNobodyHasCleared() {
         let ranked = [standing("Alex", 12, finished: nil),
-                      standing("Sam", 12, finished: 500),
-                      standing("Kit", 12, finished: 200)].sorted(by: vibeTenRank)
+                      standing("Sam", 18, finished: 500),
+                      standing("Kit", 18, finished: 200)].sorted(by: vibeTenRank)
         XCTAssertEqual(ranked.map(\.name), ["Kit", "Sam", "Alex"],
-                       "finished first wins the tie; somebody still playing is last")
+                       "most pairs first, then whoever ran out first")
     }
 }
 
@@ -355,36 +367,40 @@ final class VibeTenAddRowTests: XCTestCase {
     }
 }
 
-/// The board's shape: always nine columns, and the rows you choose.
+/// The board's shape: always nine columns, always room for eighteen rows, and
+/// the first rows chosen.
 final class VibeTenShapeTests: XCTestCase {
 
     func testEveryShapeDealsNineColumns() {
-        for rows in VibeTenBoard.rowOptions {
-            let board = VibeTenBoard(seed: 12_345, rows: rows)
-            XCTAssertEqual(board.columns, 9, "\(rows): nine columns")
-            XCTAssertEqual(board.rows, rows)
+        for startRows in VibeTenBoard.rowOptions {
+            let board = VibeTenBoard(seed: 12_345, startRows: startRows)
+            XCTAssertEqual(board.columns, 9, "\(startRows): nine columns")
+            XCTAssertEqual(board.rows, VibeTenBoard.maximumRows,
+                           "\(startRows): the board has room for eighteen rows")
             XCTAssertEqual(board.values.count, 9)
             for column in board.values {
-                XCTAssertEqual(column.count, rows, "\(rows): every column is full")
+                XCTAssertEqual(column.count, startRows,
+                               "\(startRows): the digits start that many rows deep")
                 XCTAssertTrue(column.allSatisfy { (1...9).contains($0) },
-                              "\(rows): digits one to nine")
+                              "\(startRows): digits one to nine")
             }
-            XCTAssertEqual(board.remaining, 9 * rows)
+            XCTAssertEqual(board.remaining, 9 * startRows)
+            XCTAssertEqual(board.roomForRows, VibeTenBoard.maximumRows - startRows)
         }
     }
 
-    func testTheRowsArePartOfTheDeal() {
-        XCTAssertEqual(VibeTenBoard(seed: 7, rows: 12).values,
-                       VibeTenBoard(seed: 7, rows: 12).values)
-        XCTAssertNotEqual(VibeTenBoard(seed: 7, rows: 12).values,
-                          VibeTenBoard(seed: 7, rows: 14).values,
+    func testTheStartingRowsArePartOfTheDeal() {
+        XCTAssertEqual(VibeTenBoard(seed: 7, startRows: 12).values,
+                       VibeTenBoard(seed: 7, startRows: 12).values)
+        XCTAssertNotEqual(VibeTenBoard(seed: 7, startRows: 12).values,
+                          VibeTenBoard(seed: 7, startRows: 14).values,
                           "two rows more is a different board")
-        XCTAssertNotEqual(VibeTenBoard(seed: 7, rows: 12).values,
-                          VibeTenBoard(seed: 8, rows: 12).values,
+        XCTAssertNotEqual(VibeTenBoard(seed: 7, startRows: 12).values,
+                          VibeTenBoard(seed: 8, startRows: 12).values,
                           "and so is another seed")
         // The default is the board the game shipped with: nine by eighteen.
         XCTAssertEqual(VibeTenBoard(seed: 7).values,
-                       VibeTenBoard(seed: 7, columns: 9, rows: 18).values)
+                       VibeTenBoard(seed: 7, columns: 9, startRows: 18).values)
     }
 
     func testRowsAreAddedUnderTheDigitsAndGrowTheBoard() {
@@ -400,18 +416,16 @@ final class VibeTenShapeTests: XCTestCase {
         XCTAssertEqual(board.values[0].last, 1, "the new digits are the bottom row")
     }
 
-    func testASmallerBoardIsFullUntilItIsNot() {
-        var board = VibeTenBoard(seed: 31, columns: 6, rows: 12)
-        XCTAssertFalse(board.canAddRow, "twelve rows of six is full")
-
+    func testABoardCanBeGrownToEighteenRowsAndNoFurther() {
+        var board = VibeTenBoard(seed: 1234, startRows: 12)
+        XCTAssertTrue(board.canAddRow, "six rows of room under a twelve-row start")
         for _ in 0..<6 {
-            guard let pair = board.availableMatches().first else { break }
-            board.take(pair.0, pair.1, mode: .remove)
+            XCTAssertTrue(board.addRow(Array(repeating: 1, count: 9)))
         }
-        XCTAssertLessThan(board.height(ofColumn: 0), 12)
+        XCTAssertEqual(board.height(ofColumn: 0), 18)
+        XCTAssertFalse(board.canAddRow, "eighteen is the last row")
     }
 }
-
 
 /// The rows joining end to end: the last square of a row is next to the first
 /// square of the row below it.

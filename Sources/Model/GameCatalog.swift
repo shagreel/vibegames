@@ -59,7 +59,7 @@ struct GameEntry: Identifiable {
             id: "vibe-ten",
             route: .vibeTen,
             title: "Vibe Ten",
-            tagline: "Pair the digits. Clear the board. Most pairs wins.",
+            tagline: "Pair the digits. Clear the board. First to clear it wins.",
             symbol: "10.circle.fill",
             gradient: VibeTheme.vibeTen
         ),
