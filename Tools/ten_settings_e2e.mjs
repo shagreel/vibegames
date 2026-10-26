@@ -118,6 +118,40 @@ await host.evaluate(() => [...document.querySelectorAll('.game-sheet button')]
 await wait(200);
 await host.screenshot({ path: '/tmp/ten_web_rows.png' });
 
+// ── two digits that do not pair: no message, and the highlight moves ───────
+const mismatch = await host.$$eval('.ten__cell', (nodes) => {
+  const read = (node) => {
+    const match = (node.getAttribute('aria-label') ?? '').match(/Column (\d+) row (\d+): (\d+)/);
+    return match ? { column: Number(match[1]), row: Number(match[2]), value: Number(match[3]) } : null;
+  };
+  const all = nodes.map(read).filter(Boolean);
+  for (const a of all) {
+    for (const b of all) {
+      if (a === b) continue;
+      if (a.value !== b.value && a.value + b.value !== 10) return [a, b];
+    }
+  }
+  return null;
+});
+check(Boolean(mismatch), 'there are two digits that do not pair');
+if (mismatch) {
+  const selector = (cell) => `.ten__cell[aria-label="Column ${cell.column} row ${cell.row}: ${cell.value}"]`;
+  const before = (await cells(host)).length;
+  await host.click(selector(mismatch[0]));
+  await host.click(selector(mismatch[1]));
+  await wait(300);
+  const selected = await host.evaluate((cell) => {
+    const node = document.querySelector(
+      `.ten__cell[aria-label="Column ${cell.column} row ${cell.row}: ${cell.value}"]`,
+    );
+    return node?.getAttribute('data-selected') === 'true';
+  }, mismatch[1]);
+  const message = await host.$('.game-message');
+  check(!message, 'a pair that does not match says nothing');
+  check(selected, 'and the highlight moves to the number just picked');
+  check((await cells(host)).length === before, 'with every digit still on the board');
+}
+
 // ── a room plays the host's rows, though the guest's own setting is 18 ──────
 await host.goto(`${origin}/ten`, { waitUntil: 'networkidle2' });
 await wait(400);

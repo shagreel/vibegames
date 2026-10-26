@@ -451,8 +451,9 @@ function VibeTen() {
 
     const moved = take(board, selected, position, shownMode);
     if (!moved) {
+      // No message: the digits stay, and the highlight moves to the number just
+      // picked, ready to try it with another.
       setSelected(position);
-      setNotice("Those two don't pair.");
       return;
     }
 

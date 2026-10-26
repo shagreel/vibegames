@@ -93,6 +93,35 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertEqual(model.startRows, 14)
     }
 
+    /// A pair that does not match is not refused out loud: the digits stay, and
+    /// the highlight moves to the number just picked.
+    func testAPairThatDoesNotMatchKeepsTheDigitsAndMovesTheHighlight() {
+        var cells = [[VibeTenCell]](repeating: [], count: 9)
+        cells[0] = [VibeTenCell(value: 1)]
+        cells[1] = [VibeTenCell(value: 2)]
+        cells[2] = [VibeTenCell(value: 3)]
+        let saved = VibeTenModel.Saved(seed: 1, columns: 9, rows: 18, startRows: 18,
+                                       wrapRows: false, mode: .remove, cells: cells,
+                                       score: 0, finished: false, cleared: false,
+                                       elapsed: 0)
+        SoloProgressStore.save(saved, game: VibeTenModel.progressGame, summary: "three digits")
+
+        let model = VibeTenModel()
+        XCTAssertTrue(model.resumeSolo())
+        let before = model.board
+        let first = VibeTenBoard.Position(column: 0, row: 0)
+        let second = VibeTenBoard.Position(column: 1, row: 0)
+
+        model.tap(first)
+        XCTAssertEqual(model.selected, first)
+        model.tap(second)
+
+        XCTAssertEqual(model.selected, second, "the highlight moves to the new number")
+        XCTAssertEqual(model.board, before, "and nothing is taken")
+        XCTAssertEqual(model.score, 0)
+        XCTAssertTrue(model.canPlay, "the round goes on")
+    }
+
     func testDimModeLeavesThePairOnTheBoard() {
         UserDefaults.standard.set(VibeTenMode.dim.rawValue, forKey: VibeTenModel.modeKey)
         let model = VibeTenModel()

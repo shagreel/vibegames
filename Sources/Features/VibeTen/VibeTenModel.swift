@@ -28,8 +28,6 @@ final class VibeTenModel: ObservableObject {
     /// No pairs left, or the board is empty.
     @Published private(set) var finished = false
     @Published private(set) var cleared = false
-    /// A refusal, said out loud for a moment.
-    @Published private(set) var message: String?
 
     /// Bumped each time a board is dealt, so the screen can report a round
     /// starting without caring what the seed was.
@@ -334,7 +332,6 @@ final class VibeTenModel: ObservableObject {
         finished = saved.finished
         cleared = saved.cleared
         selected = nil
-        message = nil
         finishedAt = nil
         lastRoundSeconds = saved.elapsed
         startedAt = Date()
@@ -386,8 +383,7 @@ final class VibeTenModel: ObservableObject {
             finished = false
             cleared = false
             finishedAt = nil
-            message = nil
-            beginObserving(gameID: gameID)
+                beginObserving(gameID: gameID)
         } catch {
             FirebaseBootstrapper.record(error, during: "Could not create the game")
             errorMessage = "Could not create the game: \(error.localizedDescription)"
@@ -525,7 +521,6 @@ final class VibeTenModel: ObservableObject {
         finished = false
         cleared = false
         finishedAt = nil
-        message = nil
     }
 
     // MARK: - Playing
@@ -547,15 +542,13 @@ final class VibeTenModel: ObservableObject {
             self.board = board
             score += 1
             selected = nil
-            message = nil
-            reportScore()
+                reportScore()
             checkForFinish(board)
             saveSoloProgress()
         } else {
-            // The new tap becomes the selection, and the refusal is said once
-            // rather than leaving a tap that appears to do nothing.
+            // No message: the digits stay, and the highlight moves to the
+            // number just picked, ready to try it with another.
             selected = position
-            message = "Those two don't pair."
         }
     }
 
@@ -591,7 +584,6 @@ final class VibeTenModel: ObservableObject {
         }
         self.board = board
         selected = nil
-        message = nil
         checkForFinish(board)
         saveSoloProgress()
     }

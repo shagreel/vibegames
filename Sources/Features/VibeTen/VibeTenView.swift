@@ -261,11 +261,6 @@ struct VibeTenView: View {
 
             boardView
 
-            if let message = model.message, model.canPlay {
-                Text(message)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(VibeTheme.secondaryText)
-            }
         }
         // The board takes whatever the header and the panel leave, so the grid
         // is as big as the phone allows.
