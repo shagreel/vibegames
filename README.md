@@ -817,6 +817,7 @@ swiftc -O Sources/Model/SeededGenerator.swift \
   Sources/Features/VibeTen/VibeTenBoard.swift \
   Tools/ten_solvability.swift -o /tmp/ten_solvability
 /tmp/ten_solvability --boards 500
+/tmp/ten_solvability --boards 500 --mode dim --deep 60   # harder boards
 ```
 
 A clearance it finds is proof; a board it does not clear within the attempt
@@ -825,6 +826,17 @@ mode it cleared every one; at 18 rows so did 5,000 out of 5,000, and at 12 rows
 every board cleared once two stubborn ones were given more attempts. Dim mode is
 much harder: of 500 eighteen-row boards it found a way through 435 within a
 thousand attempts.
+
+Retrying those 65 with `--deep` — a one-step lookahead that chooses the pair
+leaving the fewest digits with no visible partner — cleared 61 of them within a
+few dozen attempts. Four (seeds 48, 208, 216 and 294) have still not yielded to
+50,000 fast attempts or 2,000 lookahead attempts, and a beam search of width 500
+exhausts without finding a way through; they are "not found", not proven
+impossible. That is the shape of the difficulty: the initial layout's statistics
+do not predict it — match counts, degree counts and digit mixes correlate with
+attempts at about zero — and the trap is a move that strands a digit. Fewer
+starting rows are harder (12 rows sat at 69% within 500 attempts against 80% at
+18), joined rows are much easier, and Dim mode is much harder than Remove.
 
 Adding rows is always offered — solo and in a room — so there is no switch for
 it. Each player's board grows on their own device once a room has started, which
