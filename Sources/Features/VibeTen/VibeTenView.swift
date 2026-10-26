@@ -331,8 +331,8 @@ struct VibeTenView: View {
 
     private var boardView: some View {
         GeometryReader { geo in
-            // The board's own shape, so a six-column game draws six columns and
-            // the digits grow into the space that leaves.
+            // Always nine columns, and always room for eighteen rows: the
+            // digits fill the rows that have been dealt and grow downward.
             let columns = model.board?.columns ?? VibeTenBoard.defaultColumns
             let rows = model.board?.rows ?? VibeTenBoard.maximumRows
             let gap: CGFloat = 2

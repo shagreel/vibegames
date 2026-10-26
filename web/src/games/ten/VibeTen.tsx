@@ -211,8 +211,8 @@ function VibeTen() {
     setCleared(false);
     setNotice('');
     trackGameStart(GAMES.ten, { mode: gameId ? 'shared' : 'solo' });
-    // The shape is read as the board is dealt, like the mode: changing it must
-    // not re-deal a board somebody is in the middle of.
+    // The starting rows and rules are read as the board is dealt, like the
+    // mode: changing them must not re-deal a board somebody is in the middle of.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed, gameId]);
 
