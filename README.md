@@ -807,6 +807,25 @@ The settings sheet, with each setting a choice for a game that has not begun:
   so a 5 at the end of a row matches a 5 at the start of the next — and, because
   a taken digit is not in the way, the one after that too.
 
+**How often is a dealt board solvable?** The deal no longer guarantees it, so
+`Tools/ten_solvability.swift` deals a run of boards and tries to clear each one
+with a player's heuristic — take the pair whose digits have the fewest other
+partners, break ties at random — and reports how many it cleared:
+
+```sh
+swiftc -O Sources/Model/SeededGenerator.swift \
+  Sources/Features/VibeTen/VibeTenBoard.swift \
+  Tools/ten_solvability.swift -o /tmp/ten_solvability
+/tmp/ten_solvability --boards 500
+```
+
+A clearance it finds is proof; a board it does not clear within the attempt
+budget is only "not found". On 500 boards at each starting row count in Remove
+mode it cleared every one; at 18 rows so did 5,000 out of 5,000, and at 12 rows
+every board cleared once two stubborn ones were given more attempts. Dim mode is
+much harder: of 500 eighteen-row boards it found a way through 435 within a
+thousand attempts.
+
 Adding rows is always offered — solo and in a room — so there is no switch for
 it. Each player's board grows on their own device once a room has started, which
 is why the room stores the starting rows and the rows per press but not a board.
@@ -1144,6 +1163,7 @@ Tools/make_web_game_codes.py    Mirrors the code words into the web app
 Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in browsers
 Tools/ten_room_rules_e2e.mjs    A Vibe Ten room played by the host's rules, in browsers
 Tools/ten_settings_e2e.mjs      The Vibe Ten settings sheet and its rows, in a browser
+Tools/ten_solvability.swift     Measures how often a dealt Vibe Ten board can be cleared
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/words_e2e.mjs             A real game of Word Vibe, in a browser
 Tools/ways_to_help_e2e.mjs      Sends a real note from the ways-to-help page
