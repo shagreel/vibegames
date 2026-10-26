@@ -79,7 +79,7 @@ final class VibeTenScreenshots: XCTestCase {
         let app = XCUIApplication()
         // The full board, whatever shape a previous run left in the defaults.
         app.launchArguments += ["-vibegames.appearance", appearance,
-                                "-vibeten.columns", "9", "-vibeten.rows", "18"] + extra
+                                "-vibeten.rows", "18"] + extra
         app.launch(withName: "Tester")
         return app
     }

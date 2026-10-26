@@ -8,28 +8,21 @@ final class VibeTenModelTests: XCTestCase {
 
     private var savedMode: Any?
     private var savedRow: Any?
-    private var savedColumns: Any?
     private var savedRows: Any?
-    private var savedFill: Any?
     private var savedPerAdd: Any?
     private var savedWrap: Any?
-    private var savedDifficulty: Any?
 
     override func setUp() {
         super.setUp()
         let defaults = UserDefaults.standard
         savedMode = defaults.object(forKey: VibeTenModel.modeKey)
         savedRow = defaults.object(forKey: VibeTenModel.addRowKey)
-        savedColumns = defaults.object(forKey: VibeTenModel.columnsKey)
         savedRows = defaults.object(forKey: VibeTenModel.rowsKey)
-        savedFill = defaults.object(forKey: VibeTenModel.startFillKey)
         savedPerAdd = defaults.object(forKey: VibeTenModel.rowsPerAddKey)
         savedWrap = defaults.object(forKey: VibeTenModel.wrapRowsKey)
-        savedDifficulty = defaults.object(forKey: VibeTenModel.difficultyKey)
         for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
-                    VibeTenModel.columnsKey, VibeTenModel.rowsKey,
-                    VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
-                    VibeTenModel.wrapRowsKey, VibeTenModel.difficultyKey] {
+                    VibeTenModel.rowsKey, VibeTenModel.rowsPerAddKey,
+                    VibeTenModel.wrapRowsKey] {
             defaults.removeObject(forKey: key)
         }
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
@@ -41,13 +34,10 @@ final class VibeTenModelTests: XCTestCase {
         // here before" has to mean.
         defaults.set(savedMode, forKey: VibeTenModel.modeKey)
         defaults.set(savedRow, forKey: VibeTenModel.addRowKey)
-        defaults.set(savedColumns, forKey: VibeTenModel.columnsKey)
         defaults.set(savedRows, forKey: VibeTenModel.rowsKey)
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
-        defaults.set(savedFill, forKey: VibeTenModel.startFillKey)
         defaults.set(savedPerAdd, forKey: VibeTenModel.rowsPerAddKey)
         defaults.set(savedWrap, forKey: VibeTenModel.wrapRowsKey)
-        defaults.set(savedDifficulty, forKey: VibeTenModel.difficultyKey)
         super.tearDown()
     }
 
@@ -55,64 +45,42 @@ final class VibeTenModelTests: XCTestCase {
         let model = VibeTenModel()
         XCTAssertEqual(model.mode, .remove)
         XCTAssertTrue(model.addRowEnabled, "solo players get the extra row unless they turn it off")
-        XCTAssertEqual(model.columns, 9, "the board the game shipped with")
-        XCTAssertEqual(model.rows, 18)
-        XCTAssertEqual(model.difficulty, .medium, "medium unless it is chosen")
+        XCTAssertEqual(model.rows, 18, "the board the game shipped with")
     }
 
-    /// The shape is a setting, so a solo board is dealt the size it says — and a
-    /// size that is not one of the four is not a board this game has.
-    func testASoloBoardIsDealtTheChosenShape() {
-        UserDefaults.standard.set(6, forKey: VibeTenModel.columnsKey)
+    /// The rows are the setting, so a solo board is dealt the number it says —
+    /// and a number that is not on offer is not a board this game has.
+    func testASoloBoardIsDealtTheChosenRows() {
         UserDefaults.standard.set(12, forKey: VibeTenModel.rowsKey)
         let model = VibeTenModel()
         model.playSolo()
 
-        XCTAssertEqual(model.board?.columns, 6)
+        XCTAssertEqual(model.board?.columns, 9, "the columns are always nine")
         XCTAssertEqual(model.board?.rows, 12)
-        XCTAssertEqual(model.board?.remaining, 72)
+        XCTAssertEqual(model.board?.remaining, 108)
 
-        model.columns = 7
         model.rows = 14
-        XCTAssertEqual(model.board?.columns, 6, "the board in play keeps the shape it was dealt")
+        XCTAssertEqual(model.board?.rows, 12, "the board in play keeps the rows it was dealt")
         model.playSolo()
-        XCTAssertEqual(model.board?.columns, 7, "and the next one follows the setting")
-        XCTAssertEqual(model.board?.rows, 14)
+        XCTAssertEqual(model.board?.rows, 14, "and the next one follows the setting")
     }
 
-    /// The shape is a choice for a new game: the start screen offers it, and
-    /// once a board is in play the sheet shows it without offering it.
-    func testTheBoardShapeIsChosenBeforeTheGameStarts() {
+    /// The rows are a choice for a new game: the start screen offers them, and
+    /// once a board is in play the sheet shows them without offering them.
+    func testTheBoardRowsAreChosenBeforeTheGameStarts() {
         let model = VibeTenModel()
         XCTAssertTrue(model.canChooseBoardShape, "the start screen is where it is chosen")
 
         model.playSolo()
-        XCTAssertFalse(model.canChooseBoardShape, "a dealt board keeps its shape")
+        XCTAssertFalse(model.canChooseBoardShape, "a dealt board keeps its rows")
 
         model.leaveGame()
         XCTAssertTrue(model.canChooseBoardShape, "and leaving the game offers it again")
     }
 
-    /// The level is part of the deal, like the shape: the board is dealt with the
-    /// one that was chosen, and the choice is locked once it has been dealt.
-    func testTheDifficultyIsChosenBeforeTheBoardIsDealt() {
-        UserDefaults.standard.set("hard", forKey: VibeTenModel.difficultyKey)
-        let model = VibeTenModel()
-        XCTAssertEqual(model.difficulty, .hard, "the sheet's choice is read back")
-
-        model.playSolo()
-        XCTAssertEqual(model.board?.difficulty, .hard, "and the board is dealt with it")
-        XCTAssertFalse(model.canChooseBoardShape, "a dealt board keeps its level")
-
-        model.leaveGame()
-        XCTAssertTrue(model.canChooseBoardShape)
-    }
-
-    func testAShapeThatIsNotOfferedIsIgnored() {
-        UserDefaults.standard.set(12, forKey: VibeTenModel.columnsKey)
+    func testARowCountThatIsNotOfferedIsIgnored() {
         UserDefaults.standard.set(20, forKey: VibeTenModel.rowsKey)
         let model = VibeTenModel()
-        XCTAssertEqual(model.columns, 9)
         XCTAssertEqual(model.rows, 18)
     }
 
@@ -210,37 +178,23 @@ final class VibeTenModelTests: XCTestCase {
     /// as the grid still has room for.
     func testAPressDealsTheChosenNumberOfRows() {
         let model = VibeTenModel()
-        model.startFill = .third
         model.rowsPerAdd = 3
         model.playSolo()
+        XCTAssertFalse(model.canAddRow, "a full board has nowhere to put one")
+        guard playUntilTheBottomRowIsFree(model) else {
+            return XCTFail("this deal should free the bottom row")
+        }
 
-        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3,
-                       "a third-filled board hangs from the top")
-        model.addRows()
-        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3 + 3,
-                       "one press deals three rows")
-
-        model.rowsPerAdd = 4
-        model.addRows()
-        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3 + 7)
-    }
-
-    /// A third-filled board is only offered with the new-row setting on, and a
-    /// room always starts full.
-    func testThePartFilledStartNeedsTheNewRowOffer() {
-        let model = VibeTenModel()
-        model.startFill = .third
-        model.addRowEnabled = false
-        model.playSolo()
-        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows,
-                       "without the new-row offer the board starts full")
-
-        model.leaveGame()
-        model.addRowEnabled = true
-        model.playSolo()
-        XCTAssertEqual(model.board?.height(ofColumn: 0), model.rows / 3,
-                       "with it, the board starts a third full")
-        XCTAssertFalse(model.canChooseRowSupply, "and the choice is now for the next game")
+        for _ in 0..<2 {
+            guard let board = model.board, board.canAddRow else { break }
+            let before = board.height(ofColumn: 0)
+            let room = board.roomForRows
+            model.addRows()
+            XCTAssertEqual(model.board?.height(ofColumn: 0),
+                           before + min(model.rowsPerAdd, room),
+                           "a press deals the setting, or what is left")
+            model.rowsPerAdd = 4
+        }
     }
 
     func testTheRowsCanJoinEndToEnd() {
@@ -260,8 +214,7 @@ final class VibeTenSoloProgressTests: XCTestCase {
         super.setUp()
         SoloProgressStore.clear(game: VibeTenModel.progressGame)
         for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
-                    VibeTenModel.columnsKey, VibeTenModel.rowsKey,
-                    VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
+                    VibeTenModel.rowsKey, VibeTenModel.rowsPerAddKey,
                     VibeTenModel.wrapRowsKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }
@@ -273,9 +226,8 @@ final class VibeTenSoloProgressTests: XCTestCase {
         // these defaults are the app's: put them back so a UI test that runs
         // after this one is not handed somebody else's board.
         for key in [VibeTenModel.modeKey, VibeTenModel.addRowKey,
-                    VibeTenModel.columnsKey, VibeTenModel.rowsKey,
-                    VibeTenModel.startFillKey, VibeTenModel.rowsPerAddKey,
-                    VibeTenModel.wrapRowsKey, VibeTenModel.difficultyKey] {
+                    VibeTenModel.rowsKey, VibeTenModel.rowsPerAddKey,
+                    VibeTenModel.wrapRowsKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }
         super.tearDown()
@@ -349,8 +301,6 @@ final class VibeTenSoloProgressTests: XCTestCase {
     /// become the choices for the next game.
     func testTheResumedGameBringsItsRulesBack() {
         let model = VibeTenModel()
-        model.difficulty = .hard
-        model.columns = 6
         model.rows = 12
         model.wrapRows = true
         model.mode = .dim
@@ -365,18 +315,15 @@ final class VibeTenSoloProgressTests: XCTestCase {
 
         // A new model, with the preferences back at their defaults, as if the
         // game had been left on another day.
-        for key in [VibeTenModel.difficultyKey, VibeTenModel.columnsKey,
-                    VibeTenModel.rowsKey, VibeTenModel.wrapRowsKey,
+        for key in [VibeTenModel.rowsKey, VibeTenModel.wrapRowsKey,
                     VibeTenModel.modeKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }
         let resumed = VibeTenModel()
-        XCTAssertEqual(resumed.difficulty, .medium, "the defaults are the defaults")
+        XCTAssertEqual(resumed.rows, 18, "the defaults are the defaults")
         XCTAssertTrue(resumed.resumeSolo())
         XCTAssertEqual(resumed.board, dealt, "the same digits, and the same rules")
-        XCTAssertEqual(resumed.difficulty, .hard, "the game comes back with its level")
-        XCTAssertEqual(resumed.columns, 6)
-        XCTAssertEqual(resumed.rows, 12)
+        XCTAssertEqual(resumed.rows, 12, "the game comes back with its rows")
         XCTAssertEqual(resumed.wrapRows, true)
         XCTAssertEqual(resumed.mode, .dim)
     }

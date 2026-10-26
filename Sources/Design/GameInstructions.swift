@@ -125,39 +125,29 @@ struct GameInstructions {
                         + "They have to be on the same row, column or diagonal, with nothing "
                         + "in between: neighbours count, and so does a line with only gaps "
                         + "in it."),
-            Section(title: "Every board can be cleared",
-                    body: "The digits are not placed at random: the board is built out of "
-                        + "pairs, each placed where it could be seen, so a solution always "
-                        + "exists — the order they were placed in, read backwards, is a way "
-                        + "through."),
-            Section(title: "Easy, medium, hard",
-                    body: "The **difficulty** is part of the deal, chosen with the other "
-                        + "settings. **Easy** starts every pair side by side. **Medium** nests "
-                        + "pairs inside one another across a row, down a column, corner to "
-                        + "corner, or round the join between two rows. **Hard** nests whole "
-                        + "rows and whole columns, so a pair at the edge of a band only comes "
-                        + "together once the digits around it are gone. Every level can be "
-                        + "cleared: the digits are placed in pairs, and the order they were "
-                        + "placed in is a way through."),
+            Section(title: "How the board is dealt",
+                    body: "The digits are dealt in valid pairs — some are two of the same "
+                        + "number, some add up to ten — and then the digits are shuffled and "
+                        + "laid out across the board. So the board is a real mix, and a round "
+                        + "can open up or run out of moves: clearing every digit is the aim, "
+                        + "not a promise."),
             Section(title: "The board hangs from the top",
                     body: "The digits hang from the top row and a gap closes **upward**: take a "
                         + "pair and the digits below it rise into the space. Half the game is "
                         + "deciding which pair to take first, because every take changes what is "
                         + "next to what."),
             Section(title: "The board's size",
-                    body: "In the game settings the grid can be **six to nine columns** and "
-                        + "**twelve to eighteen rows** — the full board unless you choose "
-                        + "otherwise. Fewer squares means bigger digits, and the grid always "
-                        + "fills the screen. Choose it on the start screen: once a game is "
-                        + "under way the board keeps its shape. A room plays the shape the "
-                        + "host dealt, so everybody's board matches."),
+                    body: "The board is **nine columns** wide, and **twelve to eighteen rows** "
+                        + "tall — the full board unless you choose fewer rows. Fewer rows means "
+                        + "bigger digits, and the grid always fills the screen. Choose the rows "
+                        + "on the start screen: once a game is under way the board keeps them. "
+                        + "A room plays the rows the host dealt."),
             Section(title: "Rows that join up",
                     body: "One setting lets the rows read end to end: the last square of a row "
                         + "is next to the first square of the row below it, so a 5 at the end of "
                         + "one row matches a 5 at the start of the next — and, if the square "
-                        + "between them has already been taken, the one after that. With the "
-                        + "join on, the deal nests a band of every board round it from Medium "
-                        + "up, so the join is part of the way through."),
+                        + "between them has already been taken, the one after that. In a room "
+                        + "it is part of the host's rules."),
             Section(title: "Dim mode",
                     body: "In the game settings, **Dim** leaves a taken pair on the board, "
                         + "greyed out, instead of removing it. A dimmed digit is gone as far as "
@@ -171,20 +161,19 @@ struct GameInstructions {
                         + "It is only possible while the bottom row of the grid is empty — and "
                         + "rather than taking up space of its own, the button appears on that "
                         + "empty row. A press adds one to four rows, as you choose in the "
-                        + "settings, and a board can also start a third full to leave room for "
-                        + "them. A room plays the board it was dealt, so the button is never "
+                        + "settings. A room plays the board it was dealt, so the button is never "
                         + "there in a shared game."),
             Section(title: "Playing as a room",
                     body: "Everyone gets the identical board, dealt from a seed and played by "
-                        + "the host's rules — the size, the level, whether the rows join end to "
-                        + "end, and how a taken pair leaves the board. You each take pairs at "
-                        + "your own pace on your own device. One point per pair, and when "
-                        + "everybody has run out of moves, the most pairs wins. A tie goes to "
-                        + "whoever ran out of moves first."),
+                        + "the host's rules — the rows, whether the rows join end to end, and how "
+                        + "a taken pair leaves the board. You each take pairs at your own pace on "
+                        + "your own device. One point per pair, and when everybody has run out of "
+                        + "moves, the most pairs wins. A tie goes to whoever ran out of moves "
+                        + "first."),
         ],
         bullets: [
-            Bullet(lead: "Solo", text: "A fresh board whenever you want one, any shape you "
-                        + "like, and a new row whenever the top of the grid is free."),
+            Bullet(lead: "Solo", text: "A fresh board whenever you want one, any number of "
+                        + "rows you like, and a new row whenever the bottom of the grid is free."),
             Bullet(lead: "Room", text: "The same board for everyone. Most pairs wins."),
         ])
 

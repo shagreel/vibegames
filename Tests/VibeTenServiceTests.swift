@@ -3,7 +3,7 @@ import XCTest
 
 /// A room shares a board, not a game.
 ///
-/// Every player deals the same 162 digits from one seed and then takes their own
+/// Every player deals the same digits from one seed and then takes their own
 /// pairs on their own device. If the room recorded takes, one player's move would
 /// vanish from everybody else's board and the scores would stop meaning anything;
 /// these tests pin the fact that it does not.
@@ -22,9 +22,7 @@ final class VibeTenServiceTests: XCTestCase {
         let room = GameCode.make()
         try await service.createGame(gameID: room,
                                      seed: 777,
-                                     columns: 9,
                                      rows: 18,
-                                     difficulty: .easy,
                                      wrapRows: true,
                                      mode: .dim,
                                      creatorName: "Tester",
@@ -39,14 +37,13 @@ final class VibeTenServiceTests: XCTestCase {
                        "a room is a seed, who is here, and the scores — not a board")
 
         let meta = try await read("ten/\(room)/meta")
-        XCTAssertEqual(meta["columns"] as? Int, 9, "the room remembers the shape it was made with")
-        XCTAssertEqual(meta["rows"] as? Int, 18)
-        XCTAssertEqual(meta["difficulty"] as? String, "easy",
-                       "and the level, because every device has to deal the same board")
+        XCTAssertEqual(meta["rows"] as? Int, 18, "the room remembers the rows it was made with")
         XCTAssertEqual(meta["wrap"] as? Bool, true,
                        "and whether the rows join, because it changes the way through")
         XCTAssertEqual(meta["mode"] as? String, "dim",
                        "and how a pair leaves the board, because a room is played one way")
+        XCTAssertNil(meta["columns"], "the columns are always nine, so they are not a setting")
+        XCTAssertNil(meta["difficulty"], "there are no levels any more")
 
         // Nobody's pairs are in the room to be replayed.
         let taken = try await read("ten/\(room)/taken")
@@ -60,31 +57,23 @@ final class VibeTenServiceTests: XCTestCase {
         let room = GameCode.make()
         try await service.createGame(gameID: room,
                                      seed: 778,
-                                     columns: 6,
                                      rows: 12,
-                                     difficulty: .hard,
                                      wrapRows: false,
                                      mode: .remove,
                                      creatorName: "Tester",
                                      playerID: PlayerIdentity.id)
 
         let meta = try await read("ten/\(room)/meta")
-        XCTAssertEqual(meta["columns"] as? Int, 6, "a smaller room is a smaller room")
-        XCTAssertEqual(meta["rows"] as? Int, 12)
-        XCTAssertEqual(meta["difficulty"] as? String, "hard")
+        XCTAssertEqual(meta["rows"] as? Int, 12, "a shorter room is a shorter room")
 
         let status = try await put("ten/\(room)/taken/0", ["by": PlayerIdentity.id, "value": 1])
         XCTAssertNotEqual(status, 200, "the rules should refuse a take")
         XCTAssertTrue((400...403).contains(status), "expected a refusal, got \(status)")
 
-        // And a shape that is not one of the four is refused, so a room cannot
-        // be made with a board no client can draw.
-        let bad = try await put("ten/\(room)/meta/columns", ["value": 12])
-        XCTAssertNotEqual(bad, 200, "twelve columns is not a board this game has")
-
-        // And a level that is not one of the three is refused too.
-        let badLevel = try await put("ten/\(room)/meta/difficulty", ["value": "impossible"])
-        XCTAssertNotEqual(badLevel, 200, "there are three levels, not four")
+        // And a row count that is not on offer is refused, so a room cannot be
+        // made with a board no client can draw.
+        let badRows = try await put("ten/\(room)/meta/rows", ["value": 5])
+        XCTAssertNotEqual(badRows, 200, "five rows is not a board this game has")
 
         // The rules are fixed when the room is made: a joiner cannot turn the
         // join on, or change the way pairs leave the board, for everybody.
@@ -94,52 +83,28 @@ final class VibeTenServiceTests: XCTestCase {
         XCTAssertNotEqual(changedMode, 200, "and they are decided once")
     }
 
-    /// The join and the pair mode are in the room too, so every device plays the
-    /// same game. Rooms made before they existed read as off and remove.
+    /// The rows, the join and the pair mode are in the room too, so every device
+    /// plays the same game. Rooms made before they existed read as full, off and
+    /// remove.
     func testASnapshotCarriesTheRoomsRules() {
         let plain = VibeTenSnapshot(meta: ["seed": 1], players: nil, scores: nil)
+        XCTAssertEqual(plain.rows, VibeTenBoard.defaultRows)
         XCTAssertFalse(plain.wrapRows, "the rows do not join unless the host says so")
         XCTAssertEqual(plain.mode, .remove, "and a room without a mode removes")
 
-        let joined = VibeTenSnapshot(meta: ["seed": 1, "wrap": true, "mode": "dim"],
+        let joined = VibeTenSnapshot(meta: ["seed": 1, "rows": 12, "wrap": true,
+                                            "mode": "dim"],
                                      players: nil, scores: nil)
+        XCTAssertEqual(joined.rows, 12)
         XCTAssertTrue(joined.wrapRows)
         XCTAssertEqual(joined.mode, .dim)
 
-        let nonsense = VibeTenSnapshot(meta: ["seed": 1, "mode": "vanish"],
+        let nonsense = VibeTenSnapshot(meta: ["seed": 1, "rows": 3, "mode": "vanish",
+                                              "columns": 6, "difficulty": "hard"],
                                        players: nil, scores: nil)
+        XCTAssertEqual(nonsense.rows, VibeTenBoard.defaultRows,
+                       "a row count that is not a board is not played")
         XCTAssertEqual(nonsense.mode, .remove, "a mode that does not exist is remove")
-    }
-
-    /// The shape is in the room, so a joiner deals the host's board. Rooms made
-    /// before the choice existed have no shape and read as the full board.
-    func testASnapshotCarriesTheRoomsDifficulty() {
-        let easy = VibeTenSnapshot(meta: ["seed": 1, "difficulty": "easy"], players: nil, scores: nil)
-        XCTAssertEqual(easy.difficulty, .easy)
-
-        let unset = VibeTenSnapshot(meta: ["seed": 1], players: nil, scores: nil)
-        XCTAssertEqual(unset.difficulty, .medium, "a room without a level is a medium one")
-
-        let nonsense = VibeTenSnapshot(meta: ["seed": 1, "difficulty": "impossible"],
-                                       players: nil, scores: nil)
-        XCTAssertEqual(nonsense.difficulty, .medium, "and so is a level that does not exist")
-    }
-
-    func testASnapshotCarriesTheRoomsShape() {
-        let full = VibeTenSnapshot(meta: ["seed": 1, "creator": "Alex"], players: nil, scores: nil)
-        XCTAssertEqual(full.columns, 9)
-        XCTAssertEqual(full.rows, 18)
-
-        let small = VibeTenSnapshot(meta: ["seed": 1, "creator": "Alex",
-                                           "columns": 6, "rows": 12],
-                                    players: nil, scores: nil)
-        XCTAssertEqual(small.columns, 6, "a room remembers the shape it was made with")
-        XCTAssertEqual(small.rows, 12)
-
-        let nonsense = VibeTenSnapshot(meta: ["seed": 1, "columns": 12, "rows": 3],
-                                       players: nil, scores: nil)
-        XCTAssertEqual(nonsense.columns, 9, "a shape that is not a board is not played")
-        XCTAssertEqual(nonsense.rows, 18)
     }
 
     // MARK: - Reading and writing

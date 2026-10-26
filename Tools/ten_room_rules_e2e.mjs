@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * A Vibe Ten room is played by the host's rules: the shape, the level, whether
- * the rows join end to end, and how a taken pair leaves the board. The web
- * client reads them from the room's meta, so a guest who has never opened the
- * settings sheet still has to get the host's game.
+ * A Vibe Ten room is played by the host's rules: the rows, whether the rows join
+ * end to end, and how a taken pair leaves the board. The web client reads them
+ * from the room's meta, so a guest who has never opened the settings sheet still
+ * has to get the host's game.
  *
- * This is the check that the rules really are shared: the host picks a small,
- * dim, joined, hard room; the room's meta says so; the guest's sheet shows the
- * same rules disabled; both deal the identical board; and a pair the guest takes
- * dims rather than disappearing, which is the host's rule and not the guest's.
+ * This is the check that the rules really are shared: the host picks a short,
+ * dim, joined room; the room's meta says so; the guest's sheet shows the same
+ * rules disabled; both deal the identical board; and a pair the guest takes dims
+ * rather than disappearing, which is the host's rule and not the guest's.
  *
  *   node Tools/ten_room_rules_e2e.mjs [origin]
  *
@@ -109,9 +109,7 @@ let state = await sheetState(host);
 check(state.modeDisabled === false, 'the host can choose the pair mode before the room');
 check(state.wrapDisabled === false, 'and whether the rows join');
 await choose(host, 'When a pair is matched', 'Dim');
-await choose(host, 'Difficulty', 'Hard');
-await choose(host, 'Columns', 7);
-await choose(host, 'Rows', 14);
+await choose(host, 'Rows', 12);
 await host.evaluate(() => {
   const toggle = [...document.querySelectorAll('.game-sheet__switch')]
     .find((node) => node.getAttribute('aria-label') === 'Rows join end to end');
@@ -136,8 +134,9 @@ const meta = await fetch(
 ).then((response) => response.json());
 check(meta?.wrap === true, 'the room remembers that the rows join');
 check(meta?.mode === 'dim', 'and that a pair dims');
-check(meta?.difficulty === 'hard', 'and the level');
-check(meta?.columns === 7 && meta?.rows === 14, 'and the shape');
+check(meta?.rows === 12, 'and the rows');
+check(!('columns' in (meta ?? {})) && !('difficulty' in (meta ?? {})),
+  'the columns are always nine and there are no levels, so neither is in the room');
 
 // ── the guest arrives with none of those choices and plays anyway ────────────
 await guest.goto(`${origin}/ten?game=${room}`, { waitUntil: 'networkidle2' });
@@ -162,7 +161,7 @@ await wait(1400);
 
 const hostCells = await cells(host);
 const guestCells = await cells(guest);
-check(hostCells.length === 98, `the room is seven by fourteen (${hostCells.length} cells)`);
+check(hostCells.length === 108, `the room is nine by twelve (${hostCells.length} cells)`);
 check(JSON.stringify(hostCells) === JSON.stringify(guestCells),
   'the guest deals the identical board');
 
@@ -181,7 +180,7 @@ if (pair) {
   await wait(600);
   const after = await cells(guest);
   const dimmed = after.filter((cell) => cell.dimmed);
-  check(after.length === 98, `dim mode leaves every digit on the guest's board (${after.length})`);
+  check(after.length === 108, `dim mode leaves every digit on the guest's board (${after.length})`);
   check(dimmed.length === 2, `and the pair is greyed out (${dimmed.length})`);
   const hostBoard = await cells(host);
   check(hostBoard.filter((cell) => cell.dimmed).length === 0,

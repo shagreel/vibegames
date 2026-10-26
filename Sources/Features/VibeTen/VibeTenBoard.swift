@@ -28,113 +28,6 @@ enum VibeTenMode: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-/// How much of the grid a game starts with.
-enum VibeTenStartFill: String, CaseIterable, Identifiable {
-    case full = "full"
-    /// A third of the rows, with the empty space underneath: the new-row offer
-    /// is what fills it in.
-    case third = "third"
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .full: return "Full"
-        case .third: return "One third"
-        }
-    }
-
-    var blurb: String {
-        switch self {
-        case .full: return "The whole grid, as it has always been."
-        case .third: return "A third of the rows to start with, and room below for the new rows to fill."
-        }
-    }
-}
-
-/// How hard a board is to take apart.
-///
-/// Every level is dealt so that a solution exists — the board is built out of
-/// pairs, in an order that is itself a way through. What changes is what a pair
-/// is nested in: at Easy every pair is already next to itself; at Medium pairs
-/// are nested across a row, down a column, corner to corner, or round the join
-/// between two rows; and at Hard whole rows and whole columns are nested, which
-/// makes for longer chains of "clear that before this".
-///
-/// All four of those are the game's own lines — a pair can be found along a row,
-/// a column, a diagonal, or, when the rows join end to end, across the join — so
-/// a hard board can need a column cleared before a row, which is a different
-/// puzzle from a row before a row.
-enum VibeTenDifficulty: String, CaseIterable, Identifiable, Codable {
-    case easy
-    case medium
-    case hard
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .easy: return "Easy"
-        case .medium: return "Medium"
-        case .hard: return "Hard"
-        }
-    }
-
-    var blurb: String {
-        switch self {
-        case .easy:
-            return "Every pair starts side by side: a gentle board."
-        case .medium:
-            return "Pairs are nested across a row, down a column, corner to corner, or round the join between two rows."
-        case .hard:
-            return "Whole rows and whole columns are nested: the pair at the edge of a band only comes together once the digits around it are gone."
-        }
-    }
-}
-
-/// How one band of rows is filled. A band is a short block of rows dealt as a
-/// unit, so a pair never spans two bands and every band can be cleared on its
-/// own. The patterns are the ways a pair can be found: side by side, and nested
-/// along one of the four lines — a row, a column, a diagonal, or the join.
-enum VibeTenBandPattern: Equatable {
-    /// Side by side along each row, with any odd column paired down the band.
-    case sideBySide
-    /// Nested along each row, with any odd column nested down the band.
-    case rows
-    /// Nested down each column.
-    case columns
-    /// Nested corner to corner, two columns and one row at a time.
-    case diagonals
-    /// Nested round the join: the last square of a row to the first of the next.
-    case wrap
-}
-
-/// A block of rows and the way it is filled.
-struct VibeTenBand: Equatable {
-    let start: Int
-    let height: Int
-    let pattern: VibeTenBandPattern
-
-    var end: Int { start + height }
-}
-
-/// A pair in the order it is dealt, at the rows and columns it will occupy in
-/// the finished board.
-private struct DealTarget {
-    let first: VibeTenBoard.Position
-    let second: VibeTenBoard.Position
-}
-
-/// One pair, and where it was placed. In a nested band a pair is put in before
-/// the pairs that cover it, so the row it lands in is also the row it will be
-/// taken from when the placements are read backwards.
-struct DealStep: Equatable {
-    let first: VibeTenBoard.Position
-    let second: VibeTenBoard.Position
-    let firstValue: Int
-    let secondValue: Int
-}
-
 /// One digit on the board.
 struct VibeTenCell: Equatable, Codable {
     let value: Int
@@ -148,24 +41,29 @@ struct VibeTenCell: Equatable, Codable {
 /// gravity rule: take a digit out and the ones below it are already one place
 /// higher. There are no gaps inside a column, ever, so "what is below" is just
 /// "what is at the next index". The board is anchored at the top — row 0 is the
-/// top row — so a row that clears closes upward, and a board that starts part
-/// filled hangs from the top with the empty space beneath it.
+/// top row — so a row that clears closes upward.
 struct VibeTenBoard: Equatable {
 
-    /// The size a board is unless the player asks for another. Columns run
-    /// 6–9 and rows 12–18, so every shape is a grid that still fills the screen
-    /// with bigger digits.
+    /// The board is always nine columns; only the rows are a choice. Twelve to
+    /// eighteen rows means a grid that still fills the screen with bigger
+    /// digits.
     static let defaultColumns = 9
     static let defaultRows = 18
-    static let columnOptions = [6, 7, 8, 9]
     static let rowOptions = [12, 14, 16, 18]
     /// One press of the new-row offer adds this many rows, at most.
     static let rowsPerAddOptions = [1, 2, 3, 4]
     static let minimumRowsPerAdd = rowsPerAddOptions.first ?? 1
     static let maximumRowsPerAdd = rowsPerAddOptions.last ?? 1
 
+    /// Every unordered pair the deal can draw from: two of the same number, or
+    /// two that add to ten. A pair of fives is both, so it is listed once.
+    static let pairOptions: [(Int, Int)] = [
+        (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9),
+        (1, 9), (2, 8), (3, 7), (4, 6)
+    ]
+
     /// How many columns and rows this board has. A room's board is dealt from
-    /// the seed *and* these two numbers, so the size is part of the deal.
+    /// the seed and its rows, so the rows are part of the deal.
     let columns: Int
     let rows: Int
 
@@ -189,374 +87,64 @@ struct VibeTenBoard: Equatable {
     /// The seed the board was dealt from, for a shared game's report.
     let seed: UInt32
 
-    /// How the board was dealt. Part of the deal, like the seed and the shape:
-    /// a room's board has to be the same on every device.
-    let difficulty: VibeTenDifficulty
-
     private(set) var stacks: [[VibeTenCell]]
 
     // MARK: - Building
 
-    /// Deals a board, optionally starting part-filled.
+    /// Deals a full board of the given shape.
     ///
-    /// The deal is always the full grid — that is what keeps the seed meaning
-    /// one thing — and `startRows` then keeps that many rows off the top of each
-    /// column. Whole bands are kept, so a part-filled board is the top of the
-    /// same deal with every pair it holds still whole, which is what both
-    /// clients reproduce from the same numbers.
+    /// The deal is two steps. First a set of valid pairs is drawn — pairs of the
+    /// same number or pairs that add up to ten — enough of them to fill the
+    /// grid. Then all of those digits are shuffled and laid out, so where a
+    /// pair's two halves end up is chance. It makes a board that reads as dealt
+    /// rather than sorted; it does not promise a way through, so a round can end
+    /// with no moves left instead of a cleared board.
     init(seed: UInt32,
          columns: Int = VibeTenBoard.defaultColumns,
          rows: Int = VibeTenBoard.defaultRows,
-         startRows: Int? = nil,
-         wrapRows: Bool = false,
-         difficulty: VibeTenDifficulty = .easy) {
+         wrapRows: Bool = false) {
         self.seed = seed
         self.columns = columns
         self.rows = rows
         self.wrapRows = wrapRows
-        self.difficulty = difficulty
-        let planned = VibeTenBoard.plan(seed: seed,
-                                        columns: columns,
-                                        rows: rows,
-                                        difficulty: difficulty,
-                                        wrapRows: wrapRows)
-        let wanted = max(1, min(rows, startRows ?? rows))
-        let kept = planned.bandEnds.last(where: { $0 <= wanted })
-            ?? planned.bandEnds.first
-            ?? wanted
-        self.stacks = planned.stacks.map { Array($0.prefix(kept)) }
+        self.stacks = VibeTenBoard.deal(seed: seed, columns: columns, rows: rows)
     }
 
-    /// The digits, dealt so that every board can be cleared.
-    ///
-    /// A random shuffle of the right digits is a board with a random chance of
-    /// being finishable — usually none. So the board is built the other way
-    /// round: the grid is cut into bands of rows, each band is filled with pairs
-    /// nested along its own lines, and the pairs are *placed* one at a time in an
-    /// order where each can be seen. Read backwards, the placements are a way to
-    /// clear the board.
+    /// The pairs a board is dealt from, before their digits are shuffled onto
+    /// it. Each one is a pair the rules can take: equal, or adding to ten.
+    static func pairChoices(seed: UInt32, count: Int) -> [(Int, Int)] {
+        var generator = SeededGenerator(seed: seed)
+        var pairs: [(Int, Int)] = []
+        pairs.reserveCapacity(count)
+        for _ in 0..<count {
+            pairs.append(pairOptions[Int.random(in: 0..<pairOptions.count,
+                                                using: &generator)])
+        }
+        return pairs
+    }
+
+    /// The digits, drawn as pairs and then laid out at random.
     ///
     /// Both clients have to reproduce the recipe exactly — the same generator,
     /// the same draws in the same order — because a room's board comes back from
     /// one seed. `board.fixtures.json` pins it.
-    static func deal(seed: UInt32,
-                     columns: Int,
-                     rows: Int,
-                     difficulty: VibeTenDifficulty = .easy,
-                     wrapRows: Bool = false) -> [[VibeTenCell]] {
-        plan(seed: seed, columns: columns, rows: rows,
-             difficulty: difficulty, wrapRows: wrapRows).stacks
-    }
-
-    /// The placing order, the board it makes, and where its bands end.
-    ///
-    /// Kept separate from `deal` so a test can check the thing that matters:
-    /// every pair could be seen when it was placed, and the board it leaves is
-    /// full. Read backwards, the steps are a way to clear the board.
-    static func plan(seed: UInt32,
-                     columns: Int,
-                     rows: Int,
-                     difficulty: VibeTenDifficulty,
-                     wrapRows: Bool = false) -> (steps: [DealStep],
-                                                  stacks: [[VibeTenCell]],
-                                                  bandEnds: [Int]) {
+    static func deal(seed: UInt32, columns: Int, rows: Int) -> [[VibeTenCell]] {
         var generator = SeededGenerator(seed: seed)
-
-        let heights = bandHeights(rows: rows, difficulty: difficulty,
-                                  wrapRows: wrapRows, generator: &generator)
-        let patterns = bandPatterns(heights: heights, difficulty: difficulty,
-                                    wrapRows: wrapRows, generator: &generator)
-        var start = 0
-        let bands = zip(heights, patterns).map { pair -> VibeTenBand in
-            let band = VibeTenBand(start: start, height: pair.0, pattern: pair.1)
-            start += pair.0
-            return band
+        let pairCount = columns * rows / 2
+        var digits: [Int] = []
+        digits.reserveCapacity(pairCount * 2)
+        for _ in 0..<pairCount {
+            let pair = pairOptions[Int.random(in: 0..<pairOptions.count,
+                                              using: &generator)]
+            digits.append(pair.0)
+            digits.append(pair.1)
         }
-
-        let deck = makeDeck(pairs: columns * rows / 2, generator: &generator)
-
-        // The pairs of every band, in placing order. Bands are dealt top to
-        // bottom, so clearing the finished board runs bottom to top: nothing
-        // below a band is left to move it, and a band comes apart from the
-        // inside out.
-        let targets = bands.flatMap { targets(for: $0, columns: columns) }
-
-        var columnsCells = [[(row: Int, cell: VibeTenCell)]](repeating: [], count: columns)
-        var steps: [DealStep] = []
-        var nextPair = 0
-
-        /// The next pair of digits, either way round.
-        func takePair() -> (Int, Int) {
-            let pair = deck[nextPair]
-            nextPair += 1
-            return Int.random(in: 0...1, using: &generator) == 1 ? (pair.1, pair.0) : pair
-        }
-
-        /// Puts one digit into its column in front of every digit that will end
-        /// up below it, and says which row it landed in.
-        ///
-        /// The digits already there are the ones placed earlier, which are the
-        /// ones that end up below it: that is how a pair laid down first ends up
-        /// *outside* the pairs placed after it.
-        func place(_ value: Int, at target: Position) -> Position {
-            var index = 0
-            while index < columnsCells[target.column].count,
-                  columnsCells[target.column][index].row < target.row {
-                index += 1
-            }
-            columnsCells[target.column].insert((row: target.row, cell: VibeTenCell(value: value)),
-                                               at: index)
-            return Position(column: target.column, row: index)
-        }
-
-        for target in targets {
-            let digits = takePair()
-            // The upper square of a pair goes in first when they share a column,
-            // so that the lower one lands underneath it.
-            let firstIsUpper = target.first.row <= target.second.row
-            let upper = firstIsUpper ? target.first : target.second
-            let lower = firstIsUpper ? target.second : target.first
-            let upperValue = firstIsUpper ? digits.0 : digits.1
-            let lowerValue = firstIsUpper ? digits.1 : digits.0
-            let placedUpper = place(upperValue, at: upper)
-            let placedLower = place(lowerValue, at: lower)
-            steps.append(DealStep(first: placedUpper,
-                                  second: placedLower,
-                                  firstValue: upperValue,
-                                  secondValue: lowerValue))
-        }
-
-        return (steps,
-                columnsCells.map { $0.map(\.cell) },
-                bands.map(\.end))
-    }
-
-    /// The bands a full board is dealt in.
-    ///
-    /// Easy and Medium are two rows at a time. Hard is taller, so a pair can be
-    /// nested down a column as well as across a row, and it opens with a two-row
-    /// band of diagonals — and, when the rows join end to end, one of wrap
-    /// pairs — so those lines are always part of the puzzle.
-    static func bandHeights(rows: Int,
-                            difficulty: VibeTenDifficulty,
-                            wrapRows: Bool,
-                            generator: inout SeededGenerator) -> [Int] {
-        guard rows > 2 else { return [rows] }
-        switch difficulty {
-        case .easy, .medium:
-            return Array(repeating: 2, count: rows / 2)
-        case .hard:
-            var heights: [Int] = []
-            var remaining = rows
-            // A deep band first, then the two-row ones: that puts a band
-            // boundary at four and at six rows, which is where a third of every
-            // shape falls, so "start with one third" keeps a whole band instead
-            // of dropping to the first two rows.
-            heights.append(4)
-            remaining -= 4
-            if wrapRows {
-                heights.append(2)
-                remaining -= 2
-            }
-            heights.append(2)
-            remaining -= 2
-            while remaining > 0 {
-                let options = [4, 6, 8].filter { height in
-                    height <= remaining && (remaining - height == 0 || remaining - height >= 4)
-                }
-                let height: Int
-                if options.isEmpty {
-                    height = remaining
-                } else if options.count == 1 {
-                    height = options[0]
-                } else {
-                    height = options[Int.random(in: 0..<options.count, using: &generator)]
-                }
-                heights.append(height)
-                remaining -= height
-            }
-            return heights
-        }
-    }
-
-    /// How each band is filled.
-    static func bandPatterns(heights: [Int],
-                             difficulty: VibeTenDifficulty,
-                             wrapRows: Bool,
-                             generator: inout SeededGenerator) -> [VibeTenBandPattern] {
-        switch difficulty {
-        case .easy:
-            return heights.map { _ in .sideBySide }
-        case .medium:
-            return heights.indices.map { index in
-                if index == 0 { return wrapRows ? .wrap : .diagonals }
-                return VibeTenBoard.randomPattern(wrapRows: wrapRows, generator: &generator)
-            }
-        case .hard:
-            var patterns: [VibeTenBandPattern] = []
-            var sawTwoRow = false
-            var sawTall = false
-            for height in heights {
-                if height == 2 {
-                    patterns.append(wrapRows && !sawTwoRow ? .wrap : .diagonals)
-                    sawTwoRow = true
-                    continue
-                }
-                // Tall bands are whole rows or whole columns, and they alternate
-                // so a hard board is not all one line.
-                if sawTall {
-                    patterns.append(patterns.last == .columns ? .rows : .columns)
-                } else {
-                    patterns.append(Int.random(in: 0...1, using: &generator) == 1 ? .columns : .rows)
-                    sawTall = true
-                }
-            }
-            return patterns
-        }
-    }
-
-    /// A pattern for a two-row Medium band: mostly rows, some columns and
-    /// diagonals, and the join when the rules allow it.
-    static func randomPattern(wrapRows: Bool, generator: inout SeededGenerator) -> VibeTenBandPattern {
-        var choices: [VibeTenBandPattern] = [.rows, .rows, .rows,
-                                             .columns, .columns,
-                                             .diagonals, .diagonals]
-        if wrapRows { choices.append(contentsOf: [.wrap, .wrap]) }
-        return choices[Int.random(in: 0..<choices.count, using: &generator)]
-    }
-
-    /// The digits a board is dealt from.
-    ///
-    /// Balanced so every digit appears about as often as every other, and with
-    /// both kinds of pair guaranteed: some equal pairs (two of a number) and
-    /// plenty that add to ten. A pair of fives is both, so it gets its own
-    /// smaller share of the deck.
-    static func makeDeck(pairs: Int, generator: inout SeededGenerator) -> [(Int, Int)] {
-        // A fives-pair puts two 5s on the board and every other pair puts one of
-        // each digit, so the fives need half as many pairs as the others to keep
-        // the digits even.
-        let fivePairs = (2 * pairs + 9) / 18
-        let otherPairs = pairs - fivePairs
-
-        var order = Array(0..<4)
-        order.shuffle(using: &generator)
-        var groupPairs = [Int](repeating: otherPairs / 4, count: 4)
-        for index in 0..<(otherPairs % 4) { groupPairs[order[index]] += 1 }
-
-        var deck: [(Int, Int)] = []
-        for group in 0..<5 {
-            if group == 4 {
-                deck.append(contentsOf: Array(repeating: (5, 5), count: fivePairs))
-                continue
-            }
-            let count = groupPairs[group]
-            let low = group + 1
-            let high = 10 - low
-            guard count >= 3 else {
-                deck.append(contentsOf: Array(repeating: (low, high), count: max(0, count)))
-                continue
-            }
-            // At least one equal pair, and at least one that adds to ten: the
-            // board is the game, and both kinds of pair are the game.
-            let most = min(2, (count - 1) / 2)
-            let equal = most == 1 ? 1 : Int.random(in: 1...most, using: &generator)
-            deck.append(contentsOf: Array(repeating: (low, low), count: equal))
-            deck.append(contentsOf: Array(repeating: (high, high), count: equal))
-            deck.append(contentsOf: Array(repeating: (low, high), count: count - 2 * equal))
-        }
-        deck.shuffle(using: &generator)
-        return deck
-    }
-
-    /// The pairs of a band, in placing order: outermost first, so every pair can
-    /// see itself when it arrives and the pairs that cover it arrive later.
-    private static func targets(for band: VibeTenBand, columns: Int) -> [DealTarget] {
-        var targets: [DealTarget] = []
-        let top = band.start
-        let bottom = band.start + band.height - 1
-
-        func add(_ firstColumn: Int, _ firstRow: Int,
-                 _ secondColumn: Int, _ secondRow: Int) {
-            targets.append(DealTarget(first: Position(column: firstColumn, row: firstRow),
-                                      second: Position(column: secondColumn, row: secondRow)))
-        }
-
-        switch band.pattern {
-        case .sideBySide:
-            let last = columns - (columns % 2 == 0 ? 1 : 2)
-            for row in top...bottom {
-                var column = 0
-                while column < last {
-                    add(column, row, column + 1, row)
-                    column += 2
-                }
-            }
-            if columns % 2 == 1 {
-                add(columns - 1, top, columns - 1, bottom)
-            }
-
-        case .rows:
-            let last = columns - (columns % 2 == 0 ? 1 : 2)
-            for row in top...bottom {
-                var low = 0
-                var high = last
-                while low < high {
-                    add(low, row, high, row)
-                    low += 1
-                    high -= 1
-                }
-            }
-            if columns % 2 == 1 {
-                // The odd column left over by every row is nested down the band.
-                var low = top
-                var high = bottom
-                while low < high {
-                    add(columns - 1, low, columns - 1, high)
-                    low += 1
-                    high -= 1
-                }
-            }
-
-        case .columns:
-            for column in 0..<columns {
-                var low = top
-                var high = bottom
-                while low < high {
-                    add(column, low, column, high)
-                    low += 1
-                    high -= 1
-                }
-            }
-
-        case .diagonals:
-            var column = 0
-            while column + 1 < columns {
-                add(column, top, column + 1, bottom)
-                add(column, bottom, column + 1, top)
-                column += 2
-            }
-            if column < columns {
-                add(column, top, column, bottom)
-            }
-
-        case .wrap:
-            // The two ends of the join. The pair that runs the whole way round
-            // is placed first and ends up outermost; the pair that owns the join
-            // itself goes next; the columns between them are filled with
-            // vertical pairs, which end up inside both. So the finished band is
-            // a long wrap pair holding a short wrap pair holding the middle.
-            if columns > 2 {
-                add(0, top, columns - 1, bottom)
-                add(columns - 1, top, 0, bottom)
-                for column in 1..<(columns - 1) {
-                    add(column, top, column, bottom)
-                }
-            } else {
-                add(0, top, columns - 1, bottom)
+        digits.shuffle(using: &generator)
+        return (0..<columns).map { column in
+            (0..<rows).map { row in
+                VibeTenCell(value: digits[column * rows + row])
             }
         }
-
-        return targets
     }
 
     /// A board with an exact shape, for tests and for the browser to check
@@ -566,13 +154,11 @@ struct VibeTenBoard: Equatable {
          seed: UInt32 = 0,
          columns: Int = VibeTenBoard.defaultColumns,
          rows: Int = VibeTenBoard.defaultRows,
-         wrapRows: Bool = false,
-         difficulty: VibeTenDifficulty = .easy) {
+         wrapRows: Bool = false) {
         self.seed = seed
         self.columns = columns
         self.rows = rows
         self.wrapRows = wrapRows
-        self.difficulty = difficulty
         self.stacks = stacks.prefix(columns).map { column in
             column.prefix(rows).map { VibeTenCell(value: $0) }
         }
@@ -584,13 +170,11 @@ struct VibeTenBoard: Equatable {
          seed: UInt32 = 0,
          columns: Int = VibeTenBoard.defaultColumns,
          rows: Int = VibeTenBoard.defaultRows,
-         wrapRows: Bool = false,
-         difficulty: VibeTenDifficulty = .easy) {
+         wrapRows: Bool = false) {
         self.seed = seed
         self.columns = columns
         self.rows = rows
         self.wrapRows = wrapRows
-        self.difficulty = difficulty
         self.stacks = cells.prefix(columns).map { Array($0.prefix(rows)) }
         while self.stacks.count < columns { self.stacks.append([]) }
     }

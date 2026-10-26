@@ -15,8 +15,7 @@ final class SoloProgressUITests: XCTestCase {
 
     func testVibeTenRemembersTheBoardAndAsksBeforeStartingAgain() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.columns", "9", "-vibeten.rows", "18",
-                                "-vibeten.startFill", "full", "-vibeten.mode", "remove"]
+        app.launchArguments += ["-vibeten.rows", "18", "-vibeten.mode", "remove"]
         app.launch(withName: "Tester")
 
         openSoloBoard(app)

@@ -14,9 +14,7 @@ struct VibeTenScore: Equatable {
 ///     ten/{gameId}
 ///       meta/
 ///         seed        1234567890
-///         columns     9
 ///         rows        18
-///         difficulty  "medium"
 ///         wrap        false
 ///         mode        "remove"
 ///         creator     "Alex"
@@ -25,25 +23,20 @@ struct VibeTenScore: Equatable {
 ///       players/{playerId} { name, joinedAt }
 ///       scores/{playerId}  { score, finishedAt }
 ///
-/// The board is never stored: it is a pure function of the seed *and the rules*
-/// — the shape, the difficulty, whether the rows join end to end, and how a
-/// taken pair leaves the board — so every device — phone or browser — deals the
-/// identical digits and plays them the same way. Those rules are the host's
-/// choice, written once when the room is made and kept for the room's life;
-/// only the scores travel, and each player writes their own.
+/// The board is never stored: it is a pure function of the seed and the rules —
+/// the rows, whether the rows join end to end, and how a taken pair leaves the
+/// board — so every device — phone or browser — deals the identical digits and
+/// plays them the same way. Those rules are the host's choice, written once when
+/// the room is made and kept for the room's life; only the scores travel, and
+/// each player writes their own. The board is always nine columns.
 struct VibeTenSnapshot: Equatable {
     var exists = false
     var seed: UInt32?
-    /// The board's shape. Rooms made before the choice existed have neither
-    /// field, and read as the full board.
-    var columns = VibeTenBoard.defaultColumns
+    /// How many rows the board has. Rooms made before the choice existed read
+    /// as the full board; the columns are always nine.
     var rows = VibeTenBoard.defaultRows
-    /// How hard the board is to take apart. Rooms made before the levels
-    /// existed read as medium, which is the level most boards are dealt at now.
-    var difficulty = VibeTenDifficulty.medium
-    /// Whether the rows join end to end. A room rule, because the board can only
-    /// be cleared one way: a joiner cannot turn the join on for a board dealt
-    /// without it.
+    /// Whether the rows join end to end. A room rule, so every device plays the
+    /// same board by the same lines.
     var wrapRows = false
     /// How a taken pair leaves the board, also part of the room's rules.
     var mode = VibeTenMode.remove
@@ -70,17 +63,9 @@ struct VibeTenSnapshot: Equatable {
                 let value = rawSeed.uint64Value
                 if value <= UInt64(UInt32.max) { seed = UInt32(value) }
             }
-            if let rawColumns = (object["columns"] as? NSNumber)?.intValue,
-               VibeTenBoard.columnOptions.contains(rawColumns) {
-                columns = rawColumns
-            }
             if let rawRows = (object["rows"] as? NSNumber)?.intValue,
                VibeTenBoard.rowOptions.contains(rawRows) {
                 rows = rawRows
-            }
-            if let raw = object["difficulty"] as? String,
-               let level = VibeTenDifficulty(rawValue: raw) {
-                difficulty = level
             }
             wrapRows = (object["wrap"] as? Bool) ?? false
             if let raw = object["mode"] as? String,
@@ -214,9 +199,7 @@ final class VibeTenService {
 
     func createGame(gameID: String,
                     seed: UInt32,
-                    columns: Int,
                     rows: Int,
-                    difficulty: VibeTenDifficulty,
                     wrapRows: Bool,
                     mode: VibeTenMode,
                     creatorName: String,
@@ -225,9 +208,7 @@ final class VibeTenService {
 
         try await reference.child("meta").setValue([
             "seed": Int(seed),
-            "columns": columns,
             "rows": rows,
-            "difficulty": difficulty.rawValue,
             "wrap": wrapRows,
             "mode": mode.rawValue,
             "creator": creatorName,

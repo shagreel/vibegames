@@ -119,7 +119,46 @@ final class VibeTenBoardTests: XCTestCase {
                           "a different seed, a different board")
     }
 
-    /// The browser deals the same boards, so each level is pinned against a
+    /// The deal draws valid pairs — equal, or adding to ten — and then shuffles
+    /// their digits onto the board.
+    func testTheDealDrawsValidPairsAndLaysTheirDigitsOut() {
+        for seed in [UInt32(1), 7, 1234, 999, 424242] {
+            for rows in VibeTenBoard.rowOptions {
+                let count = VibeTenBoard.defaultColumns * rows / 2
+                let pairs = VibeTenBoard.pairChoices(seed: seed, count: count)
+                XCTAssertEqual(pairs.count, count)
+                for pair in pairs {
+                    XCTAssertTrue(VibeTenBoard.valuesPair(pair.0, pair.1),
+                                  "\(seed) \(rows): \(pair) is not a pair")
+                }
+                let board = VibeTenBoard(seed: seed, rows: rows)
+                XCTAssertEqual(board.values.flatMap { $0 }.sorted(),
+                               pairs.flatMap { [$0.0, $0.1] }.sorted(),
+                               "the board is those digits, laid out at random")
+            }
+        }
+    }
+
+    /// The second step is a real shuffle: the digits are not laid down pair by
+    /// pair in the order they were drawn.
+    func testTheDigitsAreLaidOutAtRandom() {
+        let pairs = VibeTenBoard.pairChoices(seed: 1234, count: 9 * 18 / 2)
+        let board = VibeTenBoard(seed: 1234).values.flatMap { $0 }
+        XCTAssertNotEqual(board, pairs.flatMap { [$0.0, $0.1] })
+    }
+
+    /// The pool the draw comes from has both kinds of pair in it.
+    func testThePairPoolHasEqualPairsAndPairsThatAddToTen() {
+        XCTAssertTrue(VibeTenBoard.pairOptions.contains { $0.0 == $0.1 },
+                      "two of the same number")
+        XCTAssertTrue(VibeTenBoard.pairOptions.contains { $0.0 + $0.1 == 10 },
+                      "and two that add up to ten")
+        for pair in VibeTenBoard.pairOptions {
+            XCTAssertTrue(VibeTenBoard.valuesPair(pair.0, pair.1))
+        }
+    }
+
+    /// The browser deals the same boards, so each shape is pinned against a
     /// fixture both engines read. The fixtures live in
     /// `web/src/games/ten/board.fixtures.json`, dumped from this engine.
     func testTheDealMatchesTheFixturesTheWebUses() {
@@ -128,130 +167,56 @@ final class VibeTenBoardTests: XCTestCase {
             let shape = parts[1].split(separator: "x")
             let columns = Int(shape[0]) ?? 9
             let rows = Int(shape[1]) ?? 18
-            let difficulty = VibeTenDifficulty(rawValue: parts[2]) ?? .medium
-            let wrapRows = parts.count > 3 && parts[3] == "wrap"
-            XCTAssertEqual(VibeTenBoard(seed: 1234, columns: columns, rows: rows,
-                                        wrapRows: wrapRows, difficulty: difficulty).values,
+            XCTAssertEqual(VibeTenBoard(seed: 1234, columns: columns, rows: rows).values,
                            expected, name)
         }
     }
 
-    /// Every level's nine-by-eighteen board, and one small one, from seed 1234,
-    /// with and without the rows joined. Dumped from this engine.
+    /// Every row count, from seed 1234. Dumped from this engine.
     static let fixtures: [String: [[Int]]] = [
-        "1234-6x12-easy": [
-            [2, 9, 3, 1, 4, 8, 4, 4, 3, 8, 5, 7],
-            [2, 1, 7, 9, 4, 8, 6, 6, 7, 8, 5, 7],
-            [8, 9, 5, 5, 3, 7, 2, 1, 9, 2, 9, 4],
-            [2, 9, 5, 5, 7, 7, 2, 9, 1, 8, 1, 6],
-            [4, 9, 5, 8, 3, 6, 4, 3, 1, 8, 4, 3],
-            [6, 1, 5, 2, 7, 6, 6, 3, 1, 2, 6, 3]
+        "1234-9x12": [
+            [8, 2, 8, 4, 9, 4, 8, 1, 4, 3, 5, 8],
+            [7, 3, 9, 3, 2, 1, 4, 8, 6, 6, 3, 3],
+            [9, 2, 9, 7, 8, 9, 9, 9, 1, 9, 1, 9],
+            [6, 7, 2, 4, 7, 2, 4, 8, 5, 1, 1, 3],
+            [4, 3, 3, 2, 1, 9, 7, 9, 4, 5, 3, 7],
+            [7, 2, 3, 9, 9, 7, 3, 7, 2, 3, 2, 7],
+            [5, 1, 2, 7, 4, 9, 6, 9, 3, 2, 4, 1],
+            [4, 3, 7, 5, 2, 6, 8, 9, 3, 5, 1, 9],
+            [7, 1, 1, 7, 7, 8, 3, 3, 8, 3, 9, 7]
         ],
-        "1234-6x12-easy-wrap": [
-            [2, 9, 3, 1, 4, 8, 4, 4, 3, 8, 5, 7],
-            [2, 1, 7, 9, 4, 8, 6, 6, 7, 8, 5, 7],
-            [8, 9, 5, 5, 3, 7, 2, 1, 9, 2, 9, 4],
-            [2, 9, 5, 5, 7, 7, 2, 9, 1, 8, 1, 6],
-            [4, 9, 5, 8, 3, 6, 4, 3, 1, 8, 4, 3],
-            [6, 1, 5, 2, 7, 6, 6, 3, 1, 2, 6, 3]
+        "1234-9x14": [
+            [1, 5, 4, 3, 1, 9, 9, 7, 1, 1, 3, 6, 8, 7],
+            [9, 9, 3, 9, 2, 9, 8, 3, 3, 9, 9, 9, 8, 6],
+            [9, 2, 9, 1, 1, 8, 8, 2, 7, 7, 1, 3, 1, 4],
+            [4, 6, 1, 5, 3, 9, 1, 1, 1, 7, 8, 9, 2, 2],
+            [7, 4, 7, 3, 3, 6, 7, 4, 3, 3, 3, 8, 3, 9],
+            [2, 3, 2, 3, 5, 8, 1, 9, 7, 1, 1, 3, 5, 5],
+            [7, 5, 5, 3, 8, 7, 3, 4, 2, 2, 9, 7, 9, 1],
+            [2, 4, 6, 7, 1, 1, 7, 5, 5, 2, 9, 4, 1, 2],
+            [5, 7, 2, 9, 8, 3, 9, 7, 8, 3, 4, 1, 4, 4]
         ],
-        "1234-6x12-hard": [
-            [8, 4, 6, 2, 3, 9, 1, 4, 4, 6, 6, 9],
-            [9, 8, 2, 1, 9, 7, 3, 3, 3, 7, 3, 7],
-            [1, 3, 7, 1, 8, 7, 7, 2, 6, 6, 2, 3],
-            [5, 5, 5, 5, 7, 8, 1, 9, 5, 5, 9, 9],
-            [4, 5, 5, 6, 8, 2, 9, 4, 3, 7, 6, 1],
-            [8, 4, 4, 2, 2, 8, 4, 1, 2, 8, 1, 6]
+        "1234-9x16": [
+            [5, 7, 6, 5, 8, 7, 2, 2, 5, 1, 5, 8, 7, 9, 9, 9],
+            [3, 8, 9, 3, 7, 1, 3, 4, 1, 9, 5, 9, 4, 3, 1, 3],
+            [4, 4, 3, 2, 6, 5, 6, 2, 7, 1, 7, 4, 4, 7, 1, 9],
+            [7, 2, 2, 3, 3, 9, 2, 1, 1, 8, 1, 4, 2, 7, 8, 7],
+            [3, 9, 1, 7, 9, 1, 3, 5, 2, 8, 1, 3, 8, 1, 9, 9],
+            [2, 3, 2, 9, 7, 8, 3, 1, 1, 4, 9, 7, 1, 3, 7, 4],
+            [1, 5, 8, 4, 9, 3, 2, 9, 4, 6, 1, 4, 8, 1, 4, 3],
+            [6, 5, 4, 1, 3, 6, 7, 3, 4, 1, 3, 4, 8, 9, 1, 3],
+            [5, 9, 9, 8, 8, 2, 3, 9, 5, 9, 7, 3, 9, 3, 5, 7]
         ],
-        "1234-6x12-hard-wrap": [
-            [8, 4, 6, 2, 3, 9, 1, 4, 7, 2, 2, 3],
-            [9, 8, 2, 1, 8, 8, 6, 9, 6, 1, 9, 6],
-            [1, 3, 7, 1, 7, 7, 4, 3, 9, 5, 5, 9],
-            [5, 5, 5, 5, 8, 8, 7, 6, 9, 4, 6, 1],
-            [4, 5, 5, 6, 2, 2, 3, 3, 3, 4, 6, 7],
-            [8, 4, 4, 2, 9, 7, 7, 3, 1, 2, 8, 1]
-        ],
-        "1234-6x12-medium": [
-            [6, 3, 8, 7, 9, 1, 9, 9, 9, 3, 7, 5],
-            [7, 4, 3, 8, 4, 6, 2, 6, 9, 4, 5, 3],
-            [5, 5, 7, 3, 1, 1, 9, 5, 9, 2, 2, 8],
-            [5, 5, 7, 7, 4, 6, 1, 5, 1, 8, 2, 8],
-            [4, 6, 8, 2, 3, 7, 2, 4, 1, 4, 3, 6],
-            [4, 6, 8, 8, 2, 2, 9, 1, 1, 7, 6, 3]
-        ],
-        "1234-6x12-medium-wrap": [
-            [6, 7, 8, 7, 9, 4, 9, 9, 9, 3, 7, 5],
-            [5, 5, 3, 8, 6, 1, 2, 6, 9, 4, 5, 3],
-            [5, 5, 7, 3, 1, 4, 9, 5, 9, 2, 2, 8],
-            [4, 6, 7, 7, 6, 1, 1, 5, 1, 8, 2, 8],
-            [6, 4, 8, 2, 3, 2, 2, 4, 1, 4, 3, 6],
-            [3, 4, 8, 8, 2, 7, 9, 1, 1, 7, 6, 3]
-        ],
-        "1234-9x18-easy": [
-            [2, 2, 6, 3, 6, 8, 4, 6, 1, 1, 1, 2, 2, 7, 6, 4, 7, 7],
-            [2, 8, 4, 3, 4, 2, 6, 4, 9, 9, 9, 8, 8, 3, 4, 6, 3, 3],
-            [2, 4, 4, 1, 4, 2, 6, 1, 3, 1, 9, 7, 4, 7, 2, 8, 1, 2],
-            [8, 6, 6, 9, 6, 8, 4, 1, 7, 9, 1, 3, 4, 7, 8, 8, 9, 8],
-            [4, 7, 2, 9, 4, 2, 3, 2, 9, 1, 4, 7, 9, 5, 5, 3, 6, 5],
-            [6, 3, 8, 1, 6, 8, 3, 8, 9, 9, 6, 3, 1, 5, 5, 7, 4, 5],
-            [1, 5, 7, 2, 3, 3, 5, 8, 9, 8, 7, 2, 6, 1, 7, 2, 4, 5],
-            [9, 5, 3, 8, 7, 7, 5, 2, 1, 8, 3, 8, 6, 9, 7, 2, 6, 5],
-            [5, 5, 3, 7, 1, 9, 9, 1, 3, 7, 9, 1, 5, 5, 6, 4, 5, 5]
-        ],
-        "1234-9x18-easy-wrap": [
-            [2, 2, 6, 3, 6, 8, 4, 6, 1, 1, 1, 2, 2, 7, 6, 4, 7, 7],
-            [2, 8, 4, 3, 4, 2, 6, 4, 9, 9, 9, 8, 8, 3, 4, 6, 3, 3],
-            [2, 4, 4, 1, 4, 2, 6, 1, 3, 1, 9, 7, 4, 7, 2, 8, 1, 2],
-            [8, 6, 6, 9, 6, 8, 4, 1, 7, 9, 1, 3, 4, 7, 8, 8, 9, 8],
-            [4, 7, 2, 9, 4, 2, 3, 2, 9, 1, 4, 7, 9, 5, 5, 3, 6, 5],
-            [6, 3, 8, 1, 6, 8, 3, 8, 9, 9, 6, 3, 1, 5, 5, 7, 4, 5],
-            [1, 5, 7, 2, 3, 3, 5, 8, 9, 8, 7, 2, 6, 1, 7, 2, 4, 5],
-            [9, 5, 3, 8, 7, 7, 5, 2, 1, 8, 3, 8, 6, 9, 7, 2, 6, 5],
-            [5, 5, 3, 7, 1, 9, 9, 1, 3, 7, 9, 1, 5, 5, 6, 4, 5, 5]
-        ],
-        "1234-9x18-hard": [
-            [4, 1, 9, 6, 4, 3, 3, 5, 6, 9, 1, 4, 5, 3, 5, 7, 4, 5],
-            [2, 1, 1, 8, 7, 6, 4, 8, 9, 5, 5, 1, 2, 6, 6, 1, 6, 7],
-            [7, 5, 5, 3, 8, 2, 1, 2, 9, 2, 8, 9, 8, 9, 1, 2, 2, 8],
-            [5, 6, 4, 5, 8, 2, 3, 2, 4, 3, 7, 6, 8, 7, 4, 8, 9, 3],
-            [4, 2, 8, 6, 2, 3, 1, 6, 1, 7, 3, 1, 4, 9, 6, 2, 1, 7],
-            [7, 8, 2, 3, 7, 8, 1, 7, 9, 8, 8, 1, 3, 9, 9, 2, 8, 2],
-            [2, 9, 1, 8, 9, 4, 7, 1, 6, 7, 3, 4, 9, 3, 4, 9, 4, 3],
-            [2, 3, 7, 8, 6, 9, 3, 4, 8, 5, 5, 2, 4, 7, 5, 7, 6, 5],
-            [6, 4, 6, 6, 6, 4, 1, 5, 7, 5, 5, 3, 5, 9, 3, 9, 1, 7]
-        ],
-        "1234-9x18-hard-wrap": [
-            [4, 1, 9, 6, 4, 7, 3, 5, 2, 9, 2, 8, 9, 8, 5, 7, 4, 5],
-            [2, 1, 1, 8, 8, 2, 5, 3, 3, 2, 4, 6, 8, 7, 6, 1, 6, 7],
-            [7, 5, 5, 3, 2, 8, 6, 9, 3, 1, 6, 4, 9, 7, 1, 2, 2, 8],
-            [5, 6, 4, 5, 2, 8, 1, 4, 1, 7, 1, 9, 3, 1, 4, 8, 9, 3],
-            [4, 2, 8, 6, 3, 7, 4, 8, 7, 9, 8, 8, 1, 3, 6, 2, 1, 7],
-            [7, 8, 2, 3, 9, 9, 2, 6, 7, 1, 6, 4, 9, 3, 9, 2, 8, 2],
-            [2, 9, 1, 8, 4, 6, 9, 5, 7, 3, 4, 4, 7, 3, 4, 9, 4, 3],
-            [2, 3, 7, 8, 6, 4, 5, 1, 8, 5, 1, 9, 5, 2, 5, 7, 6, 5],
-            [6, 4, 6, 6, 3, 6, 1, 9, 5, 7, 5, 5, 3, 5, 3, 9, 1, 7]
-        ],
-        "1234-9x18-medium": [
-            [5, 6, 3, 7, 4, 6, 9, 2, 3, 7, 7, 1, 6, 4, 7, 7, 2, 7],
-            [4, 5, 3, 7, 6, 6, 5, 4, 1, 1, 9, 3, 9, 1, 6, 4, 5, 8],
-            [4, 1, 4, 4, 6, 4, 3, 1, 6, 8, 8, 2, 4, 4, 2, 8, 9, 5],
-            [9, 6, 6, 4, 9, 1, 2, 3, 2, 7, 2, 2, 5, 5, 5, 5, 8, 1],
-            [7, 8, 7, 8, 5, 5, 8, 7, 8, 3, 3, 9, 7, 3, 4, 6, 2, 9],
-            [2, 3, 8, 7, 6, 4, 7, 9, 4, 2, 1, 3, 2, 8, 6, 4, 9, 5],
-            [2, 9, 2, 2, 7, 3, 5, 6, 1, 9, 7, 5, 8, 8, 1, 9, 5, 2],
-            [1, 8, 8, 8, 1, 9, 1, 2, 7, 3, 5, 3, 4, 6, 6, 4, 8, 3],
-            [1, 9, 3, 7, 9, 1, 6, 6, 3, 3, 2, 8, 5, 5, 9, 1, 1, 9]
-        ],
-        "1234-9x18-medium-wrap": [
-            [5, 4, 3, 7, 4, 6, 9, 2, 3, 7, 7, 1, 6, 9, 7, 7, 2, 7],
-            [4, 6, 3, 7, 6, 6, 5, 4, 1, 1, 9, 3, 1, 4, 6, 4, 5, 8],
-            [1, 9, 4, 4, 6, 9, 3, 1, 6, 8, 8, 2, 4, 5, 2, 8, 9, 5],
-            [7, 3, 6, 4, 1, 4, 2, 3, 2, 7, 2, 2, 5, 4, 5, 5, 8, 1],
-            [8, 2, 7, 8, 5, 6, 8, 7, 8, 3, 3, 9, 7, 2, 4, 6, 2, 9],
-            [2, 8, 8, 7, 4, 5, 7, 9, 4, 2, 1, 3, 8, 3, 6, 4, 9, 5],
-            [9, 1, 2, 2, 7, 1, 5, 6, 1, 9, 7, 5, 8, 4, 1, 9, 5, 2],
-            [1, 9, 8, 8, 9, 3, 1, 2, 7, 3, 5, 3, 6, 8, 6, 4, 8, 3],
-            [6, 5, 3, 7, 9, 1, 6, 6, 3, 3, 2, 8, 5, 5, 9, 1, 1, 9]
+        "1234-9x18": [
+            [5, 3, 6, 4, 5, 1, 9, 7, 2, 9, 1, 7, 8, 7, 1, 4, 3, 7],
+            [8, 7, 1, 9, 3, 3, 2, 2, 2, 4, 7, 5, 3, 4, 3, 7, 2, 2],
+            [4, 5, 2, 2, 7, 3, 9, 9, 9, 5, 6, 4, 2, 7, 2, 7, 5, 7],
+            [1, 2, 1, 3, 6, 5, 7, 1, 2, 1, 6, 4, 1, 1, 1, 3, 3, 3],
+            [9, 1, 3, 7, 9, 8, 6, 9, 9, 9, 1, 1, 8, 5, 1, 9, 6, 3],
+            [3, 7, 9, 9, 2, 5, 3, 4, 8, 9, 1, 4, 5, 6, 6, 1, 8, 7],
+            [3, 2, 9, 2, 9, 9, 5, 4, 3, 3, 8, 1, 4, 5, 7, 8, 1, 9],
+            [6, 4, 8, 3, 9, 9, 7, 7, 4, 8, 9, 3, 6, 1, 1, 8, 4, 3],
+            [3, 5, 1, 8, 3, 3, 9, 3, 4, 1, 8, 4, 5, 8, 8, 4, 7, 4]
         ]
     ]
 }
@@ -390,76 +355,41 @@ final class VibeTenAddRowTests: XCTestCase {
     }
 }
 
-/// The board's shape: how many columns and rows a game is dealt with.
+/// The board's shape: always nine columns, and the rows you choose.
 final class VibeTenShapeTests: XCTestCase {
 
-    func testEveryShapeDealsAFullGrid() {
-        for columns in VibeTenBoard.columnOptions {
-            for rows in VibeTenBoard.rowOptions {
-                let board = VibeTenBoard(seed: 12_345, columns: columns, rows: rows)
-                XCTAssertEqual(board.columns, columns)
-                XCTAssertEqual(board.rows, rows)
-                XCTAssertEqual(board.values.count, columns, "\(columns)x\(rows): columns")
-                for column in board.values {
-                    XCTAssertEqual(column.count, rows, "\(columns)x\(rows): rows")
-                    XCTAssertTrue(column.allSatisfy { (1...9).contains($0) },
-                                  "\(columns)x\(rows): digits one to nine")
-                }
-                XCTAssertEqual(board.remaining, columns * rows)
+    func testEveryShapeDealsNineColumns() {
+        for rows in VibeTenBoard.rowOptions {
+            let board = VibeTenBoard(seed: 12_345, rows: rows)
+            XCTAssertEqual(board.columns, 9, "\(rows): nine columns")
+            XCTAssertEqual(board.rows, rows)
+            XCTAssertEqual(board.values.count, 9)
+            for column in board.values {
+                XCTAssertEqual(column.count, rows, "\(rows): every column is full")
+                XCTAssertTrue(column.allSatisfy { (1...9).contains($0) },
+                              "\(rows): digits one to nine")
             }
+            XCTAssertEqual(board.remaining, 9 * rows)
         }
     }
 
-    /// Nine values into a grid that is not a multiple of nine: as even as the
-    /// shape allows, so a smaller board is still the same game.
-    func testTheDigitsAreSpreadAsEvenlyAsTheShapeAllows() {
-        for columns in VibeTenBoard.columnOptions {
-            for rows in VibeTenBoard.rowOptions {
-                let total = columns * rows
-                let counts = VibeTenBoard(seed: 99, columns: columns, rows: rows)
-                    .values.flatMap { $0 }
-                    .reduce(into: [Int: Int]()) { $0[$1, default: 0] += 1 }
-
-                XCTAssertEqual(counts.count, 9, "\(columns)x\(rows): every digit is there")
-                let smallest = counts.values.min() ?? 0
-                let largest = counts.values.max() ?? 0
-                XCTAssertLessThanOrEqual(largest - smallest, 1,
-                                         "\(columns)x\(rows): counts should differ by at most one")
-                XCTAssertEqual(counts.values.reduce(0, +), total)
-            }
-        }
-    }
-
-    func testTheShapeIsPartOfTheDeal() {
-        XCTAssertEqual(VibeTenBoard(seed: 7, columns: 6, rows: 12).values,
-                       VibeTenBoard(seed: 7, columns: 6, rows: 12).values)
-        XCTAssertNotEqual(VibeTenBoard(seed: 7, columns: 6, rows: 12).values,
-                          VibeTenBoard(seed: 7, columns: 6, rows: 14).values,
+    func testTheRowsArePartOfTheDeal() {
+        XCTAssertEqual(VibeTenBoard(seed: 7, rows: 12).values,
+                       VibeTenBoard(seed: 7, rows: 12).values)
+        XCTAssertNotEqual(VibeTenBoard(seed: 7, rows: 12).values,
+                          VibeTenBoard(seed: 7, rows: 14).values,
                           "two rows more is a different board")
-        XCTAssertNotEqual(VibeTenBoard(seed: 7, columns: 6, rows: 12).values,
-                          VibeTenBoard(seed: 8, columns: 6, rows: 12).values,
+        XCTAssertNotEqual(VibeTenBoard(seed: 7, rows: 12).values,
+                          VibeTenBoard(seed: 8, rows: 12).values,
                           "and so is another seed")
         // The default is the board the game shipped with: nine by eighteen.
         XCTAssertEqual(VibeTenBoard(seed: 7).values,
                        VibeTenBoard(seed: 7, columns: 9, rows: 18).values)
     }
 
-    func testABoardCanStartPartFilled() {
-        let full = VibeTenBoard(seed: 4321)
-        let third = VibeTenBoard(seed: 4321, startRows: 6)
-
-        XCTAssertEqual(third.height(ofColumn: 0), 6, "a third of eighteen rows")
-        for column in 0..<9 {
-            XCTAssertEqual(third.values[column], Array(full.values[column].prefix(6)),
-                           "the top slice of the same deal, hanging from the top")
-        }
-        XCTAssertEqual(third.remaining, 54)
-        XCTAssertTrue(third.canAddRow, "and there is room below it")
-        XCTAssertEqual(third.roomForRows, 12)
-    }
-
     func testRowsAreAddedUnderTheDigitsAndGrowTheBoard() {
-        var board = VibeTenBoard(seed: 77, startRows: 6)
+        var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 6),
+                                               count: 9))
         let before = board.values
         XCTAssertTrue(board.addRow([1, 2, 3, 4, 5, 6, 7, 8, 9]))
         XCTAssertEqual(board.height(ofColumn: 0), 7)
@@ -480,26 +410,6 @@ final class VibeTenShapeTests: XCTestCase {
         }
         XCTAssertLessThan(board.height(ofColumn: 0), 12)
     }
-
-    /// A row is complete when every column of *this* board has been dimmed in
-    /// it — six columns is a whole row on a six-column board.
-    func testARowClearsAcrossTheBoardsOwnColumns() {
-        // Six columns, so six dimmed digits in the bottom row is a whole row:
-        // 1+9, 2+8, 3+7.
-        var board = VibeTenBoard(stacks: [[1, 9], [9, 8], [2, 7], [8, 6], [3, 5], [7, 4]],
-                                 columns: 6, rows: 2)
-        for (left, right) in [(0, 1), (2, 3)] {
-            XCTAssertNotNil(board.take(.init(column: left, row: 0),
-                                       .init(column: right, row: 0), mode: .dim))
-        }
-        XCTAssertEqual(board.height(ofColumn: 0), 2, "four of six is not a row")
-
-        let result = board.take(.init(column: 4, row: 0), .init(column: 5, row: 0), mode: .dim)
-        XCTAssertEqual(result?.rowsCleared, [0], "the sixth column completes the row")
-        XCTAssertEqual(board.height(ofColumn: 0), 1)
-    }
-
-
 }
 
 
@@ -578,228 +488,5 @@ final class VibeTenWrapTests: XCTestCase {
         let stacks = columns.map { $0.map { VibeTenCell(value: $0) } }
         XCTAssertFalse(VibeTenBoard(cells: stacks, columns: 9, rows: 2)
                         .canMatch(.init(column: 8, row: 0), .init(column: 0, row: 1)))
-    }
-}
-
-
-/// Every board can be cleared, and the difficulty is what decides how much has
-/// to come off first.
-///
-/// The deal places pairs one at a time, each where it can be seen; read
-/// backwards, that order is a way to clear the board. So the proof is
-/// structural: replay the placements and check each pair was visible when it was
-/// placed, then read the plan backwards through the real rule and check the
-/// board empties. The difficulty tests then check that Easy's pairs are still
-/// side by side in the finished board, that Hard's are not, and that the deal
-/// uses all four lines a pair can be found on.
-final class VibeTenSolutionTests: XCTestCase {
-
-    private let seeds: [UInt32] = [1, 7, 1234, 999, 424242]
-
-    /// Replays a plan, checking every pair could be seen when it was placed.
-    private func replay(_ plan: (steps: [DealStep], stacks: [[VibeTenCell]], bandEnds: [Int]),
-                        columns: Int,
-                        rows: Int,
-                        wrapRows: Bool = false,
-                        file: StaticString = #filePath,
-                        line: UInt = #line) -> [[VibeTenCell]] {
-        var stacks = [[VibeTenCell]](repeating: [], count: columns)
-        for step in plan.steps {
-            for (position, value) in [(step.first, step.firstValue),
-                                      (step.second, step.secondValue)] {
-                let count = stacks[position.column].count
-                stacks[position.column].insert(VibeTenCell(value: value),
-                                               at: min(position.row, count))
-            }
-
-            let board = VibeTenBoard(cells: stacks, columns: columns, rows: rows,
-                                     wrapRows: wrapRows)
-            XCTAssertTrue(board.canMatch(step.first, step.second),
-                          "the pair placed at \(step.first) and \(step.second) could not be seen",
-                          file: file, line: line)
-            XCTAssertEqual(board.value(at: step.first), step.firstValue, file: file, line: line)
-            XCTAssertEqual(board.value(at: step.second), step.secondValue, file: file, line: line)
-        }
-        return stacks
-    }
-
-    func testEveryBoardCanBeClearedAtEveryDifficulty() {
-        for difficulty in VibeTenDifficulty.allCases {
-            for wrapRows in [false, true] {
-                for seed in seeds {
-                    for columns in VibeTenBoard.columnOptions {
-                        for rows in VibeTenBoard.rowOptions {
-                            let plan = VibeTenBoard.plan(seed: seed, columns: columns, rows: rows,
-                                                         difficulty: difficulty,
-                                                         wrapRows: wrapRows)
-                            let stacks = replay(plan, columns: columns, rows: rows,
-                                                wrapRows: wrapRows)
-                            XCTAssertEqual(stacks, plan.stacks, "the replay builds the same board")
-                            XCTAssertEqual(stacks.map(\.count),
-                                           Array(repeating: rows, count: columns),
-                                           "\(difficulty) \(seed) \(columns)x\(rows) should be full")
-                            XCTAssertEqual(plan.steps.count, columns * rows / 2,
-                                           "every digit is placed in a pair")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// The plan read backwards is a real clearance: the rule accepts every pair,
-    /// and the board empties. This is the promise the deal makes — there is
-    /// always a way through, whatever the shape, level or join.
-    func testThePlanReadBackwardsTakesTheWholeBoardApart() {
-        for difficulty in VibeTenDifficulty.allCases {
-            for wrapRows in [false, true] {
-                for seed in [UInt32(1), 1234] {
-                    for columns in VibeTenBoard.columnOptions {
-                        for rows in VibeTenBoard.rowOptions {
-                            let plan = VibeTenBoard.plan(seed: seed, columns: columns, rows: rows,
-                                                         difficulty: difficulty,
-                                                         wrapRows: wrapRows)
-                            var board = VibeTenBoard(cells: plan.stacks,
-                                                     columns: columns, rows: rows,
-                                                     wrapRows: wrapRows)
-                            for step in plan.steps.reversed() {
-                                XCTAssertNotNil(
-                                    board.take(step.first, step.second, mode: .remove),
-                                    "\(difficulty) wrap \(wrapRows) \(seed) \(columns)x\(rows): \(step)")
-                            }
-                            XCTAssertTrue(board.isCleared,
-                                          "\(difficulty) wrap \(wrapRows) \(seed) \(columns)x\(rows)")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// Easy's pairs are all still side by side in the finished board.
-    func testEasyPairsStartSideBySide() {
-        for seed in seeds {
-            for columns in VibeTenBoard.columnOptions {
-                for rows in VibeTenBoard.rowOptions {
-                    let plan = VibeTenBoard.plan(seed: seed, columns: columns, rows: rows,
-                                                 difficulty: .easy)
-                    let board = VibeTenBoard(seed: seed, columns: columns, rows: rows,
-                                             difficulty: .easy)
-                    for step in plan.steps {
-                        XCTAssertTrue(board.canMatch(step.first, step.second),
-                                      "easy \(seed) \(columns)x\(rows): \(step.first) and \(step.second)")
-                    }
-                }
-            }
-        }
-    }
-
-    /// Hard's pairs are not: some of them are separated by digits that have to
-    /// be cleared first, which is the whole point of the level.
-    func testHardPairsHaveToBeUncovered() {
-        var separated = 0
-        for seed in seeds {
-            let plan = VibeTenBoard.plan(seed: seed, columns: 9, rows: 18, difficulty: .hard)
-            let board = VibeTenBoard(seed: seed, columns: 9, rows: 18, difficulty: .hard)
-            for step in plan.steps where !board.canMatch(step.first, step.second) {
-                separated += 1
-            }
-        }
-        XCTAssertGreaterThan(separated, 100, "hard boards should need real clearing, not just pairs")
-    }
-
-    func testMediumSitsBetweenTheTwo() {
-        var easySeparated = 0
-        var mediumSeparated = 0
-        for seed in seeds {
-            for difficulty in [VibeTenDifficulty.easy, .medium] {
-                let plan = VibeTenBoard.plan(seed: seed, columns: 9, rows: 18,
-                                             difficulty: difficulty)
-                let board = VibeTenBoard(seed: seed, columns: 9, rows: 18, difficulty: difficulty)
-                let count = plan.steps.filter { !board.canMatch($0.first, $0.second) }.count
-                if difficulty == .easy { easySeparated += count } else { mediumSeparated += count }
-            }
-        }
-        XCTAssertEqual(easySeparated, 0, "easy boards start with every pair together")
-        XCTAssertGreaterThan(mediumSeparated, 0, "medium boards hide some pairs")
-    }
-
-    /// Both kinds of pair are part of every board: two of the same number, and
-    /// two that add to ten.
-    func testBothKindsOfPairAreDealt() {
-        for seed in seeds {
-            for columns in VibeTenBoard.columnOptions {
-                for rows in VibeTenBoard.rowOptions {
-                    let plan = VibeTenBoard.plan(seed: seed, columns: columns, rows: rows,
-                                                 difficulty: .medium)
-                    let equal = plan.steps.filter { $0.firstValue == $0.secondValue }.count
-                    let tens = plan.steps.filter { $0.firstValue + $0.secondValue == 10 }.count
-                    XCTAssertGreaterThan(equal, 0,
-                                         "\(seed) \(columns)x\(rows): a pair of the same number")
-                    XCTAssertGreaterThan(tens, 0,
-                                         "\(seed) \(columns)x\(rows): a pair adding to ten")
-                }
-            }
-        }
-    }
-
-    /// A board played with the rows joined is dealt so that crossing the join is
-    /// part of the way through it, not only a rule that happens to be on.
-    func testBoardsWithTheRowsJoinedUseTheJoinInTheSolution() {
-        for difficulty in [VibeTenDifficulty.medium, .hard] {
-            for seed in seeds {
-                let plan = VibeTenBoard.plan(seed: seed, columns: 9, rows: 18,
-                                             difficulty: difficulty, wrapRows: true)
-                let crossing = plan.steps.filter { step in
-                    step.first.row != step.second.row
-                        && step.first.column != step.second.column
-                        && abs(step.first.column - step.second.column)
-                            != abs(step.first.row - step.second.row)
-                }
-                XCTAssertGreaterThan(crossing.count, 0, "\(difficulty) \(seed)")
-            }
-        }
-    }
-
-    /// Hard uses all four lines: whole rows nested across, whole columns nested
-    /// down, and corner-to-corner pairs from the diagonal band.
-    func testHardBoardsUseRowsColumnsAndDiagonals() {
-        var horizontal = 0
-        var vertical = 0
-        var diagonal = 0
-        for seed in seeds {
-            let plan = VibeTenBoard.plan(seed: seed, columns: 9, rows: 18, difficulty: .hard)
-            for step in plan.steps {
-                if step.first.row == step.second.row {
-                    horizontal += 1
-                } else if step.first.column == step.second.column {
-                    vertical += 1
-                } else {
-                    diagonal += 1
-                }
-            }
-        }
-        XCTAssertGreaterThan(horizontal, 0, "rows are nested across")
-        XCTAssertGreaterThan(vertical, 0, "columns are nested down")
-        XCTAssertGreaterThan(diagonal, 0, "and a band is paired corner to corner")
-    }
-
-    /// A part-filled board is cut at a band boundary, so every pair it holds is
-    /// still whole and the rest of the plan still clears it.
-    func testAPartFilledBoardKeepsWholeBands() {
-        for difficulty in VibeTenDifficulty.allCases {
-            let plan = VibeTenBoard.plan(seed: 1234, columns: 9, rows: 18,
-                                         difficulty: difficulty)
-            for wanted in 1...18 {
-                let board = VibeTenBoard(seed: 1234, columns: 9, rows: 18,
-                                         startRows: wanted, difficulty: difficulty)
-                let height = board.height(ofColumn: 0)
-                XCTAssertTrue(plan.bandEnds.contains(height),
-                              "\(difficulty) \(wanted): \(height) is a band boundary")
-                let expected = plan.bandEnds.last(where: { $0 <= wanted }) ?? plan.bandEnds.first
-                XCTAssertEqual(height, expected,
-                               "\(difficulty) \(wanted): the largest boundary that fits")
-            }
-        }
     }
 }

@@ -1,29 +1,21 @@
 import { get, onDisconnect, onValue, ref, remove, set, update } from 'firebase/database';
 import { database } from '../../firebase';
-import {
-  COLUMN_OPTIONS,
-  COLUMNS,
-  DIFFICULTIES,
-  ROW_OPTIONS,
-  ROWS,
-  type TenDifficulty,
-  type TenMode,
-} from './engine';
+import { ROW_OPTIONS, ROWS, type TenMode } from './engine';
 
 /**
  * A shared Vibe Ten room.
  *
  *   ten/{gameId}
- *     meta/                { seed, columns, rows, difficulty, wrap, mode, creator, createdAt, started }
+ *     meta/                { seed, rows, wrap, mode, creator, createdAt, started }
  *     players/{playerId}   { name, joinedAt }
  *     scores/{playerId}    { score, finishedAt }
  *
- * The board is never stored. It is a pure function of the seed *and the rules* —
- * the shape, the difficulty, whether the rows join end to end, and how a taken
- * pair leaves the board — so every client deals the identical digits and plays
- * them the same way. Those rules are the host's choice, written once when the
- * room is made; only the scores travel after that, one write each, and the rules
- * allow nothing else in a room.
+ * The board is never stored. It is a pure function of the seed and the rules —
+ * the rows, whether the rows join end to end, and how a taken pair leaves the
+ * board — so every client deals the identical digits and plays them the same
+ * way. Those rules are the host's choice, written once when the room is made;
+ * only the scores travel after that, one write each, and the rules allow nothing
+ * else in a room. The board is always nine columns.
  */
 
 export interface TenScore {
@@ -35,13 +27,11 @@ export interface TenScore {
 export interface TenSnapshot {
   exists: boolean;
   seed: number | null;
-  /** The board's shape. Rooms made before the choice existed read as 9x18. */
-  columns: number;
+  /** How many rows the board has. Rooms made before the choice existed read as
+      the full board; the columns are always nine. */
   rows: number;
-  /** How hard the board is to take apart. Rooms without one read as medium. */
-  difficulty: TenDifficulty;
-  /** Whether the rows join end to end. A room rule: the board can only be
-      cleared one way, so a joiner cannot switch it on. */
+  /** Whether the rows join end to end. A room rule, so every device plays the
+      same board by the same lines. */
   wrapRows: boolean;
   /** How a taken pair leaves the board, also part of the room's rules. */
   mode: TenMode;
@@ -54,9 +44,7 @@ export interface TenSnapshot {
 export const EMPTY_SNAPSHOT: TenSnapshot = {
   exists: false,
   seed: null,
-  columns: COLUMNS,
   rows: ROWS,
-  difficulty: 'medium',
   wrapRows: false,
   mode: 'remove',
   creator: null,
@@ -71,14 +59,8 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
 
   const meta = (value.meta ?? {}) as Record<string, unknown>;
   const seedValue = typeof meta.seed === 'number' ? Math.trunc(meta.seed) : null;
-  const rawColumns = typeof meta.columns === 'number' ? Math.trunc(meta.columns) : COLUMNS;
   const rawRows = typeof meta.rows === 'number' ? Math.trunc(meta.rows) : ROWS;
-  const columns = (COLUMN_OPTIONS as readonly number[]).includes(rawColumns) ? rawColumns : COLUMNS;
   const rows = (ROW_OPTIONS as readonly number[]).includes(rawRows) ? rawRows : ROWS;
-  const rawDifficulty = typeof meta.difficulty === 'string' ? meta.difficulty : 'medium';
-  const difficulty = (DIFFICULTIES as readonly string[]).includes(rawDifficulty)
-    ? (rawDifficulty as TenDifficulty)
-    : 'medium';
   const wrapRows = meta.wrap === true;
   const rawMode = typeof meta.mode === 'string' ? meta.mode : 'remove';
   const mode: TenMode = rawMode === 'dim' ? 'dim' : 'remove';
@@ -102,9 +84,7 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
   return {
     exists: true,
     seed: seedValue,
-    columns,
     rows,
-    difficulty,
     wrapRows,
     mode,
     creator: typeof meta.creator === 'string' ? meta.creator : null,
@@ -149,9 +129,7 @@ export function observeGame(gameId: string, onChange: (snapshot: TenSnapshot) =>
 export async function createGame(
   gameId: string,
   seed: number,
-  columns: number,
   rows: number,
-  difficulty: TenDifficulty,
   wrapRows: boolean,
   mode: TenMode,
   creatorName: string,
@@ -162,9 +140,7 @@ export async function createGame(
   await set(ref(database, `ten/${gameId}`), {
     meta: {
       seed,
-      columns,
       rows,
-      difficulty,
       wrap: wrapRows,
       mode,
       creator: creatorName,

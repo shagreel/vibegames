@@ -175,53 +175,26 @@ final class VibeTenUITests: XCTestCase {
         app.buttons["tenSettings.done"].tap()
     }
 
-    /// The owner's new rules: a board that starts a third full hangs from the
-    /// top, and one press of the offer adds as many rows as the setting says.
-    func testAPartFilledBoardHangsFromTheTopAndGrowsByTheChosenRows() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.columns", "9", "-vibeten.rows", "18",
-                                "-vibeten.addRow", "YES",
-                                "-vibeten.startFill", "third",
-                                "-vibeten.rowsPerAdd", "2",
-                                "-vibeten.mode", "remove"]
-        app.launch(withName: "Tester")
-        openSoloBoard(app)
-
-        let cells = app.tenCells
-        XCTAssertEqual(cells.count, 54, "a third of the board: six rows of nine")
-        XCTAssertEqual(cells.map(\.row).min(), 0, "the top row is the first row")
-        XCTAssertEqual(cells.map(\.row).max(), 5, "six rows, hanging from the top")
-        tenAttach(app, named: "49h-ten-third-full")
-
-        let addRow = app.buttons["ten.addRow"]
-        XCTAssertTrue(addRow.exists, "the bottom of the grid is free, so the offer is there")
-        XCTAssertEqual(addRow.label, "Add 2 rows at the bottom",
-                       "the offer says how many rows a press deals")
-        addRow.tap()
-        XCTAssertEqual(app.tenCells.count, 72, "two rows more: eight rows of nine")
-        XCTAssertEqual(app.tenCells.map(\.row).max(), 7)
-        tenAttach(app, named: "49i-ten-two-rows-more")
-    }
-
-    /// The new rules are the sheet's, and they are for a game that has not begun.
+    /// The settings that remain are the sheet's, and they are for a game that
+    /// has not begun.
     func testTheNewRulesAreOnTheSheetAndLockedInAGame() throws {
-        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES", "-vibeten.startFill", "full",
+        let app = fullBoardApp(extra: ["-vibeten.addRow", "YES",
                                        "-vibeten.rowsPerAdd", "1", "-vibeten.wrapRows", "NO"])
         openLobby(app)
         app.buttons["ten.settings"].tap()
 
-        let fill = app.segmentedControls["tenSettings.startFill"].firstMatch
-        XCTAssertTrue(fill.waitForExistence(timeout: 5), "the sheet offers the starting board")
-        XCTAssertTrue(fill.isEnabled, "and on the start screen it can be chosen")
-        XCTAssertTrue(fill.buttons["Full"].exists)
-        XCTAssertTrue(fill.buttons["One third"].exists)
-
-        let level = app.segmentedControls["tenSettings.difficulty"].firstMatch
-        XCTAssertTrue(level.exists, "the sheet offers a difficulty")
-        XCTAssertTrue(level.isEnabled, "before the game starts it can be chosen")
-        XCTAssertTrue(level.buttons["Easy"].exists)
-        XCTAssertTrue(level.buttons["Medium"].exists)
-        XCTAssertTrue(level.buttons["Hard"].exists)
+        let rows = app.segmentedControls["tenSettings.rows"].firstMatch
+        XCTAssertTrue(rows.waitForExistence(timeout: 5), "the sheet offers the rows")
+        XCTAssertTrue(rows.isEnabled, "and on the start screen it can be chosen")
+        for count in [12, 14, 16, 18] {
+            XCTAssertTrue(rows.buttons["\(count)"].exists, "\(count) rows should be on offer")
+        }
+        XCTAssertFalse(app.segmentedControls["tenSettings.difficulty"].firstMatch.exists,
+                       "there are no levels any more")
+        XCTAssertFalse(app.segmentedControls["tenSettings.columns"].firstMatch.exists,
+                       "the columns are always nine")
+        XCTAssertFalse(app.segmentedControls["tenSettings.startFill"].firstMatch.exists,
+                       "a board always starts full")
 
         let perPress = app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
         XCTAssertTrue(perPress.exists, "and how many rows a press deals")
@@ -241,13 +214,11 @@ final class VibeTenUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ten.board"].firstMatch
                         .waitForExistence(timeout: 10))
         app.buttons["ten.settings"].tap()
-        XCTAssertTrue(app.segmentedControls["tenSettings.startFill"].firstMatch
+        XCTAssertTrue(app.segmentedControls["tenSettings.rows"].firstMatch
                         .waitForExistence(timeout: 5))
-        XCTAssertFalse(app.segmentedControls["tenSettings.startFill"].firstMatch.isEnabled,
-                       "a game in play keeps the board it started with")
+        XCTAssertFalse(app.segmentedControls["tenSettings.rows"].firstMatch.isEnabled,
+                       "a game in play keeps the rows it started with")
         XCTAssertFalse(app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch.isEnabled)
-        XCTAssertFalse(app.segmentedControls["tenSettings.difficulty"].firstMatch.isEnabled,
-                       "a game in play keeps the level it was dealt at")
         XCTAssertFalse(app.switches["tenSettings.wrapRows"].firstMatch.isEnabled,
                        "and how pairs are found is part of the game")
         app.buttons["tenSettings.done"].tap()
@@ -288,7 +259,7 @@ final class VibeTenUITests: XCTestCase {
     /// run on this simulator left behind.
     private func fullBoardApp(extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.columns", "9", "-vibeten.rows", "18"] + extra
+        app.launchArguments += ["-vibeten.rows", "18"] + extra
         app.launch(withName: "Tester")
         return app
     }

@@ -1,86 +1,31 @@
 import { SeededGenerator, shuffle } from '../../lib/seeded';
 
 /**
- * The Vibe Ten board: nine columns of digits, packed at the bottom.
+ * The Vibe Ten board: nine columns of digits, hanging from the top.
  *
- * A column is a plain array, bottom first, which is the whole of the gravity
- * rule: take a digit out and the ones above are already one place lower. There
- * are never gaps inside a column.
+ * A column is a plain array, top first, which is the whole of the gravity rule:
+ * take a digit out and the ones below it are already one place higher. There are
+ * never gaps inside a column.
  *
- * Mirrors `VibeTenBoard.swift`, including the deal: the digits are shuffled with
- * the same SplitMix64 generator the app uses, so a room's seed gives both
- * clients the identical 162 digits and neither can see the other's board.
+ * Mirrors `VibeTenBoard.swift`, including the deal: a set of valid pairs is
+ * drawn and then their digits are shuffled onto the board with the same
+ * SplitMix64 generator the app uses, so a room's seed gives both clients the
+ * identical digits and neither can see the other's board.
  */
 
-/** The board a game is dealt with unless another shape is asked for. Columns
-    run 6–9 and rows 12–18: every shape fills the screen with bigger digits. */
+/** The board is always nine columns; only the rows are a choice. */
 export const COLUMNS = 9;
 export const ROWS = 18;
-export const COLUMN_OPTIONS = [6, 7, 8, 9] as const;
 export const ROW_OPTIONS = [12, 14, 16, 18] as const;
 /** One press of the new-row offer adds this many rows, at most. */
 export const ROWS_PER_ADD_OPTIONS = [1, 2, 3, 4] as const;
 
-/** How hard a board is to take apart. */
-export type TenDifficulty = 'easy' | 'medium' | 'hard';
-
-export const DIFFICULTIES: TenDifficulty[] = ['easy', 'medium', 'hard'];
-
-export const DIFFICULTY_LABELS: Record<TenDifficulty, { title: string; blurb: string }> = {
-  easy: { title: 'Easy', blurb: 'Every pair starts side by side: a gentle board.' },
-  medium: {
-    title: 'Medium',
-    blurb:
-      'Pairs are nested across a row, down a column, corner to corner, or round the join between two rows.',
-  },
-  hard: {
-    title: 'Hard',
-    blurb:
-      'Whole rows and whole columns are nested: the pair at the edge of a band only comes together once the digits around it are gone.',
-  },
-};
-
-/** How one band of rows is filled.
- *
- * `sideBySide` is Easy: adjacent pairs along each row. The rest are nested along
- * the four lines a pair can be found on — a row, a column, a diagonal, or, when
- * the rows join end to end, round the join — so a harder board can need a column
- * cleared before a row.
- */
-export type TenBandPattern = 'sideBySide' | 'rows' | 'columns' | 'diagonals' | 'wrap';
-
-/** A block of rows and the way it is filled. A pair never spans two bands, so
- * every band can be cleared on its own. */
-export interface TenBand {
-  readonly start: number;
-  readonly height: number;
-  readonly pattern: TenBandPattern;
-}
-
-/** A pair at the rows and columns it will occupy in the finished board. */
-interface DealTarget {
-  readonly first: Position;
-  readonly second: Position;
-}
-
-/** One pair, and where it was placed — the reverse of a take. */
-export interface DealStep {
-  readonly first: Position;
-  readonly second: Position;
-  readonly firstValue: number;
-  readonly secondValue: number;
-}
-
-/** How much of the grid a game starts with. */
-export type TenStartFill = 'full' | 'third';
-
-export const START_FILL_LABELS: Record<TenStartFill, { title: string; blurb: string }> = {
-  full: { title: 'Full', blurb: 'The whole grid, as it has always been.' },
-  third: {
-    title: 'One third',
-    blurb: 'A third of the rows to start with, and room below for the new rows to fill.',
-  },
-};
+/** Every unordered pair the deal can draw from: two of the same number, or two
+ * that add to ten. A pair of fives is both, so it is listed once. */
+export const PAIR_OPTIONS: readonly (readonly [number, number])[] = [
+  [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [9, 9],
+  [1, 9], [2, 8], [3, 7], [4, 6],
+];
 
 export interface Position {
   readonly column: number;
@@ -120,8 +65,6 @@ export interface TenBoard {
   /** How many columns and rows: a room is dealt from the seed *and* these. */
   readonly columns: number;
   readonly rows: number;
-  /** How hard it was to take apart. Part of the deal, like the seed. */
-  readonly difficulty: TenDifficulty;
   /** Whether the end of a row joins the start of the next. */
   readonly wrapRows: boolean;
   /** The columns, each top-first: the board hangs from the top. */
@@ -137,354 +80,61 @@ export interface TenMove {
 const cell = (value: number): TenCell => ({ value, dimmed: false });
 
 /**
- * Deals a board, and records how it was made.
- *
- * A random shuffle of the right digits is a board with a random chance of being
- * finishable — usually none. So the board is built the other way round: the grid
- * is cut into bands of rows, each band is filled with pairs nested along its own
- * lines, and the pairs are placed one at a time in an order where each can be
- * seen. Read backwards, the placements are a way to clear the board.
- *
- * The recipe has to match `VibeTenBoard.plan` exactly — same generator, same
- * draws in the same order — because a room's board comes back from one seed.
- * `board.fixtures.json` pins it.
+ * The pairs a board is dealt from, before their digits are shuffled onto it.
+ * Each one is a pair the rules can take: equal, or adding to ten.
  */
-export function plan(
-  seed: number,
-  columns: number,
-  rows: number,
-  difficulty: TenDifficulty,
-  wrapRows = false,
-): { steps: DealStep[]; stacks: TenCell[][]; bandEnds: number[] } {
+export function pairChoices(seed: number, count: number): [number, number][] {
   const generator = new SeededGenerator(seed);
-
-  const heights = bandHeights(rows, difficulty, wrapRows, generator);
-  const patterns = bandPatterns(heights, difficulty, wrapRows, generator);
-  let start = 0;
-  const bands: TenBand[] = heights.map((height, index) => {
-    const band: TenBand = { start, height, pattern: patterns[index] };
-    start += height;
-    return band;
-  });
-
-  const deck = makeDeck(Math.floor((columns * rows) / 2), generator);
-
-  // The pairs of every band, in placing order. Bands are dealt top to bottom, so
-  // clearing the finished board runs bottom to top: nothing below a band is left
-  // to move it, and a band comes apart from the inside out.
-  const targets = bands.flatMap((band) => targetsFor(band, columns));
-
-  const columnsCells: { row: number; cell: TenCell }[][] = Array.from(
-    { length: columns },
-    () => [],
-  );
-  const steps: DealStep[] = [];
-  let nextPair = 0;
-
-  const takePair = (): [number, number] => {
-    const pair = deck[nextPair];
-    nextPair += 1;
-    return generator.nextBounded(2) === 1 ? [pair[1], pair[0]] : [pair[0], pair[1]];
-  };
-
-  /** Puts one digit into its column in front of every digit that will end up
-   * below it, and says which row it landed in. The digits already there were
-   * placed earlier, so they end up below: that is how a pair laid down first
-   * ends up outside the pairs placed after it. */
-  const place = (value: number, target: Position): Position => {
-    let index = 0;
-    while (
-      index < columnsCells[target.column].length &&
-      columnsCells[target.column][index].row < target.row
-    ) {
-      index += 1;
-    }
-    columnsCells[target.column].splice(index, 0, { row: target.row, cell: cell(value) });
-    return { column: target.column, row: index };
-  };
-
-  for (const target of targets) {
-    const digits = takePair();
-    // The upper square of a pair goes in first when they share a column, so the
-    // lower one lands underneath it.
-    const firstIsUpper = target.first.row <= target.second.row;
-    const upper = firstIsUpper ? target.first : target.second;
-    const lower = firstIsUpper ? target.second : target.first;
-    const upperValue = firstIsUpper ? digits[0] : digits[1];
-    const lowerValue = firstIsUpper ? digits[1] : digits[0];
-    const placedUpper = place(upperValue, upper);
-    const placedLower = place(lowerValue, lower);
-    steps.push({
-      first: placedUpper,
-      second: placedLower,
-      firstValue: upperValue,
-      secondValue: lowerValue,
-    });
+  const pairs: [number, number][] = [];
+  for (let index = 0; index < count; index += 1) {
+    const pair = PAIR_OPTIONS[generator.nextBounded(PAIR_OPTIONS.length)];
+    pairs.push([pair[0], pair[1]]);
   }
-
-  return {
-    steps,
-    stacks: columnsCells.map((column) => column.map((entry) => entry.cell)),
-    bandEnds: bands.map((band) => band.start + band.height),
-  };
-}
-
-/** The bands a full board is dealt in.
- *
- * Easy and Medium are two rows at a time. Hard is taller, so a pair can be
- * nested down a column as well as across a row, and it opens with a two-row band
- * of diagonals — and, when the rows join, one of wrap pairs — so those lines are
- * always part of the puzzle.
- */
-export function bandHeights(
-  rows: number,
-  difficulty: TenDifficulty,
-  wrapRows: boolean,
-  generator: SeededGenerator,
-): number[] {
-  if (rows <= 2) return [rows];
-  if (difficulty !== 'hard') {
-    return Array.from({ length: Math.floor(rows / 2) }, () => 2);
-  }
-  const heights: number[] = [];
-  let remaining = rows;
-  // A deep band first, then the two-row ones: that puts a band boundary at four
-  // and at six rows, which is where a third of every shape falls, so "start with
-  // one third" keeps a whole band instead of dropping to the first two rows.
-  heights.push(4);
-  remaining -= 4;
-  if (wrapRows) {
-    heights.push(2);
-    remaining -= 2;
-  }
-  heights.push(2);
-  remaining -= 2;
-  while (remaining > 0) {
-    const options = [4, 6, 8].filter(
-      (height) => height <= remaining && (remaining - height === 0 || remaining - height >= 4),
-    );
-    let height: number;
-    if (options.length === 0) {
-      height = remaining;
-    } else if (options.length === 1) {
-      height = options[0];
-    } else {
-      height = options[generator.nextBounded(options.length)];
-    }
-    heights.push(height);
-    remaining -= height;
-  }
-  return heights;
-}
-
-function bandPatterns(
-  heights: number[],
-  difficulty: TenDifficulty,
-  wrapRows: boolean,
-  generator: SeededGenerator,
-): TenBandPattern[] {
-  if (difficulty === 'easy') return heights.map(() => 'sideBySide');
-  if (difficulty === 'medium') {
-    return heights.map((_, index) => {
-      if (index === 0) return wrapRows ? 'wrap' : 'diagonals';
-      return randomPattern(wrapRows, generator);
-    });
-  }
-  const patterns: TenBandPattern[] = [];
-  let sawTwoRow = false;
-  let sawTall = false;
-  heights.forEach((height) => {
-    if (height === 2) {
-      patterns.push(wrapRows && !sawTwoRow ? 'wrap' : 'diagonals');
-      sawTwoRow = true;
-      return;
-    }
-    // Tall bands are whole rows or whole columns, and they alternate so a hard
-    // board is not all one line.
-    if (sawTall) {
-      patterns.push(patterns[patterns.length - 1] === 'columns' ? 'rows' : 'columns');
-    } else {
-      patterns.push(generator.nextBounded(2) === 1 ? 'columns' : 'rows');
-      sawTall = true;
-    }
-  });
-  return patterns;
-}
-
-/** A pattern for a two-row Medium band: mostly rows, some columns and
- * diagonals, and the join when the rules allow it. */
-function randomPattern(wrapRows: boolean, generator: SeededGenerator): TenBandPattern {
-  const choices: TenBandPattern[] = [
-    'rows',
-    'rows',
-    'rows',
-    'columns',
-    'columns',
-    'diagonals',
-    'diagonals',
-  ];
-  if (wrapRows) choices.push('wrap', 'wrap');
-  return choices[generator.nextBounded(choices.length)];
-}
-
-/** The digits a board is dealt from.
- *
- * Balanced so every digit appears about as often as every other, and with both
- * kinds of pair guaranteed: some equal pairs (two of a number) and plenty that
- * add to ten. A pair of fives is both, so it gets its own smaller share of the
- * deck.
- */
-export function makeDeck(pairs: number, generator: SeededGenerator): [number, number][] {
-  // A fives-pair puts two 5s on the board and every other pair puts one of each
-  // digit, so the fives need half as many pairs as the others to keep the digits
-  // even.
-  const fivePairs = Math.floor((2 * pairs + 9) / 18);
-  const otherPairs = pairs - fivePairs;
-
-  const order = [0, 1, 2, 3];
-  shuffle(order, generator);
-  const groupPairs = [0, 0, 0, 0].map(() => Math.floor(otherPairs / 4));
-  for (let index = 0; index < otherPairs % 4; index += 1) groupPairs[order[index]] += 1;
-
-  const deck: [number, number][] = [];
-  for (let group = 0; group < 5; group += 1) {
-    if (group === 4) {
-      for (let index = 0; index < fivePairs; index += 1) deck.push([5, 5]);
-      continue;
-    }
-    const count = groupPairs[group];
-    const low = group + 1;
-    const high = 10 - low;
-    if (count < 3) {
-      for (let index = 0; index < Math.max(0, count); index += 1) deck.push([low, high]);
-      continue;
-    }
-    // At least one equal pair, and at least one that adds to ten: the board is
-    // the game, and both kinds of pair are the game.
-    const most = Math.min(2, Math.floor((count - 1) / 2));
-    const equal = most === 1 ? 1 : 1 + generator.nextBounded(most);
-    for (let index = 0; index < equal; index += 1) deck.push([low, low]);
-    for (let index = 0; index < equal; index += 1) deck.push([high, high]);
-    for (let index = 0; index < count - 2 * equal; index += 1) deck.push([low, high]);
-  }
-  shuffle(deck, generator);
-  return deck;
-}
-
-/** The pairs of a band, in placing order: outermost first, so every pair can
- * see itself when it arrives and the pairs that cover it arrive later. */
-function targetsFor(band: TenBand, columns: number): DealTarget[] {
-  const targets: DealTarget[] = [];
-  const top = band.start;
-  const bottom = band.start + band.height - 1;
-  const add = (first: Position, second: Position) => targets.push({ first, second });
-
-  switch (band.pattern) {
-    case 'sideBySide': {
-      const last = columns - (columns % 2 === 0 ? 1 : 2);
-      for (let row = top; row <= bottom; row += 1) {
-        for (let column = 0; column < last; column += 2) {
-          add({ column, row }, { column: column + 1, row });
-        }
-      }
-      if (columns % 2 === 1) {
-        add({ column: columns - 1, row: top }, { column: columns - 1, row: bottom });
-      }
-      break;
-    }
-    case 'rows': {
-      const last = columns - (columns % 2 === 0 ? 1 : 2);
-      for (let row = top; row <= bottom; row += 1) {
-        let low = 0;
-        let high = last;
-        while (low < high) {
-          add({ column: low, row }, { column: high, row });
-          low += 1;
-          high -= 1;
-        }
-      }
-      if (columns % 2 === 1) {
-        // The odd column left over by every row is nested down the band.
-        let low = top;
-        let high = bottom;
-        while (low < high) {
-          add({ column: columns - 1, row: low }, { column: columns - 1, row: high });
-          low += 1;
-          high -= 1;
-        }
-      }
-      break;
-    }
-    case 'columns': {
-      for (let column = 0; column < columns; column += 1) {
-        let low = top;
-        let high = bottom;
-        while (low < high) {
-          add({ column, row: low }, { column, row: high });
-          low += 1;
-          high -= 1;
-        }
-      }
-      break;
-    }
-    case 'diagonals': {
-      let column = 0;
-      while (column + 1 < columns) {
-        add({ column, row: top }, { column: column + 1, row: bottom });
-        add({ column, row: bottom }, { column: column + 1, row: top });
-        column += 2;
-      }
-      if (column < columns) add({ column, row: top }, { column, row: bottom });
-      break;
-    }
-    case 'wrap': {
-      // The two ends of the join. The pair that runs the whole way round is
-      // placed first and ends up outermost; the pair that owns the join itself
-      // goes next; the columns between them are filled with vertical pairs,
-      // which end up inside both. So the finished band is a long wrap pair
-      // holding a short wrap pair holding the middle.
-      if (columns > 2) {
-        add({ column: 0, row: top }, { column: columns - 1, row: bottom });
-        add({ column: columns - 1, row: top }, { column: 0, row: bottom });
-        for (let column = 1; column < columns - 1; column += 1) {
-          add({ column, row: top }, { column, row: bottom });
-        }
-      } else {
-        add({ column: 0, row: top }, { column: columns - 1, row: bottom });
-      }
-      break;
-    }
-    default:
-      break;
-  }
-
-  return targets;
+  return pairs;
 }
 
 /**
- * The board a game is dealt: the plan's squares, trimmed to `startRows` so a
- * part-filled board is the top of the same deal hanging from the top of the grid.
+ * The digits, drawn as valid pairs and then laid out at random.
+ *
+ * The recipe has to match `VibeTenBoard.deal` exactly — same generator, same
+ * draws in the same order — because a room's board comes back from one seed.
+ * `board.fixtures.json` pins it.
+ */
+export function deal(seed: number, columns: number, rows: number): TenCell[][] {
+  const generator = new SeededGenerator(seed);
+  const pairCount = Math.floor((columns * rows) / 2);
+  const digits: number[] = [];
+  for (let index = 0; index < pairCount; index += 1) {
+    const pair = PAIR_OPTIONS[generator.nextBounded(PAIR_OPTIONS.length)];
+    digits.push(pair[0], pair[1]);
+  }
+  shuffle(digits, generator);
+  return Array.from({ length: columns }, (_, column) =>
+    Array.from({ length: rows }, (_, row) => cell(digits[column * rows + row])),
+  );
+}
+
+/**
+ * The board a game is dealt.
+ *
+ * The deal is two steps: a set of valid pairs — two of the same number or two
+ * that add to ten — enough to fill the grid, and then those digits shuffled and
+ * laid out. It makes a board that reads as dealt rather than sorted; it does not
+ * promise a way through, so a round can end with no moves left instead of a
+ * cleared board.
  */
 export function newBoard(
   seed: number,
   columns = COLUMNS,
   rows = ROWS,
-  startRows = rows,
   wrapRows = false,
-  difficulty: TenDifficulty = 'medium',
 ): TenBoard {
-  const { stacks, bandEnds } = plan(seed, columns, rows, difficulty, wrapRows);
-  // A part-filled board keeps whole bands off the top, so every pair it holds is
-  // still whole and it is clearable the same way the full board is.
-  const wanted = Math.max(1, Math.min(rows, startRows));
-  const kept = [...bandEnds].reverse().find((end) => end <= wanted) ?? bandEnds[0] ?? wanted;
   return {
     seed,
     columns,
     rows,
     wrapRows,
-    difficulty,
-    stacks: stacks.map((column) => column.slice(0, kept)),
+    stacks: deal(seed, columns, rows),
   };
 }
 
@@ -495,7 +145,6 @@ export function boardFromStacks(
     columns?: number;
     rows?: number;
     wrapRows?: boolean;
-    difficulty?: TenDifficulty;
   } = {},
 ): TenBoard {
   const columns = shape.columns ?? COLUMNS;
@@ -507,7 +156,6 @@ export function boardFromStacks(
     columns,
     rows,
     wrapRows: shape.wrapRows ?? false,
-    difficulty: shape.difficulty ?? 'medium',
     stacks: filled,
   };
 }

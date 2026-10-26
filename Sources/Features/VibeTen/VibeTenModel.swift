@@ -59,16 +59,9 @@ final class VibeTenModel: ObservableObject {
 
     static let addRowKey = "vibeten.addRow"
 
-    /// The board's shape, as the player likes it. A room's board is the shape
-    /// the host dealt, so these apply to solo play and to the rooms this player
-    /// creates; a joiner plays what they were given.
-    @Published var columns: Int {
-        didSet {
-            guard columns != oldValue else { return }
-            UserDefaults.standard.set(columns, forKey: Self.columnsKey)
-        }
-    }
-
+    /// How many rows the next board has. A room's board is the rows the host
+    /// dealt, so this applies to solo play and to the rooms this player creates;
+    /// a joiner plays what they were given. The columns are always nine.
     @Published var rows: Int {
         didSet {
             guard rows != oldValue else { return }
@@ -76,29 +69,7 @@ final class VibeTenModel: ObservableObject {
         }
     }
 
-    static let columnsKey = "vibeten.columns"
     static let rowsKey = "vibeten.rows"
-
-    /// How hard the next board is to take apart. Part of the deal, like the
-    /// shape: the pairs are placed differently, so a room has one difficulty for
-    /// everybody, chosen by the host.
-    @Published var difficulty: VibeTenDifficulty {
-        didSet {
-            guard difficulty != oldValue else { return }
-            UserDefaults.standard.set(difficulty.rawValue, forKey: Self.difficultyKey)
-        }
-    }
-
-    static let difficultyKey = "vibeten.difficulty"
-
-    /// How much of the grid a game starts with. A part-filled board is only
-    /// offered with the new-row setting on, because the rows are what fills it.
-    @Published var startFill: VibeTenStartFill {
-        didSet {
-            guard startFill != oldValue else { return }
-            UserDefaults.standard.set(startFill.rawValue, forKey: Self.startFillKey)
-        }
-    }
 
     /// How many rows one press of the offer adds: one to four.
     @Published var rowsPerAdd: Int {
@@ -123,7 +94,6 @@ final class VibeTenModel: ObservableObject {
         }
     }
 
-    static let startFillKey = "vibeten.startFill"
     static let rowsPerAddKey = "vibeten.rowsPerAdd"
     static let wrapRowsKey = "vibeten.wrapRows"
 
@@ -151,10 +121,10 @@ final class VibeTenModel: ObservableObject {
         return false
     }
 
-    /// Whether the board's size can still be chosen. It is a property of a
-    /// *new* game: once a board is in play — or a room exists — the shape is
-    /// fixed, and the settings sheet says so rather than offering a choice that
-    /// would do nothing. The start screen is the one place it is offered.
+    /// Whether the board's rows can still be chosen. They are a property of a
+    /// *new* game: once a board is in play — or a room exists — they are fixed,
+    /// and the settings sheet says so rather than offering a choice that would
+    /// do nothing. The start screen is the one place they are offered.
     var canChooseBoardShape: Bool {
         if case .lobby = session { return true }
         return false
@@ -172,10 +142,8 @@ final class VibeTenModel: ObservableObject {
         !isShared && !canPlay
     }
 
-    /// Whether the board's fill and the rows a press adds can still be chosen:
-    /// solo games only (a room starts full for everybody), before the game
-    /// begins, and only while the new-row offer is on — the rows are what fills
-    /// a part-filled board.
+    /// Whether how many rows a press adds can still be chosen: solo games only,
+    /// before the game begins, and only while the new-row offer is on.
     var canChooseRowSupply: Bool {
         !isShared && canChoosePairMode && addRowEnabled
     }
@@ -205,20 +173,12 @@ final class VibeTenModel: ObservableObject {
             : defaults.bool(forKey: Self.addRowKey)
         // `integer(forKey:)` rather than a cast: a launch argument arrives as a
         // string, and a shape that is not one of the four is not a board.
-        let savedColumns = defaults.integer(forKey: Self.columnsKey)
-        columns = VibeTenBoard.columnOptions.contains(savedColumns)
-            ? savedColumns
-            : VibeTenBoard.defaultColumns
         let savedRows = defaults.integer(forKey: Self.rowsKey)
         rows = VibeTenBoard.rowOptions.contains(savedRows) ? savedRows : VibeTenBoard.defaultRows
-        startFill = VibeTenStartFill(rawValue: defaults.string(forKey: Self.startFillKey) ?? "")
-            ?? .full
         let savedPerAdd = defaults.integer(forKey: Self.rowsPerAddKey)
         rowsPerAdd = (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
             .contains(savedPerAdd) ? savedPerAdd : VibeTenBoard.minimumRowsPerAdd
         wrapRows = defaults.bool(forKey: Self.wrapRowsKey)
-        difficulty = VibeTenDifficulty(rawValue: defaults.string(forKey: Self.difficultyKey) ?? "")
-            ?? .medium
     }
 
     var remaining: Int { board?.remaining ?? 0 }
@@ -295,10 +255,10 @@ final class VibeTenModel: ObservableObject {
     /// What a solo board is, well enough to put it back exactly.
     struct Saved: Codable, Equatable {
         var seed: UInt32
+        /// Kept for a game saved before the board became always nine columns.
         var columns: Int
         var rows: Int
         var wrapRows: Bool
-        var difficulty: VibeTenDifficulty
         var mode: VibeTenMode
         var cells: [[VibeTenCell]]
         var score: Int
@@ -314,7 +274,6 @@ final class VibeTenModel: ObservableObject {
                      columns: board.columns,
                      rows: board.rows,
                      wrapRows: board.wrapRows,
-                     difficulty: board.difficulty,
                      mode: mode,
                      cells: board.stacks,
                      score: score,
@@ -355,15 +314,12 @@ final class VibeTenModel: ObservableObject {
         // started, and so is the game after it.
         mode = saved.mode
         wrapRows = saved.wrapRows
-        difficulty = saved.difficulty
-        columns = saved.columns
         rows = saved.rows
         board = VibeTenBoard(cells: saved.cells,
                              seed: saved.seed,
                              columns: saved.columns,
                              rows: saved.rows,
-                             wrapRows: saved.wrapRows,
-                             difficulty: saved.difficulty)
+                             wrapRows: saved.wrapRows)
         boardToken += 1
         score = saved.score
         finished = saved.finished
@@ -387,9 +343,7 @@ final class VibeTenModel: ObservableObject {
         do {
             try await service.createGame(gameID: gameID,
                                          seed: seed,
-                                         columns: columns,
                                          rows: rows,
-                                         difficulty: difficulty,
                                          wrapRows: wrapRows,
                                          mode: mode,
                                          creatorName: playerName,
@@ -397,15 +351,13 @@ final class VibeTenModel: ObservableObject {
             UserDefaults.standard.set(gameID, forKey: StoredKey.hostedGame)
             session = .shared(gameID: gameID, isHost: true)
             previousSeed = seed
-            // Dealt with the shape and difficulty this room was just made with:
-            // the observer for the room arrives a moment later, and the first
-            // board must not be the wrong size or level for a heartbeat.
+            // Dealt with the rows and rules this room was just made with: the
+            // observer for the room arrives a moment later, and the first board
+            // must not be the wrong size for a heartbeat.
             board = VibeTenBoard(seed: seed,
-                                 columns: columns,
+                                 columns: VibeTenBoard.defaultColumns,
                                  rows: rows,
-                                 startRows: rows,
-                                 wrapRows: wrapRows,
-                                 difficulty: difficulty)
+                                 wrapRows: wrapRows)
             boardToken += 1
             startedAt = Date()
             selected = nil
@@ -502,11 +454,10 @@ final class VibeTenModel: ObservableObject {
         }
     }
 
-    /// The shape the next board will be dealt with: the room's when playing in
-    /// one, otherwise the player's own choice.
-    var boardShape: (columns: Int, rows: Int) {
-        if isShared { return (snapshot.columns, snapshot.rows) }
-        return (columns, rows)
+    /// The rows the next board will be dealt with: the room's when playing in
+    /// one, otherwise the player's own choice. The columns are always nine.
+    var boardRows: Int {
+        isShared ? snapshot.rows : rows
     }
 
     /// How a taken pair leaves the board in play: the room's when playing in
@@ -517,38 +468,16 @@ final class VibeTenModel: ObservableObject {
     }
 
     /// Whether the rows join end to end in play, the room's when playing in one.
-    /// The deal depends on it — a wrap pair is part of the way through the
-    /// board — so it is part of the room's rules, not a local preference.
+    /// The rule is part of a room, not a local preference.
     var effectiveWrapRows: Bool {
         isShared ? snapshot.wrapRows : wrapRows
     }
 
-    /// How many rows a board of this shape starts with.
-    ///
-    /// A part-filled board goes with the new-row setting — the rows are what
-    /// fills it — and a room always starts full, so that everybody's board is
-    /// the same shape and the same size.
-    func startRows(for shape: (columns: Int, rows: Int)) -> Int {
-        guard !isShared, addRowEnabled, startFill == .third else { return shape.rows }
-        return max(1, shape.rows / 3)
-    }
-
-    var startingRows: Int { startRows(for: boardShape) }
-
-    /// The difficulty the next board is dealt with: the room's when playing in
-    /// one, otherwise the player's own choice.
-    var boardDifficulty: VibeTenDifficulty {
-        isShared ? snapshot.difficulty : difficulty
-    }
-
     private func deal(seed: UInt32) {
-        let shape = boardShape
         board = VibeTenBoard(seed: seed,
-                             columns: shape.columns,
-                             rows: shape.rows,
-                             startRows: startRows(for: shape),
-                             wrapRows: effectiveWrapRows,
-                             difficulty: boardDifficulty)
+                             columns: VibeTenBoard.defaultColumns,
+                             rows: boardRows,
+                             wrapRows: effectiveWrapRows)
         boardToken += 1
         startedAt = Date()
         selected = nil

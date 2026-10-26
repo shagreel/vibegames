@@ -19,14 +19,10 @@ import { MAX_NAME_LENGTH, isHosting, hostedGame, playerId, playerName, setPlayer
 import { makeGameCode, normaliseGameCode } from '../../lib/gameCode';
 import {
   COLUMNS,
-  COLUMN_OPTIONS,
   MODE_LABELS,
   ROWS,
   ROWS_PER_ADD_OPTIONS,
   ROW_OPTIONS,
-  DIFFICULTIES,
-  DIFFICULTY_LABELS,
-  START_FILL_LABELS,
   addRow,
   availableMatches,
   canAddRow,
@@ -39,9 +35,7 @@ import {
   type Position,
   type TenBoard,
   type TenCell,
-  type TenDifficulty,
   type TenMode,
-  type TenStartFill,
 } from './engine';
 import {
   EMPTY_SNAPSHOT,
@@ -70,19 +64,15 @@ import './VibeTen.css';
 const TEN_INSTRUCTIONS: HowToPlayContent = {
   name: 'Vibe Ten',
   intro:
-    'Take pairs of digits off the board until nothing pairs any more. Clear every digit and you have cleared the board — every level can be cleared, it is only how much has to come off first that changes.',
+    'Take pairs of digits off the board until nothing pairs any more. Clear every digit and you have cleared the board.',
   sections: [
     {
       title: 'What pairs',
       body: 'Two digits pair if they are **equal** or **add up to ten** — 1 with 9, 2 with 8, 3 with 7, 4 with 6, 5 with 5. They have to be on the same row, column or diagonal with nothing in between: neighbours count, and so does a line with only gaps in it.',
     },
     {
-      title: 'Every board can be cleared',
-      body: 'The digits are not placed at random: the board is built out of pairs, each placed where it could be seen, so a solution always exists — the order they were placed in, read backwards, is a way through.',
-    },
-    {
-      title: 'Three levels',
-      body: "The board's difficulty is chosen with the other settings. **Easy** starts every pair side by side; **Medium** nests pairs across a row, down a column, corner to corner, or round the join between two rows; **Hard** nests whole rows and whole columns, so the pair at the edge of a band has to wait for the digits around it. Every level can be cleared — the digits are placed in pairs, and the order they were placed in is a way through.",
+      title: 'How the board is dealt',
+      body: "The digits are dealt in valid pairs — some are two of the same number, some add up to ten — and then the digits are shuffled and laid out across the board. So the board is a real mix, and a round can open up or run out of moves: clearing every digit is the aim, not a promise.",
     },
     {
       title: 'The board hangs from the top',
@@ -90,7 +80,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'Rows that join up',
-      body: 'One setting lets the rows read end to end: the last square of a row is next to the first of the row below, so a 5 at the end of one row matches a 5 at the start of the next — and, if the square between them has already been taken, the one after that. In a room it is part of the host\'s rules, and from Medium up a band of the board is always nested across the join, so it is part of the way through.',
+      body: 'One setting lets the rows read end to end: the last square of a row is next to the first of the row below, so a 5 at the end of one row matches a 5 at the start of the next — and, if the square between them has already been taken, the one after that. In a room it is part of the host\'s rules.',
     },
     {
       title: 'Dim mode',
@@ -98,15 +88,15 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: "The board's size",
-      body: 'On the start screen the grid can be **six to nine columns** and **twelve to eighteen rows**, the full board by default: fewer squares means bigger digits, and the grid always fills the screen. Once a game is under way the board keeps its shape, and a room plays the shape the host dealt so everybody\'s board matches.',
+      body: 'The board is **nine columns** wide and **twelve to eighteen rows** tall: fewer rows means bigger digits, and the grid always fills the screen. Choose the rows on the start screen; once a game is under way the board keeps them, and a room plays the rows the host dealt.',
     },
     {
       title: 'New rows, solo',
-      body: 'Playing alone, you can hang fresh rows under the board — but only while the bottom row of the grid is empty. A button appears on that empty row when there is room: a press adds one to four rows, as you choose in the settings, and a board can start a third full to leave room for them. It is a solo-only button: in a room everybody plays the board they were dealt.',
+      body: 'Playing alone, you can hang fresh rows under the board — but only while the bottom row of the grid is empty. A button appears on that empty row when there is room: a press adds one to four rows, as you choose in the settings. It is a solo-only button: in a room everybody plays the board they were dealt.',
     },
     {
       title: 'Playing as a room',
-      body: "Everyone gets the identical board, dealt from a seed and played by the host's rules — the size, the level, whether the rows join end to end and how a taken pair leaves the board — and plays their own copy at their own pace. One point a pair. When everybody has run out of moves the most pairs wins, and a tie goes to whoever ran out first.",
+      body: "Everyone gets the identical board, dealt from a seed and played by the host's rules — the rows, whether the rows join end to end and how a taken pair leaves the board — and plays their own copy at their own pace. One point a pair. When everybody has run out of moves the most pairs wins, and a tie goes to whoever ran out first.",
     },
   ],
   bullets: [
@@ -119,10 +109,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     are how this player likes to play it. */
 const MODE_KEY = 'vibegames.ten.mode';
 const ADD_ROW_KEY = 'vibegames.ten.addRow';
-const DIFFICULTY_KEY = 'vibegames.ten.difficulty';
-const COLUMNS_KEY = 'vibegames.ten.columns';
 const ROWS_KEY = 'vibegames.ten.rows';
-const START_FILL_KEY = 'vibegames.ten.startFill';
 const ROWS_PER_ADD_KEY = 'vibegames.ten.rowsPerAdd';
 const WRAP_ROWS_KEY = 'vibegames.ten.wrapRows';
 
@@ -134,26 +121,9 @@ function savedAddRow(): boolean {
   return localStorage.getItem(ADD_ROW_KEY) !== 'false';
 }
 
-/** The board's shape: one of the four in each direction, or the full board. */
-function savedColumns(): number {
-  const saved = Number(localStorage.getItem(COLUMNS_KEY));
-  return (COLUMN_OPTIONS as readonly number[]).includes(saved) ? saved : COLUMNS;
-}
-
 function savedRows(): number {
   const saved = Number(localStorage.getItem(ROWS_KEY));
   return (ROW_OPTIONS as readonly number[]).includes(saved) ? saved : ROWS;
-}
-
-function savedDifficulty(): TenDifficulty {
-  const saved = localStorage.getItem(DIFFICULTY_KEY);
-  return (DIFFICULTIES as readonly string[]).includes(saved ?? '')
-    ? (saved as TenDifficulty)
-    : 'medium';
-}
-
-function savedStartFill(): TenStartFill {
-  return localStorage.getItem(START_FILL_KEY) === 'third' ? 'third' : 'full';
 }
 
 function savedRowsPerAdd(): number {
@@ -171,11 +141,11 @@ function savedWrapRows(): boolean {
     and the rule it was being played by. */
 interface TenSaved {
   seed: number;
+  /** Kept for a game saved before the board became always nine columns. */
   columns: number;
   rows: number;
   wrapRows: boolean;
   stacks: TenCell[][];
-  difficulty: TenDifficulty;
   score: number;
   finished: boolean;
   cleared: boolean;
@@ -207,12 +177,9 @@ function VibeTen() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<TenMode>(savedMode);
   const [addRowEnabled, setAddRowEnabled] = useState(savedAddRow);
-  const [columns, setColumns] = useState(savedColumns);
   const [rows, setRows] = useState(savedRows);
   /** A solo board already saved in this browser, waiting to be continued. */
   const [savedResume, setSavedResume] = useState<SavedSolo | null>(null);
-  const [difficulty, setDifficulty] = useState<TenDifficulty>(savedDifficulty);
-  const [startFill, setStartFill] = useState<TenStartFill>(savedStartFill);
   const [rowsPerAdd, setRowsPerAdd] = useState(savedRowsPerAdd);
   const [wrapRows, setWrapRows] = useState(savedWrapRows);
 
@@ -224,8 +191,6 @@ function VibeTen() {
       when the room was made — otherwise this device's choices. */
   const shownMode = gameId ? snapshot.mode : mode;
   const shownWrapRows = gameId ? snapshot.wrapRows : wrapRows;
-  const shownDifficulty = gameId ? snapshot.difficulty : difficulty;
-  const shownColumns = gameId ? snapshot.columns : columns;
   const shownRows = gameId ? snapshot.rows : rows;
 
   // The board is a pure function of the seed: dealt once, then held in state so
@@ -234,17 +199,12 @@ function VibeTen() {
   useEffect(() => {
     if (seed == null || dealtSeed.current === seed) return;
     dealtSeed.current = seed;
-    // A room's board is the shape the host dealt; a solo board is this
-    // player's choice. A third-filled board goes with the new-row offer, and a
-    // room always starts full so everybody's board is the same size.
-    const startRows = !gameId && addRowEnabled && startFill === 'third'
-      ? Math.max(1, Math.floor(rows / 3))
-      : rows;
+    // The rows are the host's in a room and this player's solo; the columns are
+    // always nine.
     setBoard(
       gameId
-        ? newBoard(seed, snapshot.columns, snapshot.rows, snapshot.rows,
-            snapshot.wrapRows, snapshot.difficulty)
-        : newBoard(seed, columns, rows, startRows, wrapRows, difficulty),
+        ? newBoard(seed, COLUMNS, snapshot.rows, snapshot.wrapRows)
+        : newBoard(seed, COLUMNS, rows, wrapRows),
     );
     setSelected(null);
     setScore(0);
@@ -271,7 +231,6 @@ function VibeTen() {
       columns: board.columns,
       rows: board.rows,
       wrapRows: board.wrapRows,
-      difficulty: board.difficulty,
       stacks: board.stacks.map((column) => column.map((entry) => ({ ...entry }))),
       score,
       finished,
@@ -380,18 +339,15 @@ function VibeTen() {
     setSoloSeed(data.seed);
     setBoard({
       seed: data.seed,
-      columns: data.columns,
+      columns: data.columns ?? COLUMNS,
       rows: data.rows,
       wrapRows: data.wrapRows,
-      difficulty: data.difficulty,
       stacks: data.stacks,
     });
     // The saved board comes with the rules it was dealt by, and they become the
     // choices for the next one.
     setMode(data.mode);
     setWrapRows(data.wrapRows);
-    setDifficulty(data.difficulty);
-    setColumns(data.columns);
     setRows(data.rows);
     setScore(data.score);
     setFinished(data.finished);
@@ -415,7 +371,7 @@ function VibeTen() {
     withName(() => {
       const newId = makeGameCode();
       const newSeed = randomSeed();
-      void createGame(newId, newSeed, columns, rows, difficulty, wrapRows, mode, playerName(), id)
+      void createGame(newId, newSeed, rows, wrapRows, mode, playerName(), id)
         .then(() => {
           hostedGame(newId);
           setIsHost(true);
@@ -531,28 +487,13 @@ function VibeTen() {
       comes and goes during play. */
   const modeLocked = Boolean(gameId) || (board !== null && !finished && !waitingForHost);
 
-  /** The fill and the rows a press deals are solo choices, and only with the
-      new-row offer on: the rows are what fills a part-filled board. */
+  /** How many rows a press deals is a solo choice, and only with the new-row
+      offer on: the offer is what uses it. */
   const rowSupplyEditable = !gameId && !modeLocked && addRowEnabled;
-
-  function chooseColumns(next: number) {
-    setColumns(next);
-    localStorage.setItem(COLUMNS_KEY, String(next));
-  }
 
   function chooseRows(next: number) {
     setRows(next);
     localStorage.setItem(ROWS_KEY, String(next));
-  }
-
-  function chooseDifficulty(next: TenDifficulty) {
-    setDifficulty(next);
-    localStorage.setItem(DIFFICULTY_KEY, next);
-  }
-
-  function chooseStartFill(next: TenStartFill) {
-    setStartFill(next);
-    localStorage.setItem(START_FILL_KEY, next);
   }
 
   function chooseRowsPerAdd(next: number) {
@@ -690,81 +631,10 @@ function VibeTen() {
             title="The board"
             note={
               shapeLocked
-                ? 'The board is set for this game. Leave it, and choose a size on the start screen before the next one.'
-                : 'Fewer columns and rows means bigger digits. Choose it before you start; in a room everybody plays the shape the host dealt.'
+                ? 'The board is set for this game. Leave it, and choose the rows on the start screen before the next one.'
+                : 'Nine columns, always. Fewer rows means bigger digits; in a room everybody plays the board the host dealt.'
             }
           >
-            <p className="ten__setting-label">Difficulty</p>
-            <div className="game-sheet__choices" role="group" aria-label="Difficulty">
-              {DIFFICULTIES.map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  className="game-sheet__choice"
-                  data-on={shownDifficulty === choice}
-                  aria-pressed={shownDifficulty === choice}
-                  disabled={shapeLocked}
-                  onClick={() => chooseDifficulty(choice)}
-                >
-                  {DIFFICULTY_LABELS[choice].title}
-                </button>
-              ))}
-            </div>
-            <p>{DIFFICULTY_LABELS[shownDifficulty].blurb}</p>
-            <p>
-              Every level can be cleared — the harder ones just hide more pairs behind other
-              digits. In a room everybody plays the level the host dealt.
-            </p>
-
-            <p className="ten__setting-label">Start with</p>
-            <div className="game-sheet__choices" role="group" aria-label="Start with">
-              {(['full', 'third'] as TenStartFill[]).map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  className="game-sheet__choice"
-                  data-on={startFill === choice}
-                  aria-pressed={startFill === choice}
-                  disabled={!rowSupplyEditable}
-                  onClick={() => chooseStartFill(choice)}
-                >
-                  {START_FILL_LABELS[choice].title}
-                </button>
-              ))}
-            </div>
-            <p className="ten__setting-label">Rows per press</p>
-            <div className="game-sheet__choices" role="group" aria-label="Rows per press">
-              {ROWS_PER_ADD_OPTIONS.map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  className="game-sheet__choice"
-                  data-on={rowsPerAdd === choice}
-                  aria-pressed={rowsPerAdd === choice}
-                  disabled={!rowSupplyEditable}
-                  onClick={() => chooseRowsPerAdd(choice)}
-                >
-                  {choice}
-                </button>
-              ))}
-            </div>
-
-            <p className="ten__setting-label">Columns</p>
-            <div className="game-sheet__choices" role="group" aria-label="Columns">
-              {COLUMN_OPTIONS.map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  className="game-sheet__choice"
-                  data-on={shownColumns === choice}
-                  aria-pressed={shownColumns === choice}
-                  disabled={shapeLocked}
-                  onClick={() => chooseColumns(choice)}
-                >
-                  {choice}
-                </button>
-              ))}
-            </div>
             <p className="ten__setting-label">Rows</p>
             <div className="game-sheet__choices" role="group" aria-label="Rows">
               {ROW_OPTIONS.map((choice) => (
@@ -781,6 +651,26 @@ function VibeTen() {
                 </button>
               ))}
             </div>
+
+            <p className="ten__setting-label">Rows per press</p>
+            <div className="game-sheet__choices" role="group" aria-label="Rows per press">
+              {ROWS_PER_ADD_OPTIONS.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="game-sheet__choice"
+                  data-on={rowsPerAdd === choice}
+                  aria-pressed={rowsPerAdd === choice}
+                  disabled={!rowSupplyEditable}
+                  onClick={() => chooseRowsPerAdd(choice)}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+            <p>
+              How many rows a press of the new-row offer hangs under a solo board.
+            </p>
           </SettingsSection>
 
           <SettingsSection

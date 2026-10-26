@@ -564,16 +564,8 @@ struct VibeTenSettingsView: View {
         Binding(get: { model.effectiveWrapRows }, set: { model.wrapRows = $0 })
     }
 
-    private var difficultyBinding: Binding<VibeTenDifficulty> {
-        Binding(get: { model.boardDifficulty }, set: { model.difficulty = $0 })
-    }
-
-    private var columnsBinding: Binding<Int> {
-        Binding(get: { model.boardShape.columns }, set: { model.columns = $0 })
-    }
-
     private var rowsBinding: Binding<Int> {
-        Binding(get: { model.boardShape.rows }, set: { model.rows = $0 })
+        Binding(get: { model.boardRows }, set: { model.rows = $0 })
     }
 
     private var modeSection: some View {
@@ -643,45 +635,10 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("The board")
 
-            Text("Difficulty")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+            Text("Nine columns, always. The rows are the choice.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
-
-            Picker("Difficulty", selection: difficultyBinding) {
-                ForEach(VibeTenDifficulty.allCases) { level in
-                    Text(level.title).tag(level)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(!model.canChooseBoardShape)
-            .accessibilityIdentifier("tenSettings.difficulty")
-
-            Text(model.boardDifficulty.blurb)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Text("Every level can be cleared — the harder ones just hide more pairs behind other digits. In a room everybody plays the level the host dealt.")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.tertiaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Columns")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
-
-            Picker("Columns", selection: columnsBinding) {
-                ForEach(VibeTenBoard.columnOptions, id: \.self) { count in
-                    Text("\(count)").tag(count)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(!model.canChooseBoardShape)
-            .accessibilityIdentifier("tenSettings.columns")
-
-            Text("Rows")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
 
             Picker("Rows", selection: rowsBinding) {
                 ForEach(VibeTenBoard.rowOptions, id: \.self) { count in
@@ -693,38 +650,17 @@ struct VibeTenSettingsView: View {
             .accessibilityIdentifier("tenSettings.rows")
 
             Text(model.canChooseBoardShape
-                 ? "Fewer columns and rows means bigger digits. Choose it before you start; in a room everybody plays the shape the host dealt."
-                 : "The board is set for this game. Leave it, and choose a size on the start screen before the next one.")
+                 ? "Fewer rows means bigger digits. Choose it before you start; in a room everybody plays the board the host dealt."
+                 : "The board is set for this game. Leave it, and choose the rows on the start screen before the next one.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider().padding(.vertical, 2)
 
-            Text("Start with")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(VibeTheme.secondaryText)
-
-            Picker("Start with", selection: $model.startFill) {
-                ForEach(VibeTenStartFill.allCases) { fill in
-                    Text(fill.title).tag(fill)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(!model.canChooseRowSupply)
-            .accessibilityIdentifier("tenSettings.startFill")
-
-            Text(model.canChooseRowSupply
-                 ? "A third of the rows to start with leaves room for the new rows to fill."
-                 : "Solo games with the new-row offer turned on can start with a third of the board.")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.tertiaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
             Text("Rows per press")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
-                .padding(.top, 4)
 
             Picker("Rows per press", selection: $model.rowsPerAdd) {
                 ForEach(VibeTenBoard.rowsPerAddOptions, id: \.self) { count in
@@ -734,6 +670,13 @@ struct VibeTenSettingsView: View {
             .pickerStyle(.segmented)
             .disabled(!model.canChooseRowSupply)
             .accessibilityIdentifier("tenSettings.rowsPerAdd")
+
+            Text(model.canChooseRowSupply
+                 ? "How many rows a press of the new-row offer hangs under the board."
+                 : "Solo games with the new-row offer turned on can choose how many rows a press adds.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(VibeTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

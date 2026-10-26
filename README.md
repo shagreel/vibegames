@@ -776,76 +776,38 @@ top. Two digits pair when they are **equal** or **add up to ten**, on one line �
 a row, a column or a diagonal — with nothing in between. Take a pair and the
 digits below it rise into the space, so every take changes the board.
 
-**Every board can be cleared, at three levels.** The digits are not a random
-shuffle — a random board is usually finishable in no order at all — so the deal
-is built the other way round: the grid is cut into bands of rows, each band is
-filled with pairs nested along its own line, and the pairs are placed one at a
-time, each where it can be seen. The order they were placed in, read backwards,
-is a solution, and the tests replay that order through the real rule.
+**The board is a random deal of real pairs.** First a set of valid pairs is
+drawn — pairs of the same number or pairs that add up to ten — enough of them to
+fill the grid. Then all of those digits are shuffled and laid out, so where a
+pair's two halves end up is chance. The board therefore reads as dealt rather
+than sorted, and a round can open up or run out of moves: clearing every digit is
+the aim, not a promise. The two draws are the deal, and both clients reproduce
+them from the seed with the same generator and the same order.
 
-A band is filled along one of the four lines a pair can be found on — a row, a
-column, a diagonal, or, when the rows join end to end, round the join:
+The settings sheet is down to what a game needs:
 
-- **Easy** uses two-row bands paired side by side along each row. Every pair is
-  already together.
-- **Medium** mixes two-row bands: pairs nested across a row, down a column,
-  corner to corner, and — when the join is on — round it. One band of every
-  medium board is round the join or corner to corner.
-- **Hard** uses taller bands, so a pair can be nested down a whole column as well
-  as across a whole row, and it opens with a two-row band of corner-to-corner
-  pairs (and, with the join on, one of wrap pairs).
-
-Nested pairs are why a board can need clearing before it opens up. A band's
-outer pair is placed first, while the squares it spans are empty; the pairs that
-cover it are inserted between its two halves afterwards, which pushes the earlier
-ones down into place. Read the placements backwards and each pair is uncovered
-exactly by the pairs that went in after it. The board still looks dealt rather
-than sorted — the pair kinds are shuffled, the digits of a pair can be either way
-round, both an equal pair and a pair that adds to ten are guaranteed in every
-deal, and a part-filled start keeps whole bands so it stays clearable.
-
-A room stores its rules with the seed — the shape, the level, the join and the
-pair mode — because every device has to deal the same board *and play it the same
-way*: the host chooses them when the room is made and everybody plays them.
-
-Solo or a room, and the room works the way the other races do: one seed, so
-every device deals the identical 162 digits, and only each player's score
-travels. One point a pair, most pairs wins, a tie goes to whoever ran out of
-moves first. Play until nothing pairs; clear every digit and the board is done.
-
-The settings sheet, with each setting a choice for a game that has not begun:
-
+- **Rows.** Nine columns are fixed; the rows run twelve to eighteen, the full
+  board by default. Fewer rows means bigger digits. The rows are part of the
+  deal, so a room plays the rows the host created it with, and the choice is made
+  on the start screen — a board in play keeps them.
 - **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
   leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
   digit cannot be picked again and a line can be drawn straight through it, so a
   pair can be made across one. A row clears once *every* digit in it has been
   dimmed — the whole row goes at once and everything below it rises a row.
-  In a room it is one of the host's rules, written when the room is made; solo it
-  is a choice for the next game, and a board in play keeps the one it started
-  with.
-- **New rows (solo only).** While no column reaches the bottom of the grid, a
-  button appears *on that empty bottom row* — no strip of its own on screen — and
-  a press hangs one to four fresh rows underneath, as a setting chooses. A board
-  can start full or a third full, and the part-filled start goes with this offer:
-  the rows are what fills it. In a room the board is everybody's, so the offer is
-  never there.
 - **Rows joining end to end.** One setting lets the rows read as a continuous
   line: the last square of a row is next to the first square of the row below,
   so a 5 at the end of a row matches a 5 at the start of the next — and, because
-  a taken digit is not in the way, the one after that too. The deal depends on
-  it, so it is part of the room's rules, not a local preference: with the join on
-  a band of every board from Medium up is nested round it, and the solution uses
-  the join.
-- **The board's size.** Six to nine columns and twelve to eighteen rows, the
-  full board by default; fewer squares means bigger digits, and the grid still
-  fills the screen. It is a choice for a new game: the sheet offers it on the
-  start screen and shows it disabled once a board is in play. The digits are
-  spread as evenly as the shape allows — nine values into `columns × rows`, so a
-  7 × 14 board has eleven of some digits and ten of the rest — and the shape is
-  part of the deal: the seed, the columns and the rows together are what both
-  clients deal from. A room plays the shape the host created it with, which is
-  why the size is written into the room's `meta` next to the seed and can never
-  be changed after the room exists.
+  a taken digit is not in the way, the one after that too.
+- **New rows (solo only).** While no column reaches the bottom of the grid, a
+  button appears *on that empty bottom row* — no strip of its own on screen — and
+  a press hangs one to four fresh rows underneath, as a setting chooses. In a
+  room the board is everybody's, so the offer is never there.
+
+A room stores its rules with the seed — the rows, the join and the pair mode —
+because every device has to deal the same board *and play it the same way*: the
+host chooses them when the room is made and everybody plays them. One point a
+pair, most pairs wins, a tie goes to whoever ran out of moves first.
 
 `VibeTenBoard` is the rules and knows nothing about screens or the database;
 `VibeTenModel` holds a board, a tapped cell and a score, and deals a shared
@@ -853,7 +815,7 @@ board from the room's seed. `web/src/games/ten/engine.ts` mirrors the board,
 including the deal, which is what makes a room's seed light up the same numbers
 in a browser — `Tests/VibeTenBoardTests.swift` and `web/src/test/tenEngine.test.ts`
 both pin themselves to `web/src/games/ten/board.fixtures.json`. That file is
-dumped from the Swift engine, with and without the join, by:
+dumped from the Swift engine, one board per row count, by:
 
 ```sh
 swiftc -O Sources/Model/SeededGenerator.swift \
@@ -1174,6 +1136,7 @@ Tools/make_web_packs.py         Generates the web Vibe Five categories
 Tools/make_web_game_codes.py    Mirrors the code words into the web app
 Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in browsers
 Tools/ten_room_rules_e2e.mjs    A Vibe Ten room played by the host's rules, in browsers
+Tools/ten_settings_e2e.mjs      The Vibe Ten settings sheet and its rows, in a browser
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/words_e2e.mjs             A real game of Word Vibe, in a browser
 Tools/ways_to_help_e2e.mjs      Sends a real note from the ways-to-help page
