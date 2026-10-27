@@ -18,7 +18,7 @@ struct VibeTenScore: Equatable {
 ///       meta/
 ///         seed        1234567890
 ///         rows        18
-///         rowsPerAdd  1
+///         rowsPerAdd  2
 ///         wrap        false
 ///         mode        "remove"
 ///         creator     "Alex"
@@ -30,8 +30,9 @@ struct VibeTenScore: Equatable {
 /// The board is never stored: it is a pure function of the seed and the rules —
 /// the starting rows, whether the rows join end to end, and how a taken pair
 /// leaves the board — so every device — phone or browser — deals the identical
-/// digits and plays them the same way. Adding rows is always allowed, and each
-/// player's board grows on its own device once they do. Those rules are the host's choice, written once when
+/// digits and plays them the same way. A press of the new-row offer reveals the
+/// next two or four rows of the same deal, and each player's board grows on its
+/// own device once they do. Those rules are the host's choice, written once when
 /// the room is made and kept for the room's life; only the scores travel, and
 /// each player writes their own. The board is always nine columns.
 struct VibeTenSnapshot: Equatable {
@@ -40,7 +41,7 @@ struct VibeTenSnapshot: Equatable {
     /// How many rows the board has. Rooms made before the choice existed read
     /// as the full board; the columns are always nine.
     var rows = VibeTenBoard.defaultStartRows
-    /// How many rows one press of the new-row offer adds, also the host's rule.
+    /// How many rows one press of the new-row offer reveals, also the host's rule.
     var rowsPerAdd = VibeTenBoard.minimumRowsPerAdd
     /// Whether the rows join end to end. A room rule, so every device plays the
     /// same board by the same lines.
@@ -75,8 +76,7 @@ struct VibeTenSnapshot: Equatable {
                 rows = rawRows
             }
             if let rawPerAdd = (object["rowsPerAdd"] as? NSNumber)?.intValue,
-               (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
-                   .contains(rawPerAdd) {
+               VibeTenBoard.rowsPerAddOptions.contains(rawPerAdd) {
                 rowsPerAdd = rawPerAdd
             }
             wrapRows = (object["wrap"] as? Bool) ?? false
@@ -231,11 +231,15 @@ final class VibeTenService {
                     creatorName: String,
                     playerID: String) async throws {
         guard let reference = gameReference(gameID) else { return }
+        // A room is made with a press this game can offer: two or four rows.
+        let perAdd = VibeTenBoard.rowsPerAddOptions.contains(rowsPerAdd)
+            ? rowsPerAdd
+            : VibeTenBoard.minimumRowsPerAdd
 
         try await reference.child("meta").setValue([
             "seed": Int(seed),
             "rows": rows,
-            "rowsPerAdd": rowsPerAdd,
+            "rowsPerAdd": perAdd,
             "wrap": wrapRows,
             "mode": mode.rawValue,
             "creator": creatorName,

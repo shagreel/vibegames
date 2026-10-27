@@ -269,7 +269,7 @@ struct VibeTenView: View {
 
     /// Dealing yourself another row, on the empty row it drops into.
     ///
-    /// The bottom row of the grid is dead space whenever it is empty, so the
+    /// The first row under the digits is dead space while it is empty, so the
     /// button goes there rather than in a strip of its own: the board hangs from
     /// the top, and the offer appears on the edge the new rows extend.
     private func addRowButton(width: CGFloat, height: CGFloat) -> some View {
@@ -277,9 +277,7 @@ struct VibeTenView: View {
             Haptics.shared.tap()
             model.addRows()
         } label: {
-            Label(model.boardRowsPerAdd == 1 ? "Add a row"
-                                            : "Add \(model.boardRowsPerAdd) rows",
-                  systemImage: "plus")
+            Label("Add \(model.rowsToAdd) rows", systemImage: "plus")
                 .font(.system(size: max(10, height * 0.34), weight: .bold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
                 .frame(width: width, height: height)
@@ -294,9 +292,7 @@ struct VibeTenView: View {
                 }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(model.boardRowsPerAdd == 1
-                            ? "Add a row at the bottom"
-                            : "Add \(model.boardRowsPerAdd) rows at the bottom")
+        .accessibilityLabel("Add \(model.rowsToAdd) rows at the bottom")
         .accessibilityIdentifier("ten.addRow")
     }
 
@@ -337,6 +333,11 @@ struct VibeTenView: View {
             let gridWidth = cell * CGFloat(columns) + gap * CGFloat(columns - 1)
             let gridHeight = cell * CGFloat(rows) + gap * CGFloat(rows - 1)
 
+            // The offer goes on the first row under the digits, which is the
+            // row a press begins to fill. It is not always the last row of the
+            // grid: a short start leaves several rows empty underneath.
+            let deepest = model.board?.stacks.map(\.count).max() ?? rows
+
             HStack(alignment: .top, spacing: gap) {
                 ForEach(0..<columns, id: \.self) { column in
                     VStack(spacing: gap) {
@@ -349,9 +350,10 @@ struct VibeTenView: View {
                 }
             }
             .frame(width: gridWidth, height: gridHeight)
-            .overlay(alignment: .bottom) {
+            .overlay(alignment: .top) {
                 if model.canAddRow {
                     addRowButton(width: gridWidth, height: cell)
+                        .offset(y: (cell + gap) * CGFloat(deepest))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -637,7 +639,7 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("Adding rows")
 
-            Text("When the bottom row of the grid is empty, a button appears there: tap it to hang fresh rows underneath, and the board grows down into the space. Every game offers it — solo and in a room — up to eighteen rows.")
+            Text("When the bottom of the grid has room and the deal still has rows face down, a button appears there: tap it to reveal the next two or four rows of the same deal, solo or in a room. A full eighteen-row start is the whole deal, so there is nothing more to reveal.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -685,9 +687,9 @@ struct VibeTenSettingsView: View {
             .accessibilityIdentifier("tenSettings.rowsPerAdd")
 
             Text(model.canChooseRowsPerAdd
-                 ? "How many rows a press of the new-row offer hangs under the board."
+                 ? "Two or four rows a press, so the board always holds whole pairs."
                  : model.isShared
-                    ? "In a room the host set how many rows a press adds."
+                    ? "In a room the host set how many rows a press reveals."
                     : "This game is using the number it started with.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)

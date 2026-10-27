@@ -92,53 +92,55 @@ final class VibeTenUITests: XCTestCase {
         tenAttach(app, named: "49b-ten-dim")
     }
 
-    func testANewRowIsOfferedInTheEmptyBottomRowAndHangsOne() throws {
-        // Stated rather than inherited: the settings outlive the app, and an
-        // earlier test dealing itself a smaller start would make this one fail
-        // for no reason.
-        let app = fullBoardApp(extra: [])
+    func testAFullGridHasNoNewRowOffer() throws {
+        let app = fullBoardApp()
+        openSoloBoard(app)
+
+        XCTAssertFalse(app.buttons["ten.addRow"].exists,
+                       "a full grid has nowhere to reveal a row")
+    }
+
+    func testTheNewRowOfferSitsOnTheBottomRowAndRevealsTwoRows() throws {
+        // A sixteen-row start: two rows of the deal are still face down, so the
+        // offer is there from the first moment.
+        let app = boardApp(startRows: 16)
+        openSoloBoard(app)
+        XCTAssertEqual(app.tenCells.count, 144, "nine wide and sixteen tall")
+
+        let addRow = app.buttons["ten.addRow"]
+        XCTAssertTrue(addRow.waitForExistence(timeout: 3),
+                      "the offer belongs on the row the new rows drop into")
+        XCTAssertTrue(addRow.label.contains("2"), "a press reveals two rows, never one")
+
+        // It sits on the first empty row, directly under the digits.
+        XCTAssertEqual(addRow.frame.minY, app.tenDeepestCellBottom + 2, accuracy: 8,
+                       "the offer is on the row under the digits")
+
+        addRow.tap()
+        XCTAssertTrue(waitForCellCount(app, 162, timeout: 3),
+                      "two rows of nine arrive underneath")
+        XCTAssertFalse(addRow.exists, "eighteen rows is the whole deal")
+        tenAttach(app, named: "49c-ten-new-row")
+    }
+
+    func testAPressRevealsTheRowsTheSettingsChoose() throws {
+        let app = boardApp(startRows: 12, extra: ["-vibeten.rowsPerAdd", "4"])
         openSoloBoard(app)
 
         let addRow = app.buttons["ten.addRow"]
-        XCTAssertFalse(addRow.exists, "a full grid has nowhere to put a new row")
-
-        // Every column has to lose its top digit before the top row of the grid
-        // is free, so the takes are worked out from one look at the board and
-        // then replayed — reading all 162 cells between takes is what makes this
-        // test slow, and what made it flaky when a deal had no pair worth taking.
-        let takes = try XCTUnwrap(TenPlan.takesFreeingTheBottomRow(startingFrom: app.tenCells),
-                                  "this deal offers no way to clear the bottom row")
-        for pair in takes {
-            app.tenTap(pair.0)
-            app.tenTap(pair.1)
-        }
-
-        XCTAssertTrue(addRow.waitForExistence(timeout: 3),
-                      "the offer belongs on the row the new rows drop into")
-
-        // It sits on the bottom edge of the grid, under the digits.
-        let board = app.descendants(matching: .any)["ten.board"].firstMatch
-        XCTAssertLessThan(board.frame.maxY - addRow.frame.maxY, 12,
-                          "the offer is at the bottom of the board")
-
-        let before = app.tenCells.count
+        XCTAssertTrue(addRow.waitForExistence(timeout: 3))
+        XCTAssertTrue(addRow.label.contains("4"), "four rows a press, as chosen")
         addRow.tap()
-        XCTAssertEqual(app.tenCells.count, before + 9, "nine new digits arrive underneath")
-        // Keep taking rows while the grid has room. It can stop short of a full
-        // board: the takes that freed the bottom row may have left one column
-        // reaching it, and a row is only added when every column is clear of it.
-        var presses = 0
-        while addRow.exists, presses < 6 {
-            addRow.tap()
-            presses += 1
-            _ = waitForCellCount(app, before + 9 * (presses + 1), timeout: 2)
-        }
-        let cells = app.tenCells
-        let heights = Dictionary(grouping: cells, by: \.column).mapValues { $0.count }
-        let gridHasRoom = heights.values.allSatisfy { $0 < 18 }
-        XCTAssertEqual(addRow.exists, gridHasRoom,
-                       "the offer is there exactly while every column is clear of the last row")
-        tenAttach(app, named: "49c-ten-new-row")
+        XCTAssertTrue(waitForCellCount(app, 144, timeout: 3),
+                      "four rows arrive: sixteen rows of digits")
+
+        // Only two rows of the deal are left, so the offer shrinks to a whole
+        // press of two rather than showing one stranded row.
+        XCTAssertTrue(addRow.waitForExistence(timeout: 3))
+        XCTAssertTrue(addRow.label.contains("2"), "two rows, the last whole press")
+        addRow.tap()
+        XCTAssertTrue(waitForCellCount(app, 162, timeout: 3))
+        XCTAssertFalse(addRow.exists, "the deal is fully shown")
     }
 
     /// The pair setting is a choice for before the game, like the board's size.
@@ -180,7 +182,7 @@ final class VibeTenUITests: XCTestCase {
     /// The settings that remain are the sheet's, and they are for a game that
     /// has not begun.
     func testTheNewRulesAreOnTheSheetAndLockedInAGame() throws {
-        let app = fullBoardApp(extra: ["-vibeten.rowsPerAdd", "1", "-vibeten.wrapRows", "NO"])
+        let app = fullBoardApp(extra: ["-vibeten.rowsPerAdd", "2", "-vibeten.wrapRows", "NO"])
         openLobby(app)
         app.buttons["ten.settings"].tap()
 
@@ -198,9 +200,13 @@ final class VibeTenUITests: XCTestCase {
                        "a board always starts full")
 
         let perPress = app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
-        XCTAssertTrue(perPress.exists, "and how many rows a press deals")
-        for count in [1, 2, 3, 4] {
+        XCTAssertTrue(perPress.exists, "and how many rows a press reveals")
+        for count in [2, 4] {
             XCTAssertTrue(perPress.buttons["\(count)"].exists, "\(count) rows should be on offer")
+        }
+        for count in [1, 3] {
+            XCTAssertFalse(perPress.buttons["\(count)"].exists,
+                           "\(count) rows would strand a digit in its own row")
         }
 
         let wrap = app.switches["tenSettings.wrapRows"].firstMatch
@@ -227,20 +233,20 @@ final class VibeTenUITests: XCTestCase {
 
     /// How many rows a press adds is a start-screen choice, locked in play.
     func testTheRowsPerPressIsChosenBeforeTheGameAndLockedOnceItStarts() throws {
-        let app = fullBoardApp(extra: ["-vibeten.rowsPerAdd", "1"])
+        let app = fullBoardApp(extra: ["-vibeten.rowsPerAdd", "2"])
         openLobby(app)
 
         app.buttons["ten.settings"].tap()
         let perPress = app.segmentedControls["tenSettings.rowsPerAdd"].firstMatch
         XCTAssertTrue(perPress.waitForExistence(timeout: 5),
-                      "the sheet offers how many rows a press adds")
-        for count in [1, 2, 3, 4] {
+                      "the sheet offers how many rows a press reveals")
+        for count in [2, 4] {
             XCTAssertTrue(perPress.buttons["\(count)"].exists, "\(count) rows should be on offer")
         }
         XCTAssertTrue(perPress.isEnabled, "on the start screen it can be chosen")
-        XCTAssertTrue(perPress.buttons["1"].isSelected)
-        perPress.buttons["3"].tap()
-        XCTAssertTrue(perPress.buttons["3"].isSelected)
+        XCTAssertTrue(perPress.buttons["2"].isSelected)
+        perPress.buttons["4"].tap()
+        XCTAssertTrue(perPress.buttons["4"].isSelected)
         app.buttons["tenSettings.done"].tap()
 
         startSolo(app, button: "ten.playSolo")
@@ -256,7 +262,7 @@ final class VibeTenUITests: XCTestCase {
         app.buttons["ten.back"].tap()
         XCTAssertTrue(app.buttons["ten.playSolo"].waitForExistence(timeout: 5))
         app.buttons["ten.settings"].tap()
-        app.segmentedControls["tenSettings.rowsPerAdd"].buttons["1"].tap()
+        app.segmentedControls["tenSettings.rowsPerAdd"].buttons["2"].tap()
         app.buttons["tenSettings.done"].tap()
     }
 
@@ -278,8 +284,14 @@ final class VibeTenUITests: XCTestCase {
     /// An app launched on the full nine-by-eighteen board, whatever the last
     /// run on this simulator left behind.
     private func fullBoardApp(extra: [String] = []) -> XCUIApplication {
+        boardApp(extra: extra)
+    }
+
+    /// An app launched on a board of a stated starting size, so a test does not
+    /// depend on what an earlier run left in the defaults.
+    private func boardApp(startRows: Int = 18, extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-vibeten.startRows", "18"] + extra
+        app.launchArguments += ["-vibeten.startRows", "\(startRows)"] + extra
         app.launch(withName: "Tester")
         return app
     }

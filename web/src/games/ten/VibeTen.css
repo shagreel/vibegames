@@ -56,17 +56,19 @@
   width: 100%;
 }
 
-/* The offer of a new row, on the row it pushes up into: the top row is dead
-   space while it is empty, so nothing else on the screen has to move. */
+/* The offer of a new row, on the row it drops into: the first row under the
+   digits is dead space while it is empty, so nothing else on the screen has to
+   move. `--ten-empty-row` is that row, counted from the top. */
 .ten__add-row {
   position: absolute;
-  /* The bottom edge: the board hangs from the top, so the new rows arrive
-     underneath and this is the empty row they drop into. */
-  bottom: 0;
+  /* The board hangs from the top, so the new rows arrive underneath the digits
+     and this is the first empty row of the grid. */
+  top: calc(var(--ten-empty-row, 0) * (100% + var(--ten-gap))
+            / var(--ten-rows, 18));
   left: 0;
   right: 0;
-  height: calc((100% - (var(--ten-columns, 9) - 1) * var(--ten-gap))
-               / var(--ten-columns, 9));
+  height: calc((100% - (var(--ten-rows, 18) - 1) * var(--ten-gap))
+               / var(--ten-rows, 18));
   display: flex;
   align-items: center;
   justify-content: center;

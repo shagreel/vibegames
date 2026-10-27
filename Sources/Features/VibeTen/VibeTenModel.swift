@@ -61,13 +61,12 @@ final class VibeTenModel: ObservableObject {
     /// The key the setting lived under when it was the board's whole height.
     static let legacyRowsKey = "vibeten.rows"
 
-    /// How many rows one press of the new-row offer adds: one to four.
+    /// How many rows one press of the new-row offer adds: two or four, so a
+    /// press always adds a whole number of pairs.
     @Published var rowsPerAdd: Int {
         didSet {
-            let clamped = min(max(rowsPerAdd, VibeTenBoard.minimumRowsPerAdd),
-                              VibeTenBoard.maximumRowsPerAdd)
-            guard rowsPerAdd == clamped else {
-                rowsPerAdd = clamped
+            guard VibeTenBoard.rowsPerAddOptions.contains(rowsPerAdd) else {
+                rowsPerAdd = VibeTenBoard.minimumRowsPerAdd
                 return
             }
             guard rowsPerAdd != oldValue else { return }
@@ -166,8 +165,9 @@ final class VibeTenModel: ObservableObject {
             ? savedStartRows
             : VibeTenBoard.defaultStartRows
         let savedPerAdd = defaults.integer(forKey: Self.rowsPerAddKey)
-        rowsPerAdd = (VibeTenBoard.minimumRowsPerAdd...VibeTenBoard.maximumRowsPerAdd)
-            .contains(savedPerAdd) ? savedPerAdd : VibeTenBoard.minimumRowsPerAdd
+        rowsPerAdd = VibeTenBoard.rowsPerAddOptions.contains(savedPerAdd)
+            ? savedPerAdd
+            : VibeTenBoard.minimumRowsPerAdd
         wrapRows = defaults.bool(forKey: Self.wrapRowsKey)
     }
 
@@ -261,6 +261,9 @@ final class VibeTenModel: ObservableObject {
         /// The rows the game started with. Absent from a save made before the
         /// board could grow, where `rows` was the start.
         var startRows: Int?
+        /// How many rows of the eighteen-row deal had been shown. Absent from
+        /// older saves; the board falls back to its tallest column.
+        var dealtRows: Int?
         var wrapRows: Bool
         var mode: VibeTenMode
         var cells: [[VibeTenCell]]
@@ -277,6 +280,7 @@ final class VibeTenModel: ObservableObject {
                      columns: board.columns,
                      rows: board.rows,
                      startRows: startRows,
+                     dealtRows: board.dealtRows,
                      wrapRows: board.wrapRows,
                      mode: mode,
                      cells: board.stacks,
@@ -326,7 +330,8 @@ final class VibeTenModel: ObservableObject {
                              seed: saved.seed,
                              columns: saved.columns,
                              rows: VibeTenBoard.maximumRows,
-                             wrapRows: saved.wrapRows)
+                             wrapRows: saved.wrapRows,
+                             dealtRows: saved.dealtRows)
         boardToken += 1
         score = saved.score
         finished = saved.finished
@@ -571,16 +576,24 @@ final class VibeTenModel: ObservableObject {
         reportScore()
     }
 
-    /// Hangs fresh rows under the board: as many as one press deals, or as many
-    /// as the grid still has room for. Solo or in a room — each player's board
-    /// grows on their own device — and only while the bottom of the grid is free.
+    /// How many rows a press would reveal right now: the rule's two or four,
+    /// capped at the even number of undealt rows that still fit. Zero when
+    /// there is no room for the smallest press.
+    var rowsToAdd: Int {
+        guard let board else { return 0 }
+        let cap = min(boardRowsPerAdd, board.roomForRows)
+        guard cap >= VibeTenBoard.minimumRowsPerAdd else { return 0 }
+        return cap % 2 == 0 ? cap : cap - 1
+    }
+
+    /// Reveals the next rows of the same deal under the board: two or four at a
+    /// press. Solo or in a room — each player's board grows on their own device
+    /// — and the digits are the deal's, not freshly drawn, so everybody who has
+    /// revealed the same row sees the same digits.
     func addRows() {
         guard canAddRow, var board else { return }
-        let wanted = min(boardRowsPerAdd, board.roomForRows)
-        for _ in 0..<max(0, wanted) {
-            var digits: [Int] = []
-            for _ in 0..<board.columns { digits.append(Int.random(in: 1...9)) }
-            guard board.addRow(digits) else { break }
+        for _ in 0..<rowsToAdd {
+            guard board.addRow() else { break }
         }
         self.board = board
         selected = nil
@@ -589,9 +602,9 @@ final class VibeTenModel: ObservableObject {
     }
 
     /// Whether the board should offer the new-row button: the round is still
-    /// going and there is room under the digits for another row.
+    /// going and there is room for a press of two or four rows.
     var canAddRow: Bool {
-        !finished && !isWaitingForHost && (board?.canAddRow ?? false)
+        !finished && !isWaitingForHost && rowsToAdd >= VibeTenBoard.minimumRowsPerAdd
     }
 
     /// Tells the room the score. Shared games only — a solo board is nobody

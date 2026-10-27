@@ -18,8 +18,9 @@ import { SeededGenerator, shuffle } from '../../lib/seeded';
 export const COLUMNS = 9;
 export const ROWS = 18;
 export const ROW_OPTIONS = [12, 14, 16, 18] as const;
-/** One press of the new-row offer adds this many rows, at most. */
-export const ROWS_PER_ADD_OPTIONS = [1, 2, 3, 4] as const;
+/** One press of the new-row offer adds this many rows, at most. Two or four, so
+ * a press always reveals whole pairs and never leaves a row stranded. */
+export const ROWS_PER_ADD_OPTIONS = [2, 4] as const;
 
 /** Every unordered pair the deal can draw from: two of the same number, or two
  * that add to ten. A pair of fives is both, so it is listed once. */
@@ -66,6 +67,13 @@ export interface TenBoard {
   /** How many columns and rows: a room is dealt from the seed *and* these. */
   readonly columns: number;
   readonly rows: number;
+  /**
+   * How many rows of the eighteen-row deal have been shown: the starting rows
+   * plus every row the new-row offer has revealed. It is separate from the
+   * column heights because taking pairs shortens columns without winding the
+   * deal back.
+   */
+  readonly dealtRows: number;
   /** Whether the end of a row joins the start of the next. */
   readonly wrapRows: boolean;
   /** The columns, each top-first: the board hangs from the top. */
@@ -123,6 +131,10 @@ export function deal(seed: number, columns: number, rows: number): TenCell[][] {
  * laid out. It makes a board that reads as dealt rather than sorted; it does not
  * promise a way through, so a round can end with no moves left instead of a
  * cleared board.
+ *
+ * The grid is always dealt in full and the board starts showing the top
+ * `startRows` of it. The rows beneath stay face down, and the new-row offer
+ * reveals them one press at a time — the same rows for everyone in a room.
  */
 export function newBoard(
   seed: number,
@@ -130,13 +142,22 @@ export function newBoard(
   startRows = ROWS,
   wrapRows = false,
 ): TenBoard {
+  const start = validStartRows(startRows);
   return {
     seed,
     columns,
     rows: ROWS,
+    dealtRows: start,
     wrapRows,
-    stacks: deal(seed, columns, startRows),
+    stacks: deal(seed, columns, ROWS).map((column) => column.slice(0, start)),
   };
+}
+
+/** A starting row count this game can deal: twelve to eighteen, and even. */
+export function validStartRows(rows: number): number {
+  let value = Math.min(Math.max(Math.round(rows), ROW_OPTIONS[0]), ROWS);
+  if (value % 2 === 1) value -= 1;
+  return value;
 }
 
 export function boardFromStacks(
@@ -146,16 +167,19 @@ export function boardFromStacks(
     columns?: number;
     rows?: number;
     wrapRows?: boolean;
+    dealtRows?: number;
   } = {},
 ): TenBoard {
   const columns = shape.columns ?? COLUMNS;
   const rows = shape.rows ?? ROWS;
   const filled = stacks.slice(0, columns).map((column) => column.slice(0, rows).map(cell));
   while (filled.length < columns) filled.push([]);
+  const tallest = filled.reduce((most, column) => Math.max(most, column.length), 0);
   return {
     seed,
     columns,
     rows,
+    dealtRows: Math.min(rows, Math.max(0, shape.dealtRows ?? tallest)),
     wrapRows: shape.wrapRows ?? false,
     stacks: filled,
   };
@@ -349,22 +373,50 @@ export function remove(board: TenBoard, a: Position, b: Position): TenBoard | nu
 }
 
 /**
- * Rows can be added only while the bottom of the grid is free: the board hangs
- * from the top, so the empty space is underneath it.
+ * Rows can be added only while the bottom of the grid is free and the
+ * eighteen-row deal still has a row to show.
  */
 export function canAddRow(board: TenBoard): boolean {
-  return board.stacks.every((column) => column.length < board.rows);
+  return board.dealtRows < board.rows && board.stacks.every((column) => column.length < board.rows);
 }
 
-/** How many rows would fit under the digits as they are. */
+/** How many undealt rows would fit under the digits as they are. */
 export function roomForRows(board: TenBoard): number {
   const tallest = board.stacks.reduce((most, column) => Math.max(most, column.length), 0);
-  return Math.max(0, board.rows - tallest);
+  return Math.max(0, Math.min(board.rows - tallest, board.rows - board.dealtRows));
 }
 
-/** Hangs a fresh row under the digits. Nothing else moves. */
-export function addRow(board: TenBoard, digits: number[]): TenBoard | null {
-  if (!canAddRow(board) || digits.length < board.columns) return null;
-  const stacks = board.stacks.map((column, index) => [...column, cell(digits[index])]);
-  return { ...board, stacks };
+/**
+ * How many rows a press reveals right now: the rule's two or four, capped at
+ * the even number of undealt rows that still fit. Zero when there is no room
+ * for the smallest press.
+ */
+export function rowsToAdd(board: TenBoard, rowsPerAdd: number): number {
+  const cap = Math.min(rowsPerAdd, roomForRows(board));
+  if (cap < ROWS_PER_ADD_OPTIONS[0]) return 0;
+  return cap % 2 === 0 ? cap : cap - 1;
+}
+
+/**
+ * Reveals the next row of the same eighteen-row deal under the digits.
+ *
+ * Nothing else moves: the board is anchored at the top, so the row simply
+ * extends it downward. The digits are not drawn now — they were part of the
+ * deal all along, which is what makes two players' new rows identical from the
+ * same room seed.
+ */
+export function addRow(board: TenBoard): TenBoard | null {
+  if (!canAddRow(board)) return null;
+  const full = deal(board.seed, board.columns, board.rows);
+  const stacks = board.stacks.map((column, index) => {
+    const next = full[index]?.[board.dealtRows];
+    if (!next) return null;
+    return [...column, cell(next.value)];
+  });
+  if (stacks.some((column) => column === null)) return null;
+  return {
+    ...board,
+    dealtRows: board.dealtRows + 1,
+    stacks: stacks as readonly (readonly TenCell[])[],
+  };
 }

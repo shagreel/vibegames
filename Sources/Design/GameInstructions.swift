@@ -138,11 +138,12 @@ struct GameInstructions {
                         + "next to what."),
             Section(title: "The board's size",
                     body: "The board is **nine columns** wide and starts with **twelve to "
-                        + "eighteen rows** of digits. It always has room for eighteen: the rows "
-                        + "underneath the start are where fresh rows grow into, and fewer "
-                        + "starting rows means bigger digits. Choose the starting rows on the "
-                        + "start screen: once a game is under way the board keeps them. A room "
-                        + "plays the start the host dealt."),
+                        + "eighteen rows** of digits. The deal is always eighteen rows, laid out "
+                        + "at random: the game starts showing the top twelve to eighteen and the "
+                        + "rest wait underneath. Fewer starting rows means bigger digits and more "
+                        + "room to grow. Choose the starting rows on the start screen: once a "
+                        + "game is under way the board keeps them. A room plays the start the "
+                        + "host dealt."),
             Section(title: "Rows that join up",
                     body: "One setting lets the rows read end to end: the last square of a row "
                         + "is next to the first square of the row below it, so a 5 at the end of "
@@ -158,13 +159,17 @@ struct GameInstructions {
                         + "Choose it on the start screen: a game in play keeps the setting it "
                         + "started with, and in a room it is part of the host's rules."),
             Section(title: "New rows, and the end of a round",
-                    body: "You can hang fresh rows of digits under the board — solo or in a "
-                        + "room — while the bottom row of the grid is empty. Rather than taking "
-                        + "up space of its own, the button appears on that empty row; a press "
-                        + "adds one to four rows, as the settings choose. The board always has "
-                        + "room for eighteen. If nothing pairs but there is room, the round is "
-                        + "not over: add a row. It only ends when there is nothing to take and "
-                        + "no room left to add — or, in a solo game, when you clear the board."),
+                    body: "You can reveal the next rows of the same deal under the board — "
+                        + "solo or in a room — while the bottom of the grid has room and the "
+                        + "deal still has rows face down. Rather than taking up space of its "
+                        + "own, the button appears on the empty row; a press reveals two or four "
+                        + "rows, as the settings choose, and everybody in a room sees the same "
+                        + "digits. A full eighteen-row start is the whole deal, so there is "
+                        + "nothing more to reveal; a shorter start keeps the rest underneath. "
+                        + "If nothing pairs but there is room and a row to reveal, the round is "
+                        + "not over: reveal more rows. It only ends when there is nothing to take "
+                        + "and no row left to reveal — or, in a solo game, when you clear the "
+                        + "board."),
             Section(title: "Playing as a room",
                     body: "Everyone gets the identical board, dealt from a seed and played by "
                         + "the host's rules — the starting rows, how many rows a press adds, "
@@ -174,8 +179,8 @@ struct GameInstructions {
                         + "the board wins."),
         ],
         bullets: [
-            Bullet(lead: "Solo", text: "A fresh board whenever you want one, any number of "
-                        + "rows you like, and a new row whenever the bottom of the grid is free."),
+            Bullet(lead: "Solo", text: "A fresh board whenever you want one, at any starting "
+                        + "size, and the rest of the deal whenever the grid has room."),
             Bullet(lead: "Room", text: "The same board for everyone. First to clear it wins."),
         ])
 

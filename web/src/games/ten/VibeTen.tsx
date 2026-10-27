@@ -25,12 +25,11 @@ import {
   ROW_OPTIONS,
   addRow,
   availableMatches,
-  canAddRow,
   cellAt,
   isCleared,
   newBoard,
   remaining,
-  roomForRows,
+  rowsToAdd,
   take,
   type Position,
   type TenBoard,
@@ -88,11 +87,11 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: "The board's size",
-      body: 'The board is **nine columns** wide and starts with **twelve to eighteen rows** of digits. It always has room for eighteen: the rows beneath the start are where fresh rows grow into, and fewer starting rows means bigger digits. Choose the starting rows on the start screen; once a game is under way the board keeps them, and a room plays the start the host dealt.',
+      body: 'The board is **nine columns** wide and starts with **twelve to eighteen rows** of digits. The deal is always eighteen rows, laid out at random: the game starts showing the top twelve to eighteen and the rest wait underneath. Fewer starting rows means bigger digits and more room to grow. Choose the starting rows on the start screen; once a game is under way the board keeps them, and a room plays the start the host dealt.',
     },
     {
       title: 'New rows',
-      body: 'You can hang fresh rows under the board — solo or in a room — but only while the bottom row of the grid is empty. A button appears on that empty row when there is room: a press adds one to four rows, as the settings choose. The board always has room for eighteen rows; when it is full and nothing pairs, the round is over.',
+      body: 'You can reveal the next rows of the same deal under the board — solo or in a room — while the bottom of the grid has room and the deal still has rows face down. A button appears on the empty row: a press reveals two or four rows, as the settings choose, and everybody in a room sees the same digits. A full eighteen-row start is the whole deal, so there is nothing more to reveal; a shorter start keeps the rest underneath. If nothing pairs but there is room and a row to reveal, reveal more rows. The round only ends when there is nothing to take and no row left to reveal — or when you clear the board.',
     },
     {
       title: 'Playing as a room',
@@ -100,7 +99,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
   ],
   bullets: [
-    { lead: 'Solo', text: 'A fresh board whenever you want one, and a new row whenever the top of the grid is free.' },
+    { lead: 'Solo', text: 'A fresh board whenever you want one, at any starting size, and the rest of the deal whenever the grid has room.' },
     { lead: 'Room', text: 'The same board for everyone. First to clear it wins.' },
   ],
 };
@@ -143,6 +142,9 @@ interface TenSaved {
       the start too, which is why `startRows` is optional. */
   rows: number;
   startRows?: number;
+  /** How many rows of the eighteen-row deal had been shown. Absent from older
+      saves; the board falls back to its tallest column. */
+  dealtRows?: number;
   wrapRows: boolean;
   stacks: TenCell[][];
   score: number;
@@ -229,6 +231,7 @@ function VibeTen() {
       columns: board.columns,
       rows: board.rows,
       startRows: rows,
+      dealtRows: board.dealtRows,
       wrapRows: board.wrapRows,
       stacks: board.stacks.map((column) => column.map((entry) => ({ ...entry }))),
       score,
@@ -237,7 +240,7 @@ function VibeTen() {
       mode,
     };
     saveSolo('ten', savedBoard, `${score} pair${score === 1 ? '' : 's'} taken · ${remaining(board)} digits left`);
-  }, [gameId, board, score, finished, cleared, mode]);
+  }, [gameId, board, score, finished, cleared, mode, rows]);
 
   // A room's scores and roster, live. Only the seed rebuilds the board.
   useEffect(() => {
@@ -368,6 +371,10 @@ function VibeTen() {
       seed: data.seed,
       columns: data.columns ?? COLUMNS,
       rows: ROWS,
+      // A save from before the deal frontier was kept falls back to the
+      // tallest column: that is as much of the deal as it had shown.
+      dealtRows: data.dealtRows
+        ?? data.stacks.reduce((most, column) => Math.max(most, column.length), 0),
       wrapRows: data.wrapRows,
       stacks: data.stacks,
     });
@@ -438,6 +445,13 @@ function VibeTen() {
     window.history.replaceState({}, '', '/ten');
   }
 
+  /** Whether the new-row offer is showing: the round is still going and a press
+      of two or four rows still fits. */
+  function hasAddOffer(current: TenBoard | null): boolean {
+    if (current === null) return false;
+    return rowsToAdd(current, shownRowsPerAdd) >= ROWS_PER_ADD_OPTIONS[0];
+  }
+
   function tapCell(position: Position) {
     if (!canPlay || !board) return;
     if (!selected) {
@@ -467,7 +481,7 @@ function VibeTen() {
     // Clearing wins. Running out of moves only loses once there is no room for
     // a new row either; while the grid has space, the board is one to grow.
     const wonNow = isCleared(next);
-    const over = wonNow || (!availableMatches(next).length && !canAddRow(next));
+    const over = wonNow || (!availableMatches(next).length && !hasAddOffer(next));
     if (over) {
       setFinished(true);
       setCleared(wonNow);
@@ -481,16 +495,16 @@ function VibeTen() {
     }
   }
 
-  /** Hangs fresh rows under the digits: as many as a press deals, or as many
-      as the grid still has room for. Solo or in a room — each player's board
-      grows on their own device. */
-  function dealRow() {
+  /** Reveals the next rows of the same deal under the board: two or four at a
+      press. Solo or in a room — each player's board grows on their own device
+      — and the digits are the deal's, not freshly drawn, so everybody who has
+      revealed the same row sees the same digits. */
+  function addRows() {
     if (!board || !canPlay) return;
     let next = board;
-    const wanted = Math.min(shownRowsPerAdd, roomForRows(next));
+    const wanted = rowsToAdd(next, shownRowsPerAdd);
     for (let index = 0; index < wanted; index += 1) {
-      const digits = Array.from({ length: next.columns }, () => 1 + Math.floor(Math.random() * 9));
-      const moved = addRow(next, digits);
+      const moved = addRow(next);
       if (!moved) break;
       next = moved;
     }
@@ -501,7 +515,7 @@ function VibeTen() {
 
     // The new rows may still leave nothing to take, and if they filled the
     // last of the room then the round is over.
-    if (!availableMatches(next).length && !canAddRow(next)) {
+    if (!availableMatches(next).length && !hasAddOffer(next)) {
       setFinished(true);
       setCleared(false);
       if (gameId) {
@@ -629,8 +643,8 @@ function VibeTen() {
             selected={selected}
             onTap={tapCell}
             disabled={!canPlay}
-            onAddRow={!finished && canAddRow(board) ? dealRow : undefined}
-            rowsPerAdd={shownRowsPerAdd}
+            onAddRow={!finished && hasAddOffer(board) ? addRows : undefined}
+            rowsToAdd={rowsToAdd(board, shownRowsPerAdd)}
           />
 
           {finished && (
@@ -716,7 +730,7 @@ function VibeTen() {
               ))}
             </div>
             <p>
-              How many rows a press of the new-row offer hangs under the board.
+              Two or four rows a press, so the board always holds whole pairs.
               In a room it is the host's rule.
             </p>
           </SettingsSection>
@@ -758,10 +772,12 @@ function VibeTen() {
 
           <SettingsSection title="Adding rows">
             <p>
-              When the bottom row of the grid is empty, a button appears there to
-              hang fresh rows underneath. Every game offers it — solo or in a room —
-              up to eighteen rows. When the grid is full and nothing pairs, the
-              round is over.
+              When the bottom of the grid has room and the deal still has rows
+              face down, a button appears there: a press reveals the next two or
+              four rows of the same deal, solo or in a room. A full eighteen-row
+              start is the whole deal, so there is nothing more to reveal. When
+              there is nothing left to take and no row left to reveal, the round
+              is over.
             </p>
           </SettingsSection>
         </GameSettings>
@@ -815,13 +831,16 @@ function Board(props: {
   selected: Position | null;
   onTap: (position: Position) => void;
   disabled: boolean;
-  /** Set when the empty bottom row should carry the new-row button. */
+  /** Set when the first empty row should carry the new-row button. */
   onAddRow?: () => void;
-  /** How many rows one press deals, for the button's words. */
-  rowsPerAdd?: number;
+  /** How many rows one press reveals, for the button's words. */
+  rowsToAdd?: number;
 }) {
   // Row 0 is the top row: the board hangs from the top, so a gap closes upward.
   const rowNumbers = Array.from({ length: props.board.rows }, (_, index) => index);
+  // The first row under the digits: the offer goes there, because that is the
+  // row a press begins to fill. It is not always the last row of the grid.
+  const deepest = props.board.stacks.reduce((most, column) => Math.max(most, column.length), 0);
   return (
     <div
       className="ten__board-wrap"
@@ -830,6 +849,7 @@ function Board(props: {
         // squares, still filling the width it is given.
         ['--ten-columns' as string]: props.board.columns,
         ['--ten-rows' as string]: props.board.rows,
+        ['--ten-empty-row' as string]: deepest,
       } as React.CSSProperties}
     >
       <div className="ten__board" role="grid" aria-label="Vibe Ten board">
@@ -881,14 +901,10 @@ function Board(props: {
           type="button"
           className="ten__add-row"
           onClick={props.onAddRow}
-          aria-label={
-            (props.rowsPerAdd ?? 1) === 1
-              ? 'Add a row at the bottom'
-              : `Add ${props.rowsPerAdd} rows at the bottom`
-          }
+          aria-label={`Add ${props.rowsToAdd ?? 2} rows at the bottom`}
         >
           <span aria-hidden="true">＋</span>{' '}
-          {(props.rowsPerAdd ?? 1) === 1 ? 'Add a row' : `Add ${props.rowsPerAdd} rows`}
+          Add {props.rowsToAdd ?? 2} rows
         </button>
       )}
     </div>

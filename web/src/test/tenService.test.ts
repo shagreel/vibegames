@@ -34,21 +34,21 @@ describe('the room rule', () => {
 
   it('reads the rows per press and the clears out of the room', () => {
     const plain = snapshotFrom({ meta: { seed: 1 } });
-    expect(plain.rowsPerAdd).toBe(1);
+    expect(plain.rowsPerAdd).toBe(2);
     expect(plain.rows).toBe(18);
 
     const room = snapshotFrom({
-      meta: { seed: 1, rows: 12, rowsPerAdd: 3, wrap: true, mode: 'dim' },
+      meta: { seed: 1, rows: 12, rowsPerAdd: 4, wrap: true, mode: 'dim' },
       players: { me: { name: 'Me' } },
       scores: { me: { score: 4, finishedAt: 500, clearedAt: 500 } },
     });
     expect(room.rows).toBe(12);
-    expect(room.rowsPerAdd).toBe(3);
+    expect(room.rowsPerAdd).toBe(4);
     expect(room.wrapRows).toBe(true);
     expect(room.mode).toBe('dim');
     expect(room.scores.me.clearedAt).toBe(500);
 
-    const nonsense = snapshotFrom({ meta: { seed: 1, rowsPerAdd: 9 } });
-    expect(nonsense.rowsPerAdd, 'a press can only add one to four rows').toBe(1);
+    const nonsense = snapshotFrom({ meta: { seed: 1, rowsPerAdd: 3 } });
+    expect(nonsense.rowsPerAdd, 'a press reveals two or four rows').toBe(2);
   });
 });

@@ -778,25 +778,29 @@ the space, so every take changes the board.
 
 **The board is a random deal of real pairs.** First a set of valid pairs is
 drawn — pairs of the same number or pairs that add up to ten — enough of them to
-fill the starting rows. Then all of those digits are shuffled and laid out, so
-where a pair's two halves end up is chance. The board reads as dealt rather than
-sorted, and clearing every digit is the aim, not a promise. Both clients
-reproduce the deal from the seed with the same generator and the same order.
+fill the whole grid, eighteen rows. Then all of those digits are shuffled and
+laid out, so where a pair's two halves end up is chance. The board reads as dealt
+rather than sorted, and clearing every digit is the aim, not a promise. A game
+starts showing the top twelve to eighteen rows of that one deal; the rest wait
+face down underneath. Both clients reproduce the deal from the seed with the same
+generator and the same order.
 
 **The board always has room for eighteen rows of digits.** The settings choose
 how many of them start full: twelve, fourteen, sixteen or eighteen. A solo game
 is won by clearing the board. A round is only lost when nothing pairs *and* there
-is no room left to add a row; while there is room, the new-row offer appears on
-the empty bottom row and the round continues. In a room, the first player to
-clear the board wins, and a clear ends the round for everybody.
+is no room left to reveal a row; while the deal has rows face down and the grid
+has room, the new-row offer appears on the first empty row under the digits and
+the round continues. In a room, the first player to clear the board wins, and a
+clear ends the round for everybody.
 
 The settings sheet, with each setting a choice for a game that has not begun:
 
 - **Start with: 12, 14, 16 or 18 rows.** Nine columns are fixed. Fewer starting
   rows means bigger digits and more room to grow. The starting rows are part of
   the deal, so a room plays the start the host created it with.
-- **Rows per press: 1 to 4.** How much a press of the new-row offer adds. Also
-  the host's rule in a room.
+- **Rows per press: 2 or 4.** How many rows a press of the new-row offer reveals.
+  A press is never a single row, so the deal is never left half shown and no digit
+  is stranded in a row of its own. Also the host's rule in a room.
 - **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
   leaves the taken pair where it is, greyed out, and counts it as gone: a dimmed
   digit cannot be picked again and a line can be drawn straight through it, so a
@@ -807,45 +811,61 @@ The settings sheet, with each setting a choice for a game that has not begun:
   so a 5 at the end of a row matches a 5 at the start of the next — and, because
   a taken digit is not in the way, the one after that too.
 
-**How often is a dealt board solvable?** The deal no longer guarantees it, so
-`Tools/ten_solvability.swift` deals a run of boards and tries to clear each one
-with a player's heuristic — take the pair whose digits have the fewest other
-partners, break ties at random — and reports how many it cleared:
+**How often can a dealt board be cleared?** The deal draws valid pairs and then
+shuffles their digits onto the whole grid, so where a pair's two halves end up is
+chance — and a shorter start shows only the top of the deal, so some digits begin
+with their partner still face down. `Tools/ten_solvability.swift` plays a run of
+boards and tries to clear each one with a player's heuristic — take the pair whose
+digits have the fewest other partners, break ties at random — and, with `--grow`,
+reveals the rest of the deal two rows at a press whenever nothing pairs, exactly
+as the game does:
 
 ```sh
 swiftc -O Sources/Model/SeededGenerator.swift \
   Sources/Features/VibeTen/VibeTenBoard.swift \
   Tools/ten_solvability.swift -o /tmp/ten_solvability
-/tmp/ten_solvability --boards 500
-/tmp/ten_solvability --boards 500 --mode dim --deep 60   # harder boards
+/tmp/ten_solvability --boards 500 --rows 18                # the whole deal on screen
+/tmp/ten_solvability --boards 500 --rows 12,14,16 --grow 2
+/tmp/ten_solvability --boards 500 --mode dim --rows 12,14,16 --grow 2
 ```
 
 A clearance it finds is proof; a board it does not clear within the attempt
-budget is only "not found". On 500 boards at each starting row count in Remove
-mode it cleared every one; at 18 rows so did 5,000 out of 5,000, and at 12 rows
-every board cleared once two stubborn ones were given more attempts. Dim mode is
-much harder: of 500 eighteen-row boards it found a way through 435 within a
-thousand attempts.
+budget is only "not found". Played on the starting rows alone, a short start is
+usually stuck: 28, 32 and 34 of 500 twelve-, fourteen- and sixteen-row starts
+cleared within 300 attempts, because a digit's partner is often in a row that is
+still face down. With the offer on — two rows a press, the default — 500 of 500
+twelve-row and 500 of 500 fourteen-row starts cleared within 300 attempts, and
+498 of 500 sixteen-row starts did. The eighteen-row start is the whole deal, and
+all 500 cleared within 300 attempts at a median of 3. Four rows a press is about
+the same (499 of 500 at 12 and 16 rows), and joined rows help a little (500 of
+500, with fewer attempts).
 
-Retrying those 65 with `--deep` — a one-step lookahead that chooses the pair
-leaving the fewest digits with no visible partner — cleared 61 of them within a
+Dim mode is much harder. Of 500 eighteen-row boards it found a way through 435
+within a thousand attempts, and with the offer on, 337, 355 and 373 of 500
+twelve-, fourteen- and sixteen-row starts cleared within 300 attempts. Retrying
+the 18-row failures with `--deep` — a one-step lookahead that chooses the pair
+leaving the fewest digits with no visible partner — cleared 61 of the 65 within a
 few dozen attempts. Four (seeds 48, 208, 216 and 294) have still not yielded to
 50,000 fast attempts or 2,000 lookahead attempts, and a beam search of width 500
 exhausts without finding a way through; they are "not found", not proven
 impossible. That is the shape of the difficulty: the initial layout's statistics
 do not predict it — match counts, degree counts and digit mixes correlate with
-attempts at about zero — and the trap is a move that strands a digit. Fewer
-starting rows are harder (12 rows sat at 69% within 500 attempts against 80% at
-18), joined rows are much easier, and Dim mode is much harder than Remove.
+attempts at about zero — and the trap is a move that strands a digit.
 
-Adding rows is always offered — solo and in a room — so there is no switch for
-it. Each player's board grows on their own device once a room has started, which
-is why the room stores the starting rows and the rows per press but not a board.
-A room also stores the join and the pair mode, because every device has to deal
-the same board *and play it the same way*: the host chooses them when the room is
-made and everybody plays them. A player's score is their pairs, the running total
-behind the race; the winner is the first clear, written into the room's scores as
-a `clearedAt` that a later score update cannot take away.
+Adding rows is part of the deal, not a separate supply: a press reveals the next
+rows of the same deal — two or four, as the host's setting says, and two when
+only two still fit, so every row of digits arrives with the pairs it was dealt
+with. A shorter start therefore leaves the rest of the deal face down to reveal;
+a full eighteen-row start is the whole deal, so its round simply ends when
+nothing pairs. There is no switch for any of it. Each player's board grows on
+their own device once a room has started, which is why the room stores the
+starting rows and the rows per press but not a board — and why two players who
+reveal the same row see the same digits. A room also stores the join and the pair
+mode, because every device has to deal the same board *and play it the same
+way*: the host chooses them when the room is made and everybody plays them. A
+player's score is their pairs, the running total behind the race; the winner is
+the first clear, written into the room's scores as a `clearedAt` that a later
+score update cannot take away.
 
 `VibeTenBoard` is the rules and knows nothing about screens or the database;
 `VibeTenModel` holds a board, a tapped cell and a score, and deals a shared
@@ -977,12 +997,12 @@ and is worth a few seconds. Beyond that, the only lever is running fewer tests.
   image in the bundle, the file numbering runs in deck order, and no two cards
   read out the same. A card whose artwork had gone missing would render as a
   placeholder, which is the sort of thing that is easy to ship and hard to see.
-- `UITests/` — 47 UI tests driving the real screens in a simulator, attaching a
+- `UITests/` — 68 UI tests driving the real screens in a simulator, attaching a
   screenshot at each step to the result bundle. Four of them exist to shoot the
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**237 tests in all: 190 unit and 47 UI.** They are what the numbers above are
+**392 tests in all: 324 unit and 68 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -1175,7 +1195,7 @@ Tools/make_web_game_codes.py    Mirrors the code words into the web app
 Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in browsers
 Tools/ten_room_rules_e2e.mjs    A Vibe Ten room played by the host's rules, in browsers
 Tools/ten_settings_e2e.mjs      The Vibe Ten settings sheet and its rows, in a browser
-Tools/ten_solvability.swift     Measures how often a dealt Vibe Ten board can be cleared
+Tools/ten_solvability.swift     Clears dealt Vibe Ten boards, revealing the rest of the deal
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/words_e2e.mjs             A real game of Word Vibe, in a browser
 Tools/ways_to_help_e2e.mjs      Sends a real note from the ways-to-help page

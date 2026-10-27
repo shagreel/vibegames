@@ -347,7 +347,7 @@
           },
           "rowsPerAdd": {
             ".write": "!data.exists()",
-            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4 && newData.val() % 1 === 0"
+            ".validate": "newData.isNumber() && (newData.val() === 2 || newData.val() === 4)"
           },
           "difficulty": {
             ".write": "!data.exists()",

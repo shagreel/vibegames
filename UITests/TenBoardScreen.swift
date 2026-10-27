@@ -34,6 +34,16 @@ extension XCUIApplication {
         tenAllCells.filter { !$0.taken }.map { ($0.column, $0.row, $0.value) }
     }
 
+    /// The lowest edge of any digit on the board, in screen coordinates: the
+    /// row under it is the first empty row, and where the new-row offer sits.
+    var tenDeepestCellBottom: CGFloat {
+        descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "ten.cell."))
+            .allElementsBoundByIndex
+            .map { $0.frame.maxY }
+            .max() ?? 0
+    }
+
     /// Taps the digit at a column and row, both counted from zero.
     func tenTap(column: Int, row: Int) {
         let element = descendants(matching: .any)["ten.cell.\(column).\(row)"].firstMatch
@@ -134,11 +144,6 @@ struct TenPlan {
         return true
     }
 
-    /// Whether a new row would fit: no column reaches the top of the grid.
-    var hasRoomForARow: Bool {
-        stacks.allSatisfy { $0.count < 18 }
-    }
-
     /// Every pair on the board, in reading order.
     private var matches: [((column: Int, row: Int), (column: Int, row: Int))] {
         var all: [(column: Int, row: Int)] = []
@@ -173,38 +178,6 @@ struct TenPlan {
             if chosen.count == count { break }
         }
         return chosen
-    }
-
-    /// The pair worth taking to free the bottom of the grid: one that takes from
-    /// a column still reaching the last row, because a digit taken anywhere in a
-    /// column shortens that column by one. Prefers a pair that shortens two.
-    func pairFreeingTheBottomRow() -> ((column: Int, row: Int), (column: Int, row: Int))? {
-        let full = Set((0..<9).filter { stacks[$0].count == 18 })
-        var best: ((column: Int, row: Int), (column: Int, row: Int))?
-        var bestScore = 0
-        for pair in matches {
-            let score = (full.contains(pair.0.column) ? 1 : 0) + (full.contains(pair.1.column) ? 1 : 0)
-            if score > bestScore {
-                bestScore = score
-                best = pair
-            }
-        }
-        return best
-    }
-
-    /// A plan of takes that frees the bottom row of the grid, if the board
-    /// allows it. Nil means the board has no way to shorten a column that still
-    /// reaches the last row — the offer can never appear on this deal.
-    static func takesFreeingTheBottomRow(startingFrom cells: [(column: Int, row: Int, value: Int)],
-                                        limit: Int = 60)
-        -> [((column: Int, row: Int), (column: Int, row: Int))]? {
-        var plan = TenPlan(cells: cells)
-        var takes: [((column: Int, row: Int), (column: Int, row: Int))] = []
-        while !plan.hasRoomForARow, takes.count < limit {
-            guard let pair = plan.pairFreeingTheBottomRow(), plan.take(pair.0, pair.1) else { return nil }
-            takes.append(pair)
-        }
-        return plan.hasRoomForARow ? takes : nil
     }
 }
 

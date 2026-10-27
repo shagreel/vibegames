@@ -52,10 +52,11 @@ struct VibeTenBoard: Equatable {
     static let maximumRows = 18
     static let defaultStartRows = 18
     static let rowOptions = [12, 14, 16, 18]
-    /// One press of the new-row offer adds this many rows, at most.
-    static let rowsPerAddOptions = [1, 2, 3, 4]
-    static let minimumRowsPerAdd = rowsPerAddOptions.first ?? 1
-    static let maximumRowsPerAdd = rowsPerAddOptions.last ?? 1
+    /// One press of the new-row offer adds this many rows: two or four, so the
+    /// board is always left with a whole number of pairs.
+    static let rowsPerAddOptions = [2, 4]
+    static let minimumRowsPerAdd = rowsPerAddOptions.first ?? 2
+    static let maximumRowsPerAdd = rowsPerAddOptions.last ?? 4
 
     /// Every unordered pair the deal can draw from: two of the same number, or
     /// two that add to ten. A pair of fives is both, so it is listed once.
@@ -90,29 +91,38 @@ struct VibeTenBoard: Equatable {
     /// The seed the board was dealt from, for a shared game's report.
     let seed: UInt32
 
+    /// How many rows of the eighteen-row deal have been shown. The starting
+    /// rows, plus every row the new-row offer has revealed. It is separate from
+    /// the column heights because taking pairs shortens columns without winding
+    /// the deal back.
+    private(set) var dealtRows: Int
+
     private(set) var stacks: [[VibeTenCell]]
 
     // MARK: - Building
 
-    /// Deals a board that starts with `startRows` rows of digits.
+    /// Deals the board that starts with `startRows` rows of digits.
     ///
-    /// The board still has room for eighteen rows; the rows the deal fills hang
-    /// from the top, and the space beneath is where the new-row offer grows the
-    /// board. The deal is two steps: a set of valid pairs is drawn — pairs of
-    /// the same number or pairs that add up to ten — enough of them to fill the
-    /// starting rows, and then all of those digits are shuffled and laid out.
-    /// So a pair's two halves land anywhere; the board reads as dealt rather
-    /// than sorted, and clearing every digit is the aim, not a promise.
+    /// The deal is always the **full eighteen rows**, drawn as valid pairs —
+    /// two of the same number or two that add to ten — and shuffled across the
+    /// whole grid. The board starts showing the top `startRows` of them and
+    /// keeps the rest face down beneath. Every row the new-row offer adds is
+    /// just the next row of that same deal: same seed, same pairs, same random
+    /// lay-out, so everybody in a room who reveals the same row gets the same
+    /// digits. Clearing the board is still the aim, not a promise.
     init(seed: UInt32,
          columns: Int = VibeTenBoard.defaultColumns,
          startRows: Int = VibeTenBoard.defaultStartRows,
          wrapRows: Bool = false) {
-        let dealtRows = VibeTenBoard.validStartRows(startRows)
+        let start = VibeTenBoard.validStartRows(startRows)
         self.seed = seed
         self.columns = columns
         self.rows = VibeTenBoard.maximumRows
         self.wrapRows = wrapRows
-        self.stacks = VibeTenBoard.deal(seed: seed, columns: columns, rows: dealtRows)
+        self.dealtRows = start
+        let full = VibeTenBoard.deal(seed: seed, columns: columns,
+                                     rows: VibeTenBoard.maximumRows)
+        self.stacks = full.map { Array($0.prefix(start)) }
     }
 
     /// A starting row count that is a board this game can deal: twelve to
@@ -167,7 +177,8 @@ struct VibeTenBoard: Equatable {
          seed: UInt32 = 0,
          columns: Int = VibeTenBoard.defaultColumns,
          rows: Int = VibeTenBoard.maximumRows,
-         wrapRows: Bool = false) {
+         wrapRows: Bool = false,
+         dealtRows: Int? = nil) {
         self.seed = seed
         self.columns = columns
         self.rows = rows
@@ -176,6 +187,7 @@ struct VibeTenBoard: Equatable {
             column.prefix(rows).map { VibeTenCell(value: $0) }
         }
         while self.stacks.count < columns { self.stacks.append([]) }
+        self.dealtRows = min(rows, max(0, dealtRows ?? (self.stacks.map(\.count).max() ?? 0)))
     }
 
     /// A board of cells, so a test can start with dimmed digits.
@@ -183,13 +195,15 @@ struct VibeTenBoard: Equatable {
          seed: UInt32 = 0,
          columns: Int = VibeTenBoard.defaultColumns,
          rows: Int = VibeTenBoard.maximumRows,
-         wrapRows: Bool = false) {
+         wrapRows: Bool = false,
+         dealtRows: Int? = nil) {
         self.seed = seed
         self.columns = columns
         self.rows = rows
         self.wrapRows = wrapRows
         self.stacks = cells.prefix(columns).map { Array($0.prefix(rows)) }
         while self.stacks.count < columns { self.stacks.append([]) }
+        self.dealtRows = min(rows, max(0, dealtRows ?? (self.stacks.map(\.count).max() ?? 0)))
     }
 
     // MARK: - Reading
@@ -378,25 +392,36 @@ struct VibeTenBoard: Equatable {
 
     // MARK: - Adding rows
 
-    /// Rows can be added only while the bottom of the grid is free: the board
-    /// hangs from the top, so the empty space is underneath it.
+    /// Rows can be added only while the bottom of the grid is free and the
+    /// eighteen-row deal still has a row to show.
     var canAddRow: Bool {
-        stacks.allSatisfy { $0.count < rows }
+        dealtRows < rows && stacks.allSatisfy { $0.count < rows }
     }
 
-    /// How many rows would fit under the digits as they are.
+    /// How many undealt rows would fit under the digits as they are.
     var roomForRows: Int {
-        max(0, rows - (stacks.map(\.count).max() ?? 0))
+        max(0, min(rows - (stacks.map(\.count).max() ?? 0), rows - dealtRows))
     }
 
-    /// Hangs a fresh row under the digits. Nothing else moves: the board is
-    /// anchored at the top, so a new row simply extends it downward.
+    /// Reveals the next row of the same eighteen-row deal under the digits.
+    ///
+    /// Nothing else moves: the board is anchored at the top, so the row simply
+    /// extends it downward. The digits are not drawn now — they were part of
+    /// the deal all along, which is what makes two players' new rows identical
+    /// from the same room seed.
     @discardableResult
-    mutating func addRow(_ digits: [Int]) -> Bool {
-        guard canAddRow, digits.count >= columns else { return false }
+    mutating func addRow() -> Bool {
+        guard canAddRow else { return false }
+        let full = VibeTenBoard.deal(seed: seed, columns: columns, rows: rows)
+        guard (0..<columns).allSatisfy({ full.indices.contains($0)
+                  && full[$0].indices.contains(dealtRows) }) else { return false }
+        // Gather the row before touching the board, so a failed reveal cannot
+        // leave some columns a row longer than the others.
+        let digits = (0..<columns).map { full[$0][dealtRows].value }
         for column in stacks.indices {
             stacks[column].append(VibeTenCell(value: digits[column]))
         }
+        dealtRows += 1
         return true
     }
 }

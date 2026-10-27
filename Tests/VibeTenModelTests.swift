@@ -42,7 +42,7 @@ final class VibeTenModelTests: XCTestCase {
         let model = VibeTenModel()
         XCTAssertEqual(model.mode, .remove)
         XCTAssertEqual(model.startRows, 18, "the board the game shipped with")
-        XCTAssertEqual(model.rowsPerAdd, 1, "one row a press unless it is chosen")
+        XCTAssertEqual(model.rowsPerAdd, 2, "two rows a press unless it is chosen")
     }
 
     /// The starting rows are the setting, so a solo board starts that deep — the
@@ -169,55 +169,56 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertTrue(model.canChoosePairMode, "and leaving the game offers it again")
     }
 
-    func testANewRowIsOfferedOnlyOnceTheBottomRowIsFree() {
+    /// The new-row offer is the rest of the deal: a sixteen-row start has two
+    /// rows still face down, so the offer is there from the first moment and
+    /// gone once the whole deal is on the board.
+    func testTheNewRowOfferIsTheRestOfTheDeal() {
         let model = VibeTenModel()
+        model.startRows = 16
         model.playSolo()
 
-        XCTAssertFalse(model.canAddRow, "the grid starts full, so there is nowhere to hang a row")
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 16)
+        XCTAssertTrue(model.canAddRow, "two rows of the deal are still face down")
+        XCTAssertEqual(model.rowsToAdd, 2)
 
-        XCTAssertTrue(playUntilTheBottomRowIsFree(model), "taking pairs should free the bottom row")
-        XCTAssertTrue(model.canAddRow)
-
-        let height = model.board?.height(ofColumn: 0) ?? 0
         model.addRows()
-        XCTAssertEqual(model.board?.height(ofColumn: 0), height + 1,
-                       "a row of digits arrives underneath, and the board grows")
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 18)
+        XCTAssertEqual(model.board?.dealtRows, 18)
+        XCTAssertFalse(model.canAddRow, "the whole deal is on the board")
     }
 
-    /// Taking pairs until every column has lost a digit, which is what frees the
-    /// bottom row of the grid.
-    private func playUntilTheBottomRowIsFree(_ model: VibeTenModel) -> Bool {
-        var takes = 0
-        while !(model.board?.canAddRow ?? false), takes < 80 {
-            guard let board = model.board, let pair = board.availableMatches().first else { return false }
-            model.tap(pair.0)
-            model.tap(pair.1)
-            takes += 1
-        }
-        return model.board?.canAddRow ?? false
-    }
-
-    /// A press of the offer deals as many rows as the setting says, or as many
-    /// as the grid still has room for.
-    func testAPressDealsTheChosenNumberOfRows() {
+    /// A full eighteen-row start is the whole deal: taking pairs makes room
+    /// underneath, but there are no rows left to reveal.
+    func testAFullStartHasNoRowsLeftToReveal() {
         let model = VibeTenModel()
-        model.rowsPerAdd = 3
         model.playSolo()
-        XCTAssertFalse(model.canAddRow, "a full board has nowhere to put one")
-        guard playUntilTheBottomRowIsFree(model) else {
-            return XCTFail("this deal should free the bottom row")
-        }
+        XCTAssertFalse(model.canAddRow)
 
-        for _ in 0..<2 {
-            guard let board = model.board, board.canAddRow else { break }
-            let before = board.height(ofColumn: 0)
-            let room = board.roomForRows
-            model.addRows()
-            XCTAssertEqual(model.board?.height(ofColumn: 0),
-                           before + min(model.rowsPerAdd, room),
-                           "a press deals the setting, or what is left")
-            model.rowsPerAdd = 4
+        guard let board = model.board, let pair = board.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
         }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        XCTAssertFalse(model.canAddRow, "the deal was already fully shown")
+    }
+
+    /// A press reveals four rows when four fit, and two when only two do: a
+    /// press is never a single row, so the deal is never left half shown.
+    func testAPressRevealsFourRowsOrTheEvenRowsThatFit() {
+        let model = VibeTenModel()
+        model.startRows = 12
+        model.rowsPerAdd = 4
+        model.playSolo()
+
+        XCTAssertEqual(model.rowsToAdd, 4)
+        model.addRows()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 16)
+
+        XCTAssertEqual(model.rowsToAdd, 2, "only two rows of the deal still fit")
+        model.addRows()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 18)
+        XCTAssertEqual(model.rowsToAdd, 0, "no press fits a full grid")
+        XCTAssertFalse(model.canAddRow)
     }
 
     func testTheRowsCanJoinEndToEnd() {
@@ -326,8 +327,9 @@ final class VibeTenSoloProgressTests: XCTestCase {
     /// Losing needs both: nothing left that pairs, and no room for a new row.
     func testNoMovesWithRoomForANewRowIsNotTheEnd() {
         var cells = [[VibeTenCell]](repeating: [], count: 9)
-        // One column, alternating 1 and 2: neighbours never pair.
-        cells[0] = (0..<17).map { VibeTenCell(value: $0 % 2 == 0 ? 1 : 2) }
+        // One column, alternating 1 and 2: neighbours never pair. Two rows
+        // under it are still free, so there is room for a press.
+        cells[0] = (0..<16).map { VibeTenCell(value: $0 % 2 == 0 ? 1 : 2) }
         let saved = VibeTenModel.Saved(seed: 1, columns: 9, rows: 18, startRows: 18,
                                        wrapRows: false, mode: .remove, cells: cells,
                                        score: 0, finished: false, cleared: false,

@@ -45,7 +45,7 @@ final class VibeTenServiceTests: XCTestCase {
         XCTAssertEqual(meta["mode"] as? String, "dim",
                        "and how a pair leaves the board, because a room is played one way")
         XCTAssertEqual(meta["rowsPerAdd"] as? Int, 2,
-                       "and how many rows a press adds, since everybody can grow the board")
+                       "and how many rows a press reveals, since everybody can grow the board")
         XCTAssertNil(meta["columns"], "the columns are always nine, so they are not a setting")
         XCTAssertNil(meta["difficulty"], "there are no levels any more")
 
@@ -62,7 +62,7 @@ final class VibeTenServiceTests: XCTestCase {
         try await service.createGame(gameID: room,
                                      seed: 778,
                                      rows: 12,
-                                     rowsPerAdd: 1,
+                                     rowsPerAdd: 2,
                                      wrapRows: false,
                                      mode: .remove,
                                      creatorName: "Tester",
@@ -100,7 +100,7 @@ final class VibeTenServiceTests: XCTestCase {
         try await service.createGame(gameID: room,
                                      seed: 779,
                                      rows: 18,
-                                     rowsPerAdd: 1,
+                                     rowsPerAdd: 2,
                                      wrapRows: false,
                                      mode: .remove,
                                      creatorName: "Tester",
@@ -136,11 +136,17 @@ final class VibeTenServiceTests: XCTestCase {
         XCTAssertFalse(plain.wrapRows, "the rows do not join unless the host says so")
         XCTAssertEqual(plain.mode, .remove, "and a room without a mode removes")
 
-        let joined = VibeTenSnapshot(meta: ["seed": 1, "rows": 12, "rowsPerAdd": 3,
+        let joined = VibeTenSnapshot(meta: ["seed": 1, "rows": 12, "rowsPerAdd": 4,
                                             "wrap": true, "mode": "dim"],
                                      players: nil, scores: nil)
         XCTAssertEqual(joined.rows, 12)
-        XCTAssertEqual(joined.rowsPerAdd, 3)
+        XCTAssertEqual(joined.rowsPerAdd, 4)
+
+        // A room made when a press could be one, two or three rows still plays:
+        // anything but two or four reads as the smallest press.
+        let oldRoom = VibeTenSnapshot(meta: ["seed": 1, "rowsPerAdd": 3],
+                                      players: nil, scores: nil)
+        XCTAssertEqual(oldRoom.rowsPerAdd, 2)
         XCTAssertTrue(joined.wrapRows)
         XCTAssertEqual(joined.mode, .dim)
 

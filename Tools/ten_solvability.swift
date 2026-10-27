@@ -29,6 +29,9 @@ import Foundation
 ///   --rows LIST      start rows to test (default 12,14,16,18)
 ///   --mode MODE      remove (default) or dim
 ///   --wrap YES|NO    whether the rows join end to end (default NO)
+///   --grow N         when nothing pairs, reveal the rest of the deal two or
+///                    four rows at a press, the way the game does (default 0:
+///                    play only the rows the board starts with)
 ///   --seed N         the solver's own seed (default 1)
 ///   --detail         print the attempts each board needed
 
@@ -43,6 +46,7 @@ struct TenSolvability {
         var rows = VibeTenBoard.rowOptions
         var mode = VibeTenMode.remove
         var wrap = false
+        var grow = 0
         var toolSeed: UInt32 = 1
         var detail = false
 
@@ -63,6 +67,9 @@ struct TenSolvability {
                 mode = VibeTenMode(rawValue: value()) ?? .remove
             case "--wrap":
                 wrap = ["YES", "yes", "true", "1"].contains(value())
+            case "--grow":
+                grow = Int(value()) ?? grow
+                if !VibeTenBoard.rowsPerAddOptions.contains(grow) { grow = 0 }
             case "--seed":
                 toolSeed = UInt32(value()) ?? toolSeed
             case "--detail":
@@ -76,7 +83,8 @@ struct TenSolvability {
         var generator = SeededGenerator(seed: toolSeed)
 
         print("Vibe Ten solvability — \(mode.rawValue) mode, rows "
-              + (wrap ? "joined" : "not joined"))
+              + (wrap ? "joined" : "not joined")
+              + (grow > 0 ? ", revealing \(grow) rows when stuck" : ", no new rows"))
         print("\(boards) boards per row count, up to \(restarts) attempts each")
         print("")
 
@@ -94,13 +102,15 @@ struct TenSolvability {
                 var solvedThisBoard = false
                 var attempt = 0
                 while attempt < restarts && !solvedThisBoard {
-                    solvedThisBoard = solve(board, mode: mode, generator: &generator)
+                    solvedThisBoard = solve(board, mode: mode, grow: grow,
+                                            generator: &generator)
                     attempt += 1
                 }
                 if !solvedThisBoard && deep > 0 {
                     var deepAttempt = 0
                     while deepAttempt < deep && !solvedThisBoard {
                         solvedThisBoard = solveLookingAhead(board, mode: mode,
+                                                            grow: grow,
                                                             generator: &generator)
                         deepAttempt += 1
                     }
@@ -145,6 +155,7 @@ struct TenSolvability {
     /// are legal according to the same rules the game uses.
     static func solve(_ start: VibeTenBoard,
                       mode: VibeTenMode,
+                      grow: Int = 0,
                       generator: inout SeededGenerator) -> Bool {
         var board = start
         var steps = 0
@@ -152,7 +163,10 @@ struct TenSolvability {
 
         while !board.isCleared && steps < limit {
             let matches = board.availableMatches()
-            if matches.isEmpty { return false }
+            if matches.isEmpty {
+                if grow > 0, reveal(&board, rows: grow) { continue }
+                return false
+            }
 
             // How many ways each digit can pair with anything. Taking the pair
             // whose two ends have the fewest alternatives is the player's best
@@ -190,6 +204,7 @@ struct TenSolvability {
     /// the fast player never finds.
     static func solveLookingAhead(_ start: VibeTenBoard,
                                   mode: VibeTenMode,
+                                  grow: Int = 0,
                                   generator: inout SeededGenerator) -> Bool {
         var board = start
         var steps = 0
@@ -197,7 +212,10 @@ struct TenSolvability {
 
         while !board.isCleared && steps < limit {
             let matches = board.availableMatches()
-            if matches.isEmpty { return false }
+            if matches.isEmpty {
+                if grow > 0, reveal(&board, rows: grow) { continue }
+                return false
+            }
 
             var best: [(VibeTenBoard.Position, VibeTenBoard.Position)] = []
             var bestStranded = Int.max
@@ -220,6 +238,19 @@ struct TenSolvability {
         }
 
         return board.isCleared
+    }
+
+    /// Reveals the rows a press would, exactly as the game does: the setting's
+    /// two or four rows, or the even rows that are still free, and nothing at
+    /// all when the grid has no room for a whole press.
+    static func reveal(_ board: inout VibeTenBoard, rows: Int) -> Bool {
+        let room = board.roomForRows
+        let press = min(rows, room)
+        guard press >= VibeTenBoard.minimumRowsPerAdd else { return false }
+        let whole = press % 2 == 0 ? press : press - 1
+        guard whole >= VibeTenBoard.minimumRowsPerAdd else { return false }
+        for _ in 0..<whole where !board.addRow() { return false }
+        return true
     }
 
     /// How many digits have no visible partner at all right now.

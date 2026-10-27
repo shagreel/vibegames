@@ -32,7 +32,7 @@ export interface TenSnapshot {
   /** How many rows start full of digits. The board always has room for
       eighteen; rooms made before the choice existed read as a full start. */
   rows: number;
-  /** How many rows a press of the new-row offer adds, the host's rule. */
+  /** How many rows a press of the new-row offer reveals, the host's rule. */
   rowsPerAdd: number;
   /** Whether the rows join end to end. A room rule, so every device plays the
       same board by the same lines. */
@@ -49,7 +49,7 @@ export const EMPTY_SNAPSHOT: TenSnapshot = {
   exists: false,
   seed: null,
   rows: ROWS,
-  rowsPerAdd: 1,
+  rowsPerAdd: ROWS_PER_ADD_OPTIONS[0],
   wrapRows: false,
   mode: 'remove',
   creator: null,
@@ -66,7 +66,9 @@ export function snapshotFrom(raw: unknown): TenSnapshot {
   const seedValue = typeof meta.seed === 'number' ? Math.trunc(meta.seed) : null;
   const rawRows = typeof meta.rows === 'number' ? Math.trunc(meta.rows) : ROWS;
   const rows = (ROW_OPTIONS as readonly number[]).includes(rawRows) ? rawRows : ROWS;
-  const rawPerAdd = typeof meta.rowsPerAdd === 'number' ? Math.trunc(meta.rowsPerAdd) : 1;
+  const rawPerAdd = typeof meta.rowsPerAdd === 'number'
+    ? Math.trunc(meta.rowsPerAdd)
+    : ROWS_PER_ADD_OPTIONS[0];
   const rowsPerAdd = (ROWS_PER_ADD_OPTIONS as readonly number[]).includes(rawPerAdd)
     ? rawPerAdd
     : ROWS_PER_ADD_OPTIONS[0];
@@ -155,11 +157,14 @@ export async function createGame(
 ): Promise<void> {
   // One write: the rules only let a room be created while it does not exist, so
   // the meta and the creator's place go in together.
+  const perAdd = (ROWS_PER_ADD_OPTIONS as readonly number[]).includes(rowsPerAdd)
+    ? rowsPerAdd
+    : ROWS_PER_ADD_OPTIONS[0];
   await set(ref(database, `ten/${gameId}`), {
     meta: {
       seed,
       rows,
-      rowsPerAdd,
+      rowsPerAdd: perAdd,
       wrap: wrapRows,
       mode,
       creator: creatorName,

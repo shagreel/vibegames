@@ -3,9 +3,10 @@ import XCTest
 /// Screenshots of Vibe Ten for the landing page.
 ///
 /// Three screens, one launch each: a board part-played, the same game in dim
-/// mode with the taken digits still on it, and the new-row offer sitting in the
-/// empty top row. The third one needs the grid's top row cleared, which is the
-/// only way the offer appears — the same pairs a player would have to take.
+/// mode with the taken digits still on it, and the new-row offer sitting on the
+/// first empty row under the digits. The third starts at sixteen rows, because
+/// the offer is the rest of the deal and a full start has nothing left to
+/// reveal.
 ///
 /// These are the slow tests, so they are skipped by the default run and only
 /// happen with `Tools/test.sh --all`, which is what to use before deploying the
@@ -62,24 +63,24 @@ final class VibeTenScreenshots: XCTestCase {
 
     /// The offer of a new row, on the row it pushes up into.
     private func newRowOffer(appearance: String) throws {
-        let app = launch(appearance: appearance, extra: ["-vibeten.startRows", "18"])
+        // Two rows of the deal still face down, so the offer is on screen
+        // straight away.
+        let app = launch(appearance: appearance, startRows: 16)
         openSoloBoard(app)
 
         let addRow = app.buttons["ten.addRow"]
-        let takes = try XCTUnwrap(TenPlan.takesFreeingTheBottomRow(startingFrom: app.tenCells),
-                                  "this deal offers no way to clear the bottom row")
-        for pair in takes { app.tenTap(pair) }
         XCTAssertTrue(addRow.waitForExistence(timeout: 3),
-                      "the bottom row should be free after \(takes.count) pairs")
+                      "a sixteen-row start has room for a press")
         tenAttach(app, named: "ten-new-row")
         app.terminate()
     }
 
-    private func launch(appearance: String, extra: [String] = []) -> XCUIApplication {
+    private func launch(appearance: String, startRows: Int = 18,
+                        extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         // The full board, whatever shape a previous run left in the defaults.
         app.launchArguments += ["-vibegames.appearance", appearance,
-                                "-vibeten.startRows", "18"] + extra
+                                "-vibeten.startRows", "\(startRows)"] + extra
         app.launch(withName: "Tester")
         return app
     }

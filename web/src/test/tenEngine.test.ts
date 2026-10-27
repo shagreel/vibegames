@@ -11,6 +11,7 @@ import {
   boardFromStacks,
   canAddRow,
   canMatch,
+  deal,
   heightOf,
   hasMoves,
   isCleared,
@@ -20,6 +21,7 @@ import {
   remaining,
   remove,
   roomForRows,
+  rowsToAdd,
   take,
   valueAt,
   values,
@@ -37,7 +39,7 @@ import {
 const board = (
   columns: number[][],
   seed = 0,
-  shape: { columns?: number; rows?: number } = {},
+  shape: { columns?: number; rows?: number; dealtRows?: number } = {},
 ) => boardFromStacks(columns, seed, shape);
 
 const cell = (value: number): TenCell => ({ value, dimmed: false });
@@ -129,17 +131,24 @@ describe('the deal', () => {
 
   it('draws valid pairs and lays their digits out', () => {
     for (const seed of [1, 7, 1234, 999, 424242]) {
-      for (const rows of ROW_OPTIONS) {
-        const count = (COLUMNS * rows) / 2;
-        const pairs = pairChoices(seed, count);
-        expect(pairs).toHaveLength(count);
-        pairs.forEach(([first, second]) => expect(valuesPair(first, second)).toBe(true));
+      const count = (COLUMNS * ROWS) / 2;
+      const pairs = pairChoices(seed, count);
+      expect(pairs).toHaveLength(count);
+      pairs.forEach(([first, second]) => expect(valuesPair(first, second)).toBe(true));
 
-        const digits = values(newBoard(seed, COLUMNS, rows)).flat().sort((a, b) => a - b);
-        const dealt = pairs
-          .reduce<number[]>((all, [first, second]) => all.concat([first, second]), [])
-          .sort((a, b) => a - b);
-        expect(digits).toEqual(dealt);
+      const full = deal(seed, COLUMNS, ROWS).map((column) => column.map((entry) => entry.value));
+      const digits = full.flat().sort((a, b) => a - b);
+      const dealt = pairs
+        .reduce<number[]>((all, [first, second]) => all.concat([first, second]), [])
+        .sort((a, b) => a - b);
+      expect(digits).toEqual(dealt);
+
+      // A starting board is the top of that whole deal, not a shorter deal of
+      // its own: the rows underneath are already drawn and wait face down.
+      for (const rows of ROW_OPTIONS) {
+        expect(values(newBoard(seed, COLUMNS, rows))).toEqual(
+          full.map((column) => column.slice(0, rows)),
+        );
       }
     }
   });
@@ -232,18 +241,61 @@ describe('dimming', () => {
   });
 });
 
-describe('adding a row', () => {
-  it('hangs the new row under the digits without moving them', () => {
-    const grid = board([[1], [2], [3], [4], [5], [6], [7], [8], [9]]);
+describe('adding rows', () => {
+  it('reveals the next row of the same deal under the digits', () => {
+    const grid = newBoard(1234, COLUMNS, 12);
+    const full = deal(1234, COLUMNS, ROWS);
     expect(canAddRow(grid)).toBe(true);
-    const next = addRow(grid, [9, 8, 7, 6, 5, 4, 3, 2, 1])!;
-    expect(valueAt(next, { column: 0, row: 0 })).toBe(1);
-    expect(valueAt(next, { column: 0, row: 1 })).toBe(9);
+    const next = addRow(grid)!;
+    expect(heightOf(next, 0)).toBe(13);
+    for (let column = 0; column < COLUMNS; column += 1) {
+      expect(valueAt(next, { column, row: 12 })).toBe(full[column][12].value);
+      // Nothing above moved: the row hangs under the digits.
+      expect(valueAt(next, { column, row: 0 })).toBe(valueAt(grid, { column, row: 0 }));
+    }
+    expect(next.dealtRows, 'the deal frontier moves on by a row').toBe(13);
+  });
+
+  it('keeps revealing the same deal, press after press', () => {
+    let grid = newBoard(99, COLUMNS, 14);
+    const full = deal(99, COLUMNS, ROWS);
+    for (let press = 0; press < 2; press += 1) {
+      grid = addRow(addRow(grid)!)!;
+    }
+    expect(grid.dealtRows).toBe(18);
+    for (let column = 0; column < COLUMNS; column += 1) {
+      expect(grid.stacks[column].map((entry) => entry.value))
+        .toEqual(full[column].map((entry) => entry.value));
+    }
   });
 
   it('is refused while a column reaches the last row', () => {
     expect(canAddRow(newBoard(7))).toBe(false);
-    expect(addRow(newBoard(7), Array(COLUMNS).fill(1))).toBeNull();
+    expect(addRow(newBoard(7))).toBeNull();
+  });
+
+  it('offers whole presses only: two, four, and nothing stranded', () => {
+    const grid = newBoard(1234, COLUMNS, 12);
+    expect(rowsToAdd(grid, 2)).toBe(2);
+    expect(rowsToAdd(grid, 4)).toBe(4);
+
+    // Three rows left is one press of two; a single row cannot be revealed
+    // without leaving a digit with no pair in its row.
+    const threeLeft = boardFromStacks(
+      [[1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6]],
+      0,
+      { rows: 18, dealtRows: 15 },
+    );
+    expect(roomForRows(threeLeft)).toBe(3);
+    expect(rowsToAdd(threeLeft, 4)).toBe(2);
+
+    const oneLeft = boardFromStacks(
+      [[1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6]],
+      0,
+      { rows: 18, dealtRows: 17 },
+    );
+    expect(roomForRows(oneLeft)).toBe(1);
+    expect(rowsToAdd(oneLeft, 4)).toBe(0);
   });
 });
 
@@ -275,25 +327,30 @@ describe('the board', () => {
   it('grows from the starting rows up to eighteen', () => {
     let grid = newBoard(1234, COLUMNS, 12);
     expect(canAddRow(grid)).toBe(true);
-    expect(roomForRows(grid)).toBe(6);
+    expect(roomForRows(grid), 'six undealt rows still fit').toBe(6);
     let guard = 0;
     while (canAddRow(grid) && guard < 10) {
-      grid = addRow(grid, Array(COLUMNS).fill(1))!;
+      grid = addRow(grid)!;
       guard += 1;
     }
     expect(heightOf(grid, 0)).toBe(ROWS);
+    expect(grid.dealtRows).toBe(ROWS);
     expect(canAddRow(grid)).toBe(false);
   });
 
   it('counts the top row of its own shape, not of the full board', () => {
     const cells = [[1, 9], [9, 8], [2, 7], [8, 6], [3, 5], [7, 4]];
     const full = board(cells, 0, { columns: 6, rows: 2 });
+    expect(full.dealtRows, 'a shape with no frontier filled its rows').toBe(2);
     expect(canAddRow(full)).toBe(false);
 
     const shorter = board(cells, 0, { columns: 6, rows: 3 });
     expect(canAddRow(shorter)).toBe(true);
-    const next = addRow(shorter, [1, 2, 3, 4, 5, 6])!;
+    expect(roomForRows(shorter)).toBe(1);
+    const next = addRow(shorter)!;
     expect(next.stacks[0]).toHaveLength(3);
+    expect(valueAt(next, { column: 0, row: 2 }))
+      .toBe(deal(0, 6, 3)[0][2].value);
     expect(next.columns).toBe(6);
     expect(next.rows).toBe(3);
   });
@@ -333,7 +390,7 @@ describe('the rows joining end to end', () => {
       [cell(5)],
     ];
     stacks[0][1] = { value: 9, dimmed: true };
-    const wrapped = { seed: 0, columns: 9, rows: 2, wrapRows: true, stacks };
+    const wrapped = { seed: 0, columns: 9, rows: 2, dealtRows: 2, wrapRows: true, stacks };
     expect(canMatch(wrapped, { column: 8, row: 0 }, { column: 1, row: 1 })).toBe(true);
 
     const blocked = boardFromStacks(columns, 0, { columns: 9, rows: 2, wrapRows: true });
