@@ -116,71 +116,50 @@ struct GameInstructions {
         game: .ten,
         name: "Vibe Ten",
         identifier: "ten.instructions",
-        intro: "Take pairs of digits off the board until nothing pairs any more. "
-             + "Clear every digit and you have cleared the board.",
+        intro: "Take pairs of numbers off the board until all the numbers have been removed.",
         sections: [
             Section(title: "What pairs",
-                    body: "Two digits pair if they are **equal**, or if they **add up to ten** — "
+                    body: "Two numbers match if they are **the same**, or if they **add up to ten** — "
                         + "1 with 9, 2 with 8, 3 with 7, 4 with 6, 5 with 5. "
                         + "They have to be on the same row, column or diagonal, with nothing "
                         + "in between: neighbours count, and so does a line with only gaps "
                         + "in it."),
-            Section(title: "How the board is dealt",
-                    body: "The digits are dealt in valid pairs — some are two of the same "
-                        + "number, some add up to ten — and then the digits are shuffled and "
-                        + "laid out across the board. So the board is a real mix, and a round "
-                        + "can open up or run out of moves: clearing every digit is the aim, "
-                        + "not a promise."),
-            Section(title: "The board hangs from the top",
-                    body: "The digits hang from the top row and a gap closes **upward**: take a "
-                        + "pair and the digits below it rise into the space. Half the game is "
-                        + "deciding which pair to take first, because every take changes what is "
-                        + "next to what."),
-            Section(title: "The board's size",
-                    body: "The board is **nine columns** wide and starts with **twelve to "
-                        + "eighteen rows** of digits. The first deal is always eighteen rows, laid "
-                        + "out at random: the game starts showing the top twelve to eighteen and "
-                        + "the rest wait underneath. After that the deal keeps going, so a game "
-                        + "that clears rows can pass eighteen. Fewer starting rows means bigger "
-                        + "digits and more room to grow. Choose the starting rows on the start "
-                        + "screen: once a game is under way the board keeps them. A room plays "
-                        + "the start the host dealt."),
             Section(title: "Rows that join up",
-                    body: "One setting lets the rows read end to end: the last square of a row "
+                    body: "You can enable a setting that lets the rows connect end to end: the last square of a row "
                         + "is next to the first square of the row below it, so a 5 at the end of "
-                        + "one row matches a 5 at the start of the next — and, if the square "
-                        + "between them has already been taken, the one after that. In a room "
-                        + "it is part of the host's rules."),
+                        + "one row matches a 5 at the start of the next — and, if the squares "
+                        + "between them have already been taken, the one after that can match."),
+            Section(title: "The board",
+                    body: "The board is **nine columns** wide and starts with **twelve to "
+                        + "eighteen rows** of numbers. The strategy of the game is "
+                        + "deciding which pair to take first, because every pair you remove "
+                        + "changes what is available."),
             Section(title: "Dim mode",
-                    body: "In the game settings, **Dim** leaves a taken pair on the board, "
-                        + "greyed out, instead of removing it. A dimmed digit is gone as far as "
+                    body: "In standard play, when you make a pair, the pair is removed immediately "
+                        + "from the board and all the pieces below the pair rise up. In the game settings, "
+                        + "there is a **Dim** option that leaves a taken pair on the board, "
+                        + "greyed out, instead of removing it. A dimmed number is gone as far as "
                         + "the rules are concerned: it cannot be picked again, and a pair can be "
-                        + "made straight across it. When every digit in a row has been dimmed, "
-                        + "the whole row clears at once and everything below it rises one row. "
-                        + "Choose it on the start screen: a game in play keeps the setting it "
-                        + "started with, and in a room it is part of the host's rules."),
-            Section(title: "New rows, and the end of a round",
-                    body: "You can reveal the next rows of the deal under the board — solo or "
-                        + "in a room — while the bottom of the grid has room. Rather than taking "
-                        + "up space of its own, the button appears on the empty row; a press "
-                        + "reveals two or four rows, as the settings choose, and everybody in a "
-                        + "room sees the same digits. The deal does not stop at eighteen: once "
-                        + "cleared rows leave room, a press reveals the next rows of the same "
-                        + "seed, so a long game keeps going. If nothing pairs but there is room, "
-                        + "the round is not over: reveal more rows. It only ends when there is "
-                        + "nothing to take and no room left to reveal — or, in a solo game, when "
-                        + "you clear the board."),
+                        + "made straight across it. When every number in a row has been dimmed, "
+                        + "the whole row clears at once and everything below it rises one row."),
+            Section(title: "New rows",
+                    body: "You can reveal more rows of numbers at the bottom of the board "
+                        + "by pressing the **Add rows** button. During game setup, you can choose "
+                        + "whether the button reveals two or four rows."),
+            Section(title: "Winning",
+                    body: "Continue removing pairs until you have removed them all. If you are able "
+                        + "to remove all the numbers, you win. If you cannot remove all the numbers "
+                        + "and you can no longer add rows, you lose. You can retry the board and see if "
+                        + "you can remove the pairs differently and win."),
             Section(title: "Playing as a room",
                     body: "Everyone gets the identical board, dealt from a seed and played by "
-                        + "the host's rules — the starting rows, how many rows a press adds, "
+                        + "the host's chosen options — the starting rows, how many rows a press adds, "
                         + "whether the rows join end to end, and how a taken pair leaves the "
-                        + "board. You each take pairs at your own pace on your own device, and "
-                        + "your own board grows when you add to it. The first person to clear "
-                        + "the board wins."),
+                        + "board. You each take pairs at your own pace on your own device. The first "
+                        + "person to clear the board wins."),
         ],
         bullets: [
-            Bullet(lead: "Solo", text: "A fresh board whenever you want one, at any starting "
-                        + "size, and the next rows whenever the grid has room."),
+            Bullet(lead: "Solo", text: "A fresh board whenever you want one. Play at your own pace."),
             Bullet(lead: "Room", text: "The same board for everyone. First to clear it wins."),
         ])
 

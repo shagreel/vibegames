@@ -635,22 +635,11 @@ struct VibeTenSettingsView: View {
         }
     }
 
-    private var addRowSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SettingsSectionTitle("Adding rows")
-
-            Text("When the bottom of the grid has room, a button appears there: tap it to reveal the next two or four rows of the same deal, solo or in a room. The deal does not stop at eighteen — once cleared rows leave room, the next rows come from the same seed.")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(VibeTheme.tertiaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     private var shapeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("The board")
 
-            Text("Nine columns, always. Choose how many rows start full; the grid holds eighteen rows at a time.")
+            Text("Choose how many rows to start with; the grid holds only eighteen rows at a time.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -665,19 +654,19 @@ struct VibeTenSettingsView: View {
             .accessibilityIdentifier("tenSettings.rows")
 
             Text(model.canChooseStartRows
-                 ? "Fewer starting rows means bigger digits and more room to grow. Choose it before you start; in a room everybody plays the start the host dealt."
-                 : "The board is set for this game. Leave it, and choose the starting rows on the start screen before the next one.")
+                 ? "Fewer starting rows means more room to grow. In a group game everybody starts with the same number of rows."
+                 : "The board is set for this game. Start a new game to change the starting rows.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider().padding(.vertical, 2)
 
-            Text("Rows per press")
+            Text("Rows to add")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
 
-            Picker("Rows per press", selection: rowsPerAddBinding) {
+            Picker("Rows to add", selection: rowsPerAddBinding) {
                 ForEach(VibeTenBoard.rowsPerAddOptions, id: \.self) { count in
                     Text("\(count)").tag(count)
                 }
@@ -687,10 +676,10 @@ struct VibeTenSettingsView: View {
             .accessibilityIdentifier("tenSettings.rowsPerAdd")
 
             Text(model.canChooseRowsPerAdd
-                 ? "Two or four rows a press, so the board always holds whole pairs."
+                 ? "Add two or four rows at a time."
                  : model.isShared
-                    ? "In a room the host set how many rows a press reveals."
-                    : "This game is using the number it started with.")
+                    ? "In a group game the host sets how many rows are revealed at a time."
+                    : "Add two or four rows at a time.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -703,7 +692,6 @@ struct VibeTenSettingsView: View {
                 VStack(alignment: .leading, spacing: 26) {
                     shapeSection
                     modeSection
-                    addRowSection
                     GameSettingsSections()
                 }
                 .padding(20)

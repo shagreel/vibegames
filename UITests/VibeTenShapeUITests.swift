@@ -59,7 +59,7 @@ final class VibeTenShapeUITests: XCTestCase {
         let lockedRows = app.segmentedControls["tenSettings.rows"].firstMatch
         XCTAssertTrue(lockedRows.waitForExistence(timeout: 5))
         XCTAssertFalse(lockedRows.isEnabled, "a started game keeps its board")
-        XCTAssertTrue(app.staticTexts["The board is set for this game. Leave it, and choose the starting rows on the start screen before the next one."]
+        XCTAssertTrue(app.staticTexts["The board is set for this game. Start a new game to change the starting rows."]
                         .waitForExistence(timeout: 3),
                       "and the sheet says why")
         tenAttach(app, named: "49f-ten-rows-locked")

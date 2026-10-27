@@ -110,7 +110,7 @@ check(state.modeDisabled === false, 'the host can choose the pair mode before th
 check(state.wrapDisabled === false, 'and whether the rows join');
 await choose(host, 'When a pair is matched', 'Dim');
 await choose(host, 'Rows', 12);
-await choose(host, 'Rows per press', 2);
+await choose(host, 'Rows to add', 2);
 await host.evaluate(() => {
   const toggle = [...document.querySelectorAll('.game-sheet__switch')]
     .find((node) => node.getAttribute('aria-label') === 'Rows join end to end');

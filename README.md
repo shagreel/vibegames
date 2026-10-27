@@ -799,7 +799,7 @@ The settings sheet, with each setting a choice for a game that has not begun:
 - **Start with: 12, 14, 16 or 18 rows.** Nine columns are fixed. Fewer starting
   rows means bigger digits and more room to grow. The starting rows are part of
   the deal, so a room plays the start the host created it with.
-- **Rows per press: 2 or 4.** How many rows a press of the new-row offer reveals.
+- **Rows to add: 2 or 4.** How many rows a press of the new-row offer reveals.
   A press is never a single row, so the deal is never left half shown and no digit
   is stranded in a row of its own. Also the host's rule in a room.
 - **When a pair is matched: Remove or Dim.** Remove is the game above. Dim
