@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fixtures from '../games/ten/board.fixtures.json';
+import streamFixture from '../games/ten/stream.fixtures.json';
 import {
   COLUMNS,
   PAIR_OPTIONS,
@@ -21,6 +22,7 @@ import {
   remaining,
   remove,
   roomForRows,
+  rowDigits,
   rowsToAdd,
   take,
   valueAt,
@@ -279,20 +281,20 @@ describe('adding rows', () => {
     expect(rowsToAdd(grid, 2)).toBe(2);
     expect(rowsToAdd(grid, 4)).toBe(4);
 
-    // Three rows left is one press of two; a single row cannot be revealed
+    // Three rows of room is one press of two; a single row cannot be revealed
     // without leaving a digit with no pair in its row.
     const threeLeft = boardFromStacks(
-      [[1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6]],
+      [Array.from({ length: 15 }, (_, index) => (index % 9) + 1)],
       0,
-      { rows: 18, dealtRows: 15 },
+      { rows: 18 },
     );
     expect(roomForRows(threeLeft)).toBe(3);
     expect(rowsToAdd(threeLeft, 4)).toBe(2);
 
     const oneLeft = boardFromStacks(
-      [[1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6]],
+      [Array.from({ length: 17 }, (_, index) => (index % 9) + 1)],
       0,
-      { rows: 18, dealtRows: 17 },
+      { rows: 18 },
     );
     expect(roomForRows(oneLeft)).toBe(1);
     expect(rowsToAdd(oneLeft, 4)).toBe(0);
@@ -350,9 +352,46 @@ describe('the board', () => {
     const next = addRow(shorter)!;
     expect(next.stacks[0]).toHaveLength(3);
     expect(valueAt(next, { column: 0, row: 2 }))
-      .toBe(deal(0, 6, 3)[0][2].value);
+      .toBe(rowDigits(0, 6, 2)[0]);
     expect(next.columns).toBe(6);
     expect(next.rows).toBe(3);
+  });
+});
+
+describe('the stream after the first deal', () => {
+  it('matches the app, row after row', () => {
+    expect(streamFixture.rows).toHaveLength(6);
+    streamFixture.rows.forEach((expected, offset) => {
+      expect(rowDigits(streamFixture.seed, streamFixture.columns,
+                       streamFixture.firstRow + offset)).toEqual(expected);
+    });
+  });
+
+  it('keeps its frontier past eighteen when a saved board comes back', () => {
+    const stacks = Array.from({ length: COLUMNS },
+                              () => Array.from({ length: 16 }, () => 1));
+    const resumed = boardFromStacks(stacks, 1234, { rows: 18, dealtRows: 20 });
+    expect(resumed.dealtRows).toBe(20);
+    const next = addRow(resumed)!;
+    expect(valueAt(next, { column: 0, row: 16 })).toBe(rowDigits(1234, COLUMNS, 20)[0]);
+  });
+
+  it('keeps revealing once cleared rows make room', () => {
+    const stacks = Array.from({ length: COLUMNS },
+                              () => Array.from({ length: 16 }, () => 1));
+    const grid = boardFromStacks(stacks, 1234, { rows: 18, dealtRows: 18 });
+    expect(roomForRows(grid)).toBe(2);
+
+    const first = addRow(grid)!;
+    const second = addRow(first)!;
+    expect(second.dealtRows).toBe(20);
+    for (let column = 0; column < COLUMNS; column += 1) {
+      expect(heightOf(second, column)).toBe(18);
+      expect(valueAt(second, { column, row: 16 }))
+        .toBe(rowDigits(1234, COLUMNS, 18)[column]);
+      expect(valueAt(second, { column, row: 17 }))
+        .toBe(rowDigits(1234, COLUMNS, 19)[column]);
+    }
   });
 });
 

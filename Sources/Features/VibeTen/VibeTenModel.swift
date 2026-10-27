@@ -261,7 +261,7 @@ final class VibeTenModel: ObservableObject {
         /// The rows the game started with. Absent from a save made before the
         /// board could grow, where `rows` was the start.
         var startRows: Int?
-        /// How many rows of the eighteen-row deal had been shown. Absent from
+        /// How many rows of the board's stream had been shown. Absent from
         /// older saves; the board falls back to its tallest column.
         var dealtRows: Int?
         var wrapRows: Bool
@@ -577,8 +577,8 @@ final class VibeTenModel: ObservableObject {
     }
 
     /// How many rows a press would reveal right now: the rule's two or four,
-    /// capped at the even number of undealt rows that still fit. Zero when
-    /// there is no room for the smallest press.
+    /// capped at the even number of rows that still fit. Zero when there is no
+    /// room for the smallest press.
     var rowsToAdd: Int {
         guard let board else { return 0 }
         let cap = min(boardRowsPerAdd, board.roomForRows)

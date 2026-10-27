@@ -100,7 +100,7 @@ final class VibeTenUITests: XCTestCase {
                        "a full grid has nowhere to reveal a row")
     }
 
-    func testTheNewRowOfferSitsOnTheBottomRowAndRevealsTwoRows() throws {
+    func testTheNewRowOfferSitsUnderTheDigitsAndRevealsTwoRows() throws {
         // A sixteen-row start: two rows of the deal are still face down, so the
         // offer is there from the first moment.
         let app = boardApp(startRows: 16)
@@ -119,7 +119,7 @@ final class VibeTenUITests: XCTestCase {
         addRow.tap()
         XCTAssertTrue(waitForCellCount(app, 162, timeout: 3),
                       "two rows of nine arrive underneath")
-        XCTAssertFalse(addRow.exists, "eighteen rows is the whole deal")
+        XCTAssertFalse(addRow.exists, "eighteen rows is the whole grid")
         tenAttach(app, named: "49c-ten-new-row")
     }
 

@@ -639,7 +639,7 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("Adding rows")
 
-            Text("When the bottom of the grid has room and the deal still has rows face down, a button appears there: tap it to reveal the next two or four rows of the same deal, solo or in a room. A full eighteen-row start is the whole deal, so there is nothing more to reveal.")
+            Text("When the bottom of the grid has room, a button appears there: tap it to reveal the next two or four rows of the same deal, solo or in a room. The deal does not stop at eighteen — once cleared rows leave room, the next rows come from the same seed.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -650,7 +650,7 @@ struct VibeTenSettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsSectionTitle("The board")
 
-            Text("Nine columns, always. Choose how many rows start full; the board has room for eighteen.")
+            Text("Nine columns, always. Choose how many rows start full; the grid holds eighteen rows at a time.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(VibeTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)

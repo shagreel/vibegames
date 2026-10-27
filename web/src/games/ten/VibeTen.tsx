@@ -87,11 +87,11 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: "The board's size",
-      body: 'The board is **nine columns** wide and starts with **twelve to eighteen rows** of digits. The deal is always eighteen rows, laid out at random: the game starts showing the top twelve to eighteen and the rest wait underneath. Fewer starting rows means bigger digits and more room to grow. Choose the starting rows on the start screen; once a game is under way the board keeps them, and a room plays the start the host dealt.',
+      body: 'The board is **nine columns** wide and starts with **twelve to eighteen rows** of digits. The first deal is always eighteen rows, laid out at random: the game starts showing the top twelve to eighteen and the rest wait underneath. After that the deal keeps going, so a game that clears rows can pass eighteen. Fewer starting rows means bigger digits and more room to grow. Choose the starting rows on the start screen; once a game is under way the board keeps them, and a room plays the start the host dealt.',
     },
     {
       title: 'New rows',
-      body: 'You can reveal the next rows of the same deal under the board — solo or in a room — while the bottom of the grid has room and the deal still has rows face down. A button appears on the empty row: a press reveals two or four rows, as the settings choose, and everybody in a room sees the same digits. A full eighteen-row start is the whole deal, so there is nothing more to reveal; a shorter start keeps the rest underneath. If nothing pairs but there is room and a row to reveal, reveal more rows. The round only ends when there is nothing to take and no row left to reveal — or when you clear the board.',
+      body: 'You can reveal the next rows of the deal under the board — solo or in a room — while the bottom of the grid has room. A button appears on the empty row: a press reveals two or four rows, as the settings choose, and everybody in a room sees the same digits. The deal does not stop at eighteen: once cleared rows leave room, a press reveals the next rows of the same seed, so a long game keeps going. If nothing pairs but there is room, the round is not over: reveal more rows. It only ends when there is nothing to take and no room left to reveal — or when you clear the board.',
     },
     {
       title: 'Playing as a room',
@@ -99,7 +99,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
   ],
   bullets: [
-    { lead: 'Solo', text: 'A fresh board whenever you want one, at any starting size, and the rest of the deal whenever the grid has room.' },
+    { lead: 'Solo', text: 'A fresh board whenever you want one, at any starting size, and the next rows whenever the grid has room.' },
     { lead: 'Room', text: 'The same board for everyone. First to clear it wins.' },
   ],
 };
@@ -142,7 +142,7 @@ interface TenSaved {
       the start too, which is why `startRows` is optional. */
   rows: number;
   startRows?: number;
-  /** How many rows of the eighteen-row deal had been shown. Absent from older
+  /** How many rows of the board's stream had been shown. Absent from older
       saves; the board falls back to its tallest column. */
   dealtRows?: number;
   wrapRows: boolean;
@@ -693,7 +693,7 @@ function VibeTen() {
             note={
               shapeLocked
                 ? 'The board is set for this game. Leave it, and choose the starting rows on the start screen before the next one.'
-                : 'Nine columns, always. Choose how many rows start full; the board has room for eighteen.'
+                : 'Nine columns, always. Choose how many rows start full; the grid holds eighteen rows at a time.'
             }
           >
             <p className="ten__setting-label">Start with</p>
@@ -772,12 +772,11 @@ function VibeTen() {
 
           <SettingsSection title="Adding rows">
             <p>
-              When the bottom of the grid has room and the deal still has rows
-              face down, a button appears there: a press reveals the next two or
-              four rows of the same deal, solo or in a room. A full eighteen-row
-              start is the whole deal, so there is nothing more to reveal. When
-              there is nothing left to take and no row left to reveal, the round
-              is over.
+              When the bottom of the grid has room, a button appears there: a press
+              reveals the next two or four rows of the same deal, solo or in a
+              room. The deal does not stop at eighteen — once cleared rows leave
+              room, the next rows come from the same seed. When there is nothing
+              left to take and no room left to reveal, the round is over.
             </p>
           </SettingsSection>
         </GameSettings>

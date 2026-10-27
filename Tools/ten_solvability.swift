@@ -29,8 +29,8 @@ import Foundation
 ///   --rows LIST      start rows to test (default 12,14,16,18)
 ///   --mode MODE      remove (default) or dim
 ///   --wrap YES|NO    whether the rows join end to end (default NO)
-///   --grow N         when nothing pairs, reveal the rest of the deal two or
-///                    four rows at a press, the way the game does (default 0:
+///   --grow N         when nothing pairs, reveal more of the deal's stream two
+///                    or four rows at a press, the way the game does (default 0:
 ///                    play only the rows the board starts with)
 ///   --seed N         the solver's own seed (default 1)
 ///   --detail         print the attempts each board needed

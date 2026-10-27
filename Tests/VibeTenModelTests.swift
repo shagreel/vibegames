@@ -169,37 +169,47 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertTrue(model.canChoosePairMode, "and leaving the game offers it again")
     }
 
-    /// The new-row offer is the rest of the deal: a sixteen-row start has two
-    /// rows still face down, so the offer is there from the first moment and
-    /// gone once the whole deal is on the board.
-    func testTheNewRowOfferIsTheRestOfTheDeal() {
+    /// The new-row offer is there while the grid has room. A sixteen-row start
+    /// has two rows free, so the offer is there from the first moment and gone
+    /// once the grid is full again.
+    func testTheNewRowOfferIsThereWhileTheGridHasRoom() {
         let model = VibeTenModel()
         model.startRows = 16
         model.playSolo()
 
         XCTAssertEqual(model.board?.height(ofColumn: 0), 16)
-        XCTAssertTrue(model.canAddRow, "two rows of the deal are still face down")
+        XCTAssertTrue(model.canAddRow, "two rows still fit under the digits")
         XCTAssertEqual(model.rowsToAdd, 2)
 
         model.addRows()
         XCTAssertEqual(model.board?.height(ofColumn: 0), 18)
         XCTAssertEqual(model.board?.dealtRows, 18)
-        XCTAssertFalse(model.canAddRow, "the whole deal is on the board")
+        XCTAssertFalse(model.canAddRow, "eighteen rows is the whole grid")
     }
 
-    /// A full eighteen-row start is the whole deal: taking pairs makes room
-    /// underneath, but there are no rows left to reveal.
-    func testAFullStartHasNoRowsLeftToReveal() {
-        let model = VibeTenModel()
-        model.playSolo()
-        XCTAssertFalse(model.canAddRow)
-
-        guard let board = model.board, let pair = board.availableMatches().first else {
-            return XCTFail("a full board should have a pair")
+    /// A full start has no room for a press. Once rows clear, the offer comes
+    /// back and keeps drawing from the same seed past the first eighteen rows.
+    func testTheNewRowOfferComesBackAfterRowsAreCleared() {
+        var cells = [[VibeTenCell]](repeating: [], count: 9)
+        for column in 0..<9 {
+            cells[column] = (0..<16).map { VibeTenCell(value: ($0 + column) % 9 + 1) }
         }
-        model.tap(pair.0)
-        model.tap(pair.1)
-        XCTAssertFalse(model.canAddRow, "the deal was already fully shown")
+        let saved = VibeTenModel.Saved(seed: 1234, columns: 9, rows: 18, startRows: 12,
+                                       dealtRows: 18, wrapRows: false, mode: .remove,
+                                       cells: cells, score: 0, finished: false,
+                                       cleared: false, elapsed: 0)
+        SoloProgressStore.save(saved, game: VibeTenModel.progressGame, summary: "room to grow")
+
+        let model = VibeTenModel()
+        XCTAssertTrue(model.resumeSolo())
+        XCTAssertTrue(model.canAddRow, "cleared rows have made room under the digits")
+
+        model.addRows()
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 18)
+        XCTAssertEqual(model.board?.dealtRows, 20, "the stream goes past eighteen")
+        XCTAssertEqual(model.board?.value(at: .init(column: 0, row: 16)),
+                       VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 18)[0],
+                       "and the new rows are the same seed's next rows")
     }
 
     /// A press reveals four rows when four fit, and two when only two do: a

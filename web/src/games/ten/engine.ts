@@ -68,10 +68,11 @@ export interface TenBoard {
   readonly columns: number;
   readonly rows: number;
   /**
-   * How many rows of the eighteen-row deal have been shown: the starting rows
-   * plus every row the new-row offer has revealed. It is separate from the
-   * column heights because taking pairs shortens columns without winding the
-   * deal back.
+   * How many rows of the board's stream have been shown: the starting rows plus
+   * every row the new-row offer has revealed. It is separate from the column
+   * heights because taking pairs shortens columns without winding the stream
+   * back, and it can go past eighteen once cleared rows make room for another
+   * press.
    */
   readonly dealtRows: number;
   /** Whether the end of a row joins the start of the next. */
@@ -134,7 +135,9 @@ export function deal(seed: number, columns: number, rows: number): TenCell[][] {
  *
  * The grid is always dealt in full and the board starts showing the top
  * `startRows` of it. The rows beneath stay face down, and the new-row offer
- * reveals them one press at a time — the same rows for everyone in a room.
+ * reveals them one press at a time — the same rows for everyone in a room. The
+ * stream does not stop at eighteen: after the first deal it continues in fresh
+ * two-row blocks, so a game that clears rows can keep revealing.
  */
 export function newBoard(
   seed: number,
@@ -179,10 +182,47 @@ export function boardFromStacks(
     seed,
     columns,
     rows,
-    dealtRows: Math.min(rows, Math.max(0, shape.dealtRows ?? tallest)),
+    dealtRows: Math.max(0, shape.dealtRows ?? tallest),
     wrapRows: shape.wrapRows ?? false,
     stacks: filled,
   };
+}
+
+/** How many rows each fresh block of the stream after the first deal holds.
+ * Two, so a block is nine whole pairs: the smallest press reveals one. */
+export const STREAM_BLOCK_ROWS = 2;
+
+/**
+ * The seed of one block of the stream after the first deal, drawn from the
+ * board's own generator. Mirrors `VibeTenBoard.blockSeed`.
+ */
+export function blockSeed(seed: number, index: number): number {
+  const generator = new SeededGenerator(seed);
+  let value = generator.next();
+  for (let draw = 0; draw < Math.max(0, Math.trunc(index)); draw += 1) {
+    value = generator.next();
+  }
+  return Number(value & 0xffffffffn);
+}
+
+/**
+ * One row of the board's stream, column by column.
+ *
+ * The first eighteen rows are the deal a board starts from. After that the
+ * stream keeps going in two-row blocks of nine valid pairs, so a game that
+ * clears rows can reveal past eighteen — and two clients revealing the same
+ * row still see the same digits. Mirrors `VibeTenBoard.rowDigits`.
+ */
+export function rowDigits(seed: number, columns: number, row: number): number[] {
+  if (columns <= 0 || row < 0) return [];
+  if (row < ROWS) {
+    return deal(seed, columns, ROWS).map((column) => column[row].value);
+  }
+  const offset = row - ROWS;
+  const block = Math.floor(offset / STREAM_BLOCK_ROWS);
+  const within = offset % STREAM_BLOCK_ROWS;
+  return deal(blockSeed(seed, block), columns, STREAM_BLOCK_ROWS)
+    .map((column) => column[within].value);
 }
 
 /** The digits in the shape the fixture and the app use. */
@@ -373,23 +413,24 @@ export function remove(board: TenBoard, a: Position, b: Position): TenBoard | nu
 }
 
 /**
- * Rows can be added only while the bottom of the grid is free and the
- * eighteen-row deal still has a row to show.
+ * Rows can be added while the bottom of the grid is free. The stream keeps
+ * producing rows, so a long game is limited by space under the digits — not by
+ * the eighteen rows the board started with.
  */
 export function canAddRow(board: TenBoard): boolean {
-  return board.dealtRows < board.rows && board.stacks.every((column) => column.length < board.rows);
+  return board.stacks.every((column) => column.length < board.rows);
 }
 
-/** How many undealt rows would fit under the digits as they are. */
+/** How many rows of the stream would fit under the digits as they are. */
 export function roomForRows(board: TenBoard): number {
   const tallest = board.stacks.reduce((most, column) => Math.max(most, column.length), 0);
-  return Math.max(0, Math.min(board.rows - tallest, board.rows - board.dealtRows));
+  return Math.max(0, board.rows - tallest);
 }
 
 /**
  * How many rows a press reveals right now: the rule's two or four, capped at
- * the even number of undealt rows that still fit. Zero when there is no room
- * for the smallest press.
+ * the even number of rows that still fit. Zero when there is no room for the
+ * smallest press.
  */
 export function rowsToAdd(board: TenBoard, rowsPerAdd: number): number {
   const cap = Math.min(rowsPerAdd, roomForRows(board));
@@ -398,25 +439,17 @@ export function rowsToAdd(board: TenBoard, rowsPerAdd: number): number {
 }
 
 /**
- * Reveals the next row of the same eighteen-row deal under the digits.
+ * Reveals the next row of the board's stream under the digits.
  *
  * Nothing else moves: the board is anchored at the top, so the row simply
- * extends it downward. The digits are not drawn now — they were part of the
- * deal all along, which is what makes two players' new rows identical from the
- * same room seed.
+ * extends it downward. The digits are not drawn now — the stream was settled by
+ * the seed — which is what makes two players' new rows identical from the same
+ * room seed.
  */
 export function addRow(board: TenBoard): TenBoard | null {
   if (!canAddRow(board)) return null;
-  const full = deal(board.seed, board.columns, board.rows);
-  const stacks = board.stacks.map((column, index) => {
-    const next = full[index]?.[board.dealtRows];
-    if (!next) return null;
-    return [...column, cell(next.value)];
-  });
-  if (stacks.some((column) => column === null)) return null;
-  return {
-    ...board,
-    dealtRows: board.dealtRows + 1,
-    stacks: stacks as readonly (readonly TenCell[])[],
-  };
+  const digits = rowDigits(board.seed, board.columns, board.dealtRows);
+  if (digits.length < board.columns) return null;
+  const stacks = board.stacks.map((column, index) => [...column, cell(digits[index])]);
+  return { ...board, dealtRows: board.dealtRows + 1, stacks };
 }

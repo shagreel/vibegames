@@ -181,6 +181,27 @@ final class VibeTenBoardTests: XCTestCase {
         }
     }
 
+    func testAResumedBoardKeepsTheStreamFrontierPastEighteen() {
+        var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 16),
+                                               count: 9),
+                                 seed: 1234,
+                                 dealtRows: 20)
+        XCTAssertEqual(board.dealtRows, 20, "the frontier is not clamped back to the grid")
+        XCTAssertTrue(board.addRow())
+        XCTAssertEqual(board.value(at: .init(column: 0, row: 16)),
+                       VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 20)[0],
+                       "a resumed board carries on from where the stream stopped")
+    }
+
+    func testTheStreamAfterTheFirstDealMatchesTheWebFixture() {
+        let firstRow = VibeTenBoard.maximumRows
+        for (offset, expected) in Self.streamRows.enumerated() {
+            XCTAssertEqual(VibeTenBoard.rowDigits(seed: 1234, columns: 9,
+                                                  row: firstRow + offset),
+                           expected, "row \(firstRow + offset)")
+        }
+    }
+
     /// Every row count, from seed 1234. Dumped from this engine.
     static let fixtures: [String: [[Int]]] = [
         "1234-9x12": [
@@ -227,6 +248,18 @@ final class VibeTenBoardTests: XCTestCase {
             [6, 4, 8, 3, 9, 9, 7, 7, 4, 8, 9, 3, 6, 1, 1, 8, 4, 3],
             [3, 5, 1, 8, 3, 3, 9, 3, 4, 1, 8, 4, 5, 8, 8, 4, 7, 4]
         ]
+    ]
+
+    /// The rows after the first deal, from seed 1234. Dumped from this engine by
+    /// `Tools/dump_ten_stream.swift` into
+    /// `web/src/games/ten/stream.fixtures.json`.
+    static let streamRows: [[Int]] = [
+        [9, 6, 2, 6, 3, 4, 5, 8, 3],
+        [9, 9, 4, 9, 1, 4, 4, 5, 1],
+        [2, 5, 9, 1, 2, 5, 4, 2, 9],
+        [9, 2, 8, 3, 1, 3, 1, 8, 4],
+        [5, 4, 8, 3, 6, 4, 3, 9, 4],
+        [4, 8, 9, 6, 7, 7, 5, 6, 4]
     ]
 }
 
@@ -368,6 +401,28 @@ final class VibeTenAddRowTests: XCTestCase {
             XCTAssertTrue(second.addRow())
         }
         XCTAssertEqual(first.values, second.values)
+    }
+
+    func testRowsCanBeRevealedPastTheFirstDealOnceClearedRowsMakeRoom() {
+        // Sixteen rows of digits with the first deal fully shown: clearing two
+        // rows has made room for another press, and the stream keeps going.
+        var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 16),
+                                               count: 9),
+                                 seed: 1234,
+                                 dealtRows: 18)
+        XCTAssertTrue(board.canAddRow)
+        XCTAssertEqual(board.roomForRows, 2)
+        XCTAssertTrue(board.addRow())
+        XCTAssertTrue(board.addRow())
+        XCTAssertEqual(board.dealtRows, 20)
+        for column in 0..<9 {
+            XCTAssertEqual(board.value(at: .init(column: column, row: 16)),
+                           VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 18)[column],
+                           "column \(column): the row after the first deal")
+            XCTAssertEqual(board.value(at: .init(column: column, row: 17)),
+                           VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 19)[column],
+                           "column \(column): and the one after it")
+        }
     }
 
     func testAFullGridHasNowhereToPutOne() {
