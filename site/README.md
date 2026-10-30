@@ -288,7 +288,7 @@ they point at.
 | `<link rel="canonical">` | `https://vibegames.party/…`, and nothing else |
 | Open Graph + Twitter card | the same words as the title and description, plus the image below |
 | `og:image`, 1200×630 | `Tools/make_og_image.mjs` — rendered from the site's own colours and a real screenshot |
-| Structured data | `WebSite` and an `ItemList` of the five games, all marked up as free `WebApplication`s |
+| Structured data | `WebSite` and an `ItemList` of the six games, all marked up as free `WebApplication`s |
 | `robots.txt`, `sitemap.xml` | one of each per host, in `site/` and `web/public/` |
 | Favicon, touch icon | `swift Tools/make_icon.swift`, the same mark as the app's |
 

@@ -79,13 +79,14 @@ In this order. Steps 1–4 are one-time setup; 5–11 are per submission.
 **Subtitle** (30): `Party games in your pocket`
 
 **Promotional text** (170): `Party games for the whole table: describe it
-without saying it, name three things before the buzzer, race the same puzzle, or
-take three cards that match.` — *can be changed any time without a new build.*
+without saying it, name three things, race a word or a puzzle, pair the numbers,
+or take three cards that match.` — *157 characters. Can be changed any time
+without a new build.*
 
 **Keywords** (100, comma-separated, no spaces after commas):
 
 ```
-family games,word game,guessing game,puzzle,trivia,charades,group game,pass and play,offline
+family games,word game,guessing game,puzzle,trivia,charades,group game,pass and play,offline,numbers
 ```
 
 **Description** (4000):
@@ -95,7 +96,7 @@ Party games for the whole table, in your pocket.
 
 Quick games you can play on your own in a spare five minutes, or pass
 around a room with everyone on their own device. No accounts, no adverts,
-nothing to buy, and nothing to unlock.
+and nothing to unlock.
 
 SIMILAR VIBE — Describe it, don't say it.
 Two teams, one word, and nobody wants to be holding it. One person is shown a
@@ -118,10 +119,15 @@ VIBE PAIRINGS — Three cards that match.
 Every card has four features and a trio is three cards where each feature is the
 same across all three or different on all three. Find the most and you win.
 
+VIBE TEN — Pair the numbers, clear the board.
+Nine columns of numbers. Two match if they are the same or add up to ten, and
+everything above them drops into the gap. Clear every number to win — and when
+the board runs out of moves, reveal another row.
+
 WHY IT IS FREE
 I built these games for my own family. We play them in the evenings, and I wanted
-to share them. There is nothing to buy in the app: if you would like to say
-thanks, there is a page on the website about the ways to help.
+to share them. The games are free: there is nothing you have to buy. If you would
+like to say thanks, there is an optional tip in the app.
 
 WORKS ON WHATEVER YOU HAVE
 iPhone, iPad and any browser. The solo games and Vibe Five need no connection at
@@ -137,9 +143,10 @@ it is the one field in this file I cannot fill in.*
 **What's new** (release notes for 1.0):
 
 ```
-First release. Five party games for the whole table: describe it without saying
+First release. Six party games for the whole table: describe it without saying
 it, name three things before the buzzer, race the same word, race the same
-puzzle, and take three cards that match. Free, no accounts, no adverts.
+puzzle, take three cards that match, and pair the numbers to clear the board.
+Free, no accounts, no adverts.
 ```
 
 **Category**: Games → **Family** primary, Games → **Word** secondary.
@@ -200,14 +207,14 @@ Suggested notes to paste in:
 ```
 No account or sign-in: every game is playable immediately after opening.
 
-Every game except Similar Vibe has a solo mode — Vibe Five, Word Vibe, Number Vibe and
-Vibe Pairings — so the app can be reviewed fully on one device. Tap a game, then
-"Solo" or "Play on this device".
+Every game except Similar Vibe has a solo mode — Vibe Five, Word Vibe, Number Vibe,
+Vibe Pairings and Vibe Ten — so the app can be reviewed fully on one device. Tap a
+game, then "Solo" or "Play on this device".
 
 Similar Vibe is the exception: it is two teams of two, each player on their own
 device, so it cannot be exercised with one phone. The lobby says so rather than
 starting a round that cannot be played. It is there for the same reason the other
-four are: it is a game my family plays, and the four solo games demonstrate the
+five are: it is a game my family plays, and the five solo games demonstrate the
 app's functionality in full.
 
 The two links at the bottom of the heart panel (top right of every screen) are
@@ -274,8 +281,8 @@ when the product is live.
 
 ### Similar Vibe cannot be reviewed on one device
 
-Not a rejection by itself — four of five games are fully playable solo — but a
-reviewer may ask how the fifth works. Options: leave the review notes as above
+Not a rejection by itself — five of six games are fully playable solo — but a
+reviewer may ask how the sixth works. Options: leave the review notes as above
 and answer if asked; record a short video of a round and put the link in the
 notes; or leave it and see. A solo practice mode would remove the question
 entirely, and is a real feature rather than a submission chore — worth doing
