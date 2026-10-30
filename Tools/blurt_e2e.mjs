@@ -236,18 +236,20 @@ check(before.ownWord !== null, `the describer has a word: ${JSON.stringify(befor
 // the lobby, and the join field only exists before a game starts. That is
 // exactly when somebody new turns up, and Blurt puts a late arrival on the
 // smaller team.
-const gear = await firstDescriber.player.page.$(".blurt__code-button");
+// The code is the header's own button now, shared by every game, and its
+// sheet is the shared `RoomCodeSheet` rather than the game's old lobby card.
+const gear = await firstDescriber.player.page.$(".game-header-code");
 check(gear !== null, "a running game offers the code");
 if (gear) {
-  await firstDescriber.player.page.click(".blurt__code-button");
+  await gear.click();
   await sleep(400);
   const shown = await firstDescriber.player.page
-    .$eval(".blurt__sheet .blurt__code-value", (el) => el.textContent.trim())
+    .$eval(".room-code__value", (el) => el.textContent.trim())
     .catch(() => null);
   const sameCode = (shown ?? "").replace(/[^A-Za-z]/g, "") === code.replace(/[^A-Za-z]/g, "");
   check(sameCode, `the sheet shows the room's code (got ${JSON.stringify(shown)})`);
   // Closed again, so the round carries on underneath it.
-  await firstDescriber.player.page.click(".blurt__sheet .blurt__skip");
+  await firstDescriber.player.page.click(".game-sheet__done");
   await sleep(400);
 }
 
