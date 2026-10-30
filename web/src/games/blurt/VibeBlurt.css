@@ -357,7 +357,12 @@
 }
 
 .blurt__word {
+  /* A block, not an inline <strong>: width and the break both need a box the
+     line layout can size, and an inline one lets a long word hang off the
+     edge on a narrow phone. */
+  display: block;
   width: 100%;
+  max-width: 100%;
   padding: 1.6rem 1rem;
   border: 2px solid color-mix(in srgb, var(--blurt-team-one) 45%, transparent);
   border-radius: 1.75rem;
@@ -365,6 +370,7 @@
   font-size: 2.4rem;
   line-height: 1.15;
   font-weight: 800;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -550,13 +556,16 @@
 }
 
 .blurt__watched-word {
+  display: block;
   width: 100%;
+  max-width: 100%;
   padding: 0.9rem 1rem;
   border: 2px solid color-mix(in srgb, var(--blurt-urgent) 55%, transparent);
   border-radius: 1.25rem;
   background: var(--surface);
   font-size: 1.8rem;
   line-height: 1.15;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 

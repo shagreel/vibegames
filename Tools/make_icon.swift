@@ -1,13 +1,18 @@
 #!/usr/bin/env swift
 //
-// Renders the 1024pt App Store icon for Vibe Games, and the matching favicon.
+// Renders the 1024pt App Store icon for Vibe Games, its dark and tinted
+// variants, and the matching favicon.
 //
-//   swift Tools/make_icon.swift <icon.png> [favicon.svg]
+//   swift Tools/make_icon.swift <icon.png> [favicon.svg] \
+//     [--dark <icon-dark.png>] [--tinted <icon-tinted.png>]
 //
 // The mark is "VG" — the suite's initials — set in the system's rounded heavy
 // face, slanted, and filled with a sweep through all four game colours. The
 // letterform is the app's own voice: the interface is rounded and heavy
 // throughout, so the icon speaks the same language.
+//
+// iOS picks the dark variant on a dark Home Screen and the tinted one when the
+// user has chosen a tint; the plain icon stays the default.
 //
 // This was Vibe Five's dial and numeral, then four tiles; both put a game's
 // badge on the whole suite.
@@ -15,9 +20,27 @@
 import AppKit
 import CoreText
 
+var positional: [String] = []
+var darkPath: String?
+var tintedPath: String?
+var argumentIndex = 1
 let arguments = CommandLine.arguments
-let outputPath = arguments.count > 1 ? arguments[1] : "icon-1024.png"
-let faviconPath = arguments.count > 2 ? arguments[2] : nil
+while argumentIndex < arguments.count {
+    let argument = arguments[argumentIndex]
+    switch argument {
+    case "--dark" where argumentIndex + 1 < arguments.count:
+        darkPath = arguments[argumentIndex + 1]
+        argumentIndex += 2
+    case "--tinted" where argumentIndex + 1 < arguments.count:
+        tintedPath = arguments[argumentIndex + 1]
+        argumentIndex += 2
+    default:
+        positional.append(argument)
+        argumentIndex += 1
+    }
+}
+let outputPath = positional.first ?? "icon-1024.png"
+let faviconPath = positional.dropFirst().first
 
 let dimension = 1024
 let side = CGFloat(dimension)
@@ -102,11 +125,25 @@ let mark: CGPath = {
 
 // MARK: - Rendering
 
+enum Appearance {
+    case light, dark, tinted
+}
+
 /// Deep indigo rather than near-black: an icon this dark has to keep an edge
-/// against a dark wallpaper, and the mark needs something to sit in.
-func drawBackground(_ ctx: CGContext) {
+/// against a dark wallpaper, and the mark needs something to sit in. The dark
+/// variant is allowed to go darker still, because it is *for* that wallpaper.
+func drawBackground(_ ctx: CGContext, appearance: Appearance) {
+    let colours: [CGColor]
+    switch appearance {
+    case .light:
+        colours = [cg(0x1B1836), cg(0x0E0D1B)]
+    case .dark:
+        colours = [cg(0x030309), cg(0x12101F)]
+    case .tinted:
+        colours = [cg(0x000000), cg(0x000000)]
+    }
     let ink = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                         colors: [cg(0x1B1836), cg(0x0E0D1B)] as CFArray,
+                         colors: colours as CFArray,
                          locations: [0, 1])!
     ctx.drawLinearGradient(ink,
                            start: CGPoint(x: 0, y: side),
@@ -118,8 +155,9 @@ func drawBackground(_ ctx: CGContext) {
     // An explicit radial gradient whose radius ends inside the canvas edge but
     // outside the corners: the obvious `NSGradient.draw(in:relativeCenterPosition:)`
     // leaves a visible square seam where its rect stops.
-    if let glow = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                             colors: [NSColor(white: 1, alpha: 0.13).cgColor,
+    if appearance != .tinted,
+       let glow = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                             colors: [NSColor(white: 1, alpha: appearance == .dark ? 0.2 : 0.13).cgColor,
                                       NSColor(white: 1, alpha: 0).cgColor] as CFArray,
                              locations: [0, 1]) {
         ctx.drawRadialGradient(glow, startCenter: center, startRadius: 0,
@@ -127,59 +165,78 @@ func drawBackground(_ ctx: CGContext) {
     }
 }
 
-func drawMark(_ ctx: CGContext) {
+func drawMark(_ ctx: CGContext, appearance: Appearance) {
     // Shadow first, by filling the same outline in black. The gradient below
-    // covers that fill entirely, so only the shadow itself shows.
-    ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -side * 0.018),
-                  blur: side * 0.05,
-                  color: NSColor(white: 0, alpha: 0.5).cgColor)
-    ctx.addPath(mark)
-    ctx.setFillColor(cg(0x000000))
-    ctx.fillPath()
-    ctx.restoreGState()
+    // covers that fill entirely, so only the shadow itself shows. The tinted
+    // icon is used as a luminance mask, so its shadow is black on black and
+    // only the mark matters.
+    if appearance != .tinted {
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -side * 0.018),
+                      blur: side * (appearance == .dark ? 0.065 : 0.05),
+                      color: NSColor(white: 0, alpha: appearance == .dark ? 0.7 : 0.5).cgColor)
+        ctx.addPath(mark)
+        ctx.setFillColor(cg(0x000000))
+        ctx.fillPath()
+        ctx.restoreGState()
+    }
 
-    let sweep = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                           colors: [cg(five), cg(trio), cg(words), cg(sudoku)] as CFArray,
-                           locations: [0, 0.34, 0.67, 1])!
     ctx.saveGState()
     ctx.addPath(mark)
     ctx.clip()
-    ctx.drawLinearGradient(sweep,
-                           start: CGPoint(x: sweepStart, y: center.y),
-                           end: CGPoint(x: sweepEnd, y: center.y),
-                           // Fills either side of the run, so no part of the
-                           // mark is left unpainted and showing the black.
-                           options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+    if appearance == .tinted {
+        // A white mark for the system to tint. The background is black, so the
+        // luminance mask is the letterform and nothing else.
+        ctx.setFillColor(cg(0xFFFFFF))
+        ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+    } else {
+        let sweep = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                               colors: [cg(five), cg(trio), cg(words), cg(sudoku)] as CFArray,
+                               locations: [0, 0.34, 0.67, 1])!
+        ctx.drawLinearGradient(sweep,
+                               start: CGPoint(x: sweepStart, y: center.y),
+                               end: CGPoint(x: sweepEnd, y: center.y),
+                               // Fills either side of the run, so no part of the
+                               // mark is left unpainted and showing the black.
+                               options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+    }
     ctx.restoreGState()
 }
 
-guard let ctx = CGContext(data: nil,
-                          width: dimension,
-                          height: dimension,
-                          bitsPerComponent: 8,
-                          bytesPerRow: 0,
-                          space: CGColorSpaceCreateDeviceRGB(),
-                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-    fatalError("Could not create bitmap context")
+func render(_ appearance: Appearance) -> CGImage {
+    guard let ctx = CGContext(data: nil,
+                              width: dimension,
+                              height: dimension,
+                              bitsPerComponent: 8,
+                              bytesPerRow: 0,
+                              space: CGColorSpaceCreateDeviceRGB(),
+                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+        fatalError("Could not create bitmap context")
+    }
+    ctx.setAllowsAntialiasing(true)
+    ctx.setShouldAntialias(true)
+    drawBackground(ctx, appearance: appearance)
+    drawMark(ctx, appearance: appearance)
+    guard let image = ctx.makeImage() else { fatalError("Could not render image") }
+    return image
 }
-ctx.setAllowsAntialiasing(true)
-ctx.setShouldAntialias(true)
 
-drawBackground(ctx)
-drawMark(ctx)
+func write(_ image: CGImage, to path: String) {
+    guard let destination = CGImageDestinationCreateWithURL(
+        URL(fileURLWithPath: path) as CFURL, "public.png" as CFString, 1, nil
+    ) else {
+        fatalError("Could not create image destination at \(path)")
+    }
+    CGImageDestinationAddImage(destination, image, nil)
+    guard CGImageDestinationFinalize(destination) else {
+        fatalError("Could not write \(path)")
+    }
+    print("Wrote \(path)")
+}
 
-guard let image = ctx.makeImage() else { fatalError("Could not render image") }
-guard let destination = CGImageDestinationCreateWithURL(
-    URL(fileURLWithPath: outputPath) as CFURL, "public.png" as CFString, 1, nil
-) else {
-    fatalError("Could not create image destination at \(outputPath)")
-}
-CGImageDestinationAddImage(destination, image, nil)
-guard CGImageDestinationFinalize(destination) else {
-    fatalError("Could not write \(outputPath)")
-}
-print("Wrote \(outputPath)")
+write(render(.light), to: outputPath)
+if let darkPath { write(render(.dark), to: darkPath) }
+if let tintedPath { write(render(.tinted), to: tintedPath) }
 
 // MARK: - The favicon
 //

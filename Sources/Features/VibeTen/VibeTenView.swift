@@ -252,18 +252,24 @@ struct VibeTenView: View {
             header(title: "VIBE TEN", subtitle: model.subtitle)
 
             if model.finished {
-                roundOver
+                // The result is the whole screen, not a card above a finished
+                // grid. A full board and a room's standings together could push
+                // the buttons off the bottom, which is how the play-again
+                // button once became unreachable.
+                ScrollView {
+                    roundOver
+                        .frame(maxWidth: .infinity)
+                }
+                .scrollIndicators(.hidden)
+            } else {
+                if model.isShared {
+                    standingsBar
+                }
+                boardView
             }
-
-            if model.isShared, !model.finished {
-                standingsBar
-            }
-
-            boardView
-
         }
-        // The board takes whatever the header and the panel leave, so the grid
-        // is as big as the phone allows.
+        // The board takes whatever the header leaves, so the grid is as big as
+        // the phone allows.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -424,12 +430,31 @@ struct VibeTenView: View {
 
     // MARK: - Round over
 
+    /// A solo round that ran out of moves can be tried again on the same board:
+    /// the seed is the same, so the order the pairs are taken is the only thing
+    /// that changes. A cleared board, or a room, only offers a fresh deal.
+    private var canRetryBoard: Bool {
+        !model.isShared && !model.cleared
+    }
+
     private var roundOver: some View {
         RoundOverPanel(title: roundOverTitle,
                        detail: detail,
                        accent: AnyShapeStyle(VibeTheme.vibeTen),
-                       primaryIdentifier: "ten.playAgain",
-                       action: { Task { await model.playAgain() } }) {
+                       primaryLabel: canRetryBoard ? "Retry this board" : "Play again",
+                       primaryIdentifier: canRetryBoard ? "ten.retryBoard" : "ten.playAgain",
+                       action: {
+                           if canRetryBoard {
+                               model.retryBoard()
+                           } else {
+                               Task { await model.playAgain() }
+                           }
+                       },
+                       secondaryLabel: canRetryBoard ? "New board" : nil,
+                       secondaryIdentifier: "ten.playAgain",
+                       secondaryAction: canRetryBoard
+                           ? { Task { await model.playAgain() } }
+                           : nil) {
             if model.isShared {
                 standingsList
             }

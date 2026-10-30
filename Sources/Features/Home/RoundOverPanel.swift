@@ -19,21 +19,33 @@ struct RoundOverPanel<Extra: View>: View {
     private let title: String
     private let detail: String?
     private let accent: AnyShapeStyle
+    private let primaryLabel: String
     private let primaryIdentifier: String
     private let action: () -> Void
+    private let secondaryLabel: String?
+    private let secondaryIdentifier: String?
+    private let secondaryAction: (() -> Void)?
     private let extra: Extra
 
     init(title: String,
          detail: String? = nil,
          accent: AnyShapeStyle,
+         primaryLabel: String = "Play again",
          primaryIdentifier: String,
          action: @escaping () -> Void,
+         secondaryLabel: String? = nil,
+         secondaryIdentifier: String? = nil,
+         secondaryAction: (() -> Void)? = nil,
          @ViewBuilder extra: () -> Extra) {
         self.title = title
         self.detail = detail
         self.accent = accent
+        self.primaryLabel = primaryLabel
         self.primaryIdentifier = primaryIdentifier
         self.action = action
+        self.secondaryLabel = secondaryLabel
+        self.secondaryIdentifier = secondaryIdentifier
+        self.secondaryAction = secondaryAction
         self.extra = extra()
     }
 
@@ -58,7 +70,7 @@ struct RoundOverPanel<Extra: View>: View {
             extra
 
             Button(action: action) {
-                Label("Play again", systemImage: "arrow.clockwise")
+                Label(primaryLabel, systemImage: "arrow.clockwise")
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     // The one ink that is right on a bright gradient. Not
                     // `VibeTheme.primaryText`: that token flips to white in the
@@ -74,6 +86,19 @@ struct RoundOverPanel<Extra: View>: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier(primaryIdentifier)
+
+            if let secondaryLabel, let secondaryAction {
+                Button(action: secondaryAction) {
+                    Text(secondaryLabel)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(VibeTheme.secondaryText)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 42)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(secondaryIdentifier ?? "")
+            }
         }
         .padding(18)
         .background {

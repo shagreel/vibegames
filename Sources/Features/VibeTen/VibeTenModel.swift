@@ -632,6 +632,14 @@ final class VibeTenModel: ObservableObject {
         tearDownSharedGame()
     }
 
+    /// Deals the same board again — the same seed and starting rows — so a solo
+    /// player who ran out of moves can try a different order. A room is left
+    /// alone: its board is everybody's, and only a fresh one moves it on.
+    func retryBoard() {
+        guard case .solo = session, let board else { return }
+        deal(seed: board.seed)
+    }
+
     /// Another round. Solo deals a fresh board; in a room whoever asks deals one
     /// for everybody, which is what clears the scores.
     func playAgain() async {

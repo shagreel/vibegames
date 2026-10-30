@@ -828,6 +828,24 @@ body {
   cursor: default;
 }
 
+.round-over__secondary {
+  margin-top: -0.3rem;
+  padding: 0.55rem;
+  border: none;
+  border-radius: 0.8rem;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.round-over__secondary:hover {
+  color: var(--ink);
+  background: var(--raise);
+}
+
 .round-over__choices {
   display: flex;
   gap: 0.3rem;

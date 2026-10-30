@@ -1010,7 +1010,7 @@ and is worth a few seconds. Beyond that, the only lever is running fewer tests.
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**395 tests in all: 327 unit and 68 UI.** They are what the numbers above are
+**396 tests in all: 328 unit and 68 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -1264,7 +1264,14 @@ hand — so the tab and the home screen cannot drift apart:
 
     swift Tools/make_icon.swift \
       Sources/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png \
-      web/public/favicon.svg
+      web/public/favicon.svg \
+      --dark Sources/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024-dark.png \
+      --tinted Sources/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024-tinted.png
+
+The dark and tinted files are what iOS 18 and later use on a dark Home Screen
+and with a user-chosen tint; the plain icon stays the default on earlier
+versions. The tinted file is a white mark on black, which is the luminance mask
+the system colours.
 
 Two things it has to get right, both of which are easy to get wrong quietly:
 
@@ -1512,3 +1519,9 @@ there is no second palette to keep in sync.
   `startedAt` date rather than accumulating ticks, so the countdown cannot drift.
   A 20 Hz task exists only to fire audio cues and end the round; the ring itself is
   driven by `TimelineView(.animation)` for smooth 60 fps drawing.
+
+## License
+
+The app, the web versions and the landing page are licensed under the
+[Apache License, Version 2.0](LICENSE). The copyright notice is in
+[`NOTICE`](NOTICE).

@@ -18,12 +18,17 @@ export function RoundOver({
   detail,
   primaryLabel = 'Play again',
   onPrimary,
+  secondaryLabel,
+  onSecondary,
   children,
 }: {
   title: string;
   detail?: string;
   primaryLabel?: string;
   onPrimary: () => void;
+  /** A second way out, when a game has one: retry the same board, say. */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
   /** The game's own extras: its standings, its score line, the next difficulty. */
   children?: ReactNode;
 }) {
@@ -35,6 +40,11 @@ export function RoundOver({
       <button type="button" className="round-over__primary" onClick={onPrimary}>
         {primaryLabel}
       </button>
+      {secondaryLabel && onSecondary && (
+        <button type="button" className="round-over__secondary" onClick={onSecondary}>
+          {secondaryLabel}
+        </button>
+      )}
     </section>
   );
 }

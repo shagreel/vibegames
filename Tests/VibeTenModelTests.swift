@@ -231,6 +231,30 @@ final class VibeTenModelTests: XCTestCase {
         XCTAssertFalse(model.canAddRow)
     }
 
+    /// A solo board that ran out of moves can be tried again on the same deal:
+    /// the same seed and starting rows, with every digit back and the score at
+    /// zero.
+    func testASoloBoardCanBeRetriedFromTheSameSeed() {
+        let model = VibeTenModel()
+        model.startRows = 12
+        model.playSolo()
+        guard let dealt = model.board else { return XCTFail("a board should be dealt") }
+        guard let pair = dealt.availableMatches().first else {
+            return XCTFail("a full board should have a pair")
+        }
+        model.tap(pair.0)
+        model.tap(pair.1)
+        XCTAssertEqual(model.score, 1)
+
+        model.retryBoard()
+        XCTAssertEqual(model.board?.seed, dealt.seed, "the same deal comes back")
+        XCTAssertEqual(model.board?.remaining, dealt.remaining, "with every digit back")
+        XCTAssertEqual(model.board?.height(ofColumn: 0), 12, "and the starting rows it had")
+        XCTAssertEqual(model.score, 0)
+        XCTAssertFalse(model.finished)
+        XCTAssertFalse(model.cleared)
+    }
+
     func testTheRowsCanJoinEndToEnd() {
         let model = VibeTenModel()
         model.wrapRows = true

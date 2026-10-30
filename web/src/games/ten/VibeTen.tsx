@@ -554,6 +554,22 @@ function VibeTen() {
     localStorage.setItem(WRAP_ROWS_KEY, String(on));
   }
 
+  /** Deals the same solo board again — same seed, same starting rows — so a
+      player who ran out of moves can try a different order. A room is left
+      alone: its board is everybody's, and only a fresh one moves it on. */
+  function retryBoard() {
+    if (gameId || !board) return;
+    const seed = board.seed;
+    // The seed has not changed, so the deal effect will not fire: put the board
+    // back directly, with the start and rules this one was dealt with.
+    setBoard(newBoard(seed, COLUMNS, rows, board.wrapRows));
+    setSelected(null);
+    setScore(0);
+    setFinished(false);
+    setCleared(false);
+    setNotice('');
+  }
+
   function playAgain() {
     if (!gameId) {
       solo();
@@ -563,6 +579,10 @@ function VibeTen() {
   }
 
   if (rulesOpen) return <HowToPlay content={TEN_INSTRUCTIONS} onClose={() => setRulesOpen(false)} />;
+
+  /** A solo round that ran out of moves can be tried on the same board; a
+      cleared board, or a room, only offers a fresh deal. */
+  const canRetryBoard = !gameId && !cleared;
 
   const roundOverTitle = roundOverTitleFor({
     cleared, gameId, roomWinner, amITheWinner, everyoneFinished,
@@ -648,7 +668,10 @@ function VibeTen() {
               detail={detailFor({
                 cleared, score, gameId, roomWinner, amITheWinner, everyoneFinished,
               })}
-              onPrimary={playAgain}
+              primaryLabel={canRetryBoard ? 'Retry this board' : 'Play again'}
+              onPrimary={canRetryBoard ? retryBoard : playAgain}
+              secondaryLabel={canRetryBoard ? 'New board' : undefined}
+              onSecondary={canRetryBoard ? playAgain : undefined}
             >
               {gameId && standings.length > 0 && (
                 <ol className="ten__standings">
