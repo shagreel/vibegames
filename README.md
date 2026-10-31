@@ -1520,6 +1520,15 @@ there is no second palette to keep in sync.
   A 20 Hz task exists only to fire audio cues and end the round; the ring itself is
   driven by `TimelineView(.animation)` for smooth 60 fps drawing.
 
+## Copy review
+
+All user-facing English is collected in [`COPY.md`](COPY.md), grouped by screen
+and with a `file:line` reference for every entry. The app is **not localized**:
+there are no `.strings` or `.xcstrings` files, no string catalogs and no i18n
+layer, so every string is an English literal in the Swift or TypeScript source.
+`COPY.md` is a review snapshot, not a source of truth — change the source, then
+update the deck with it.
+
 ## License
 
 The app, the web versions and the landing page are licensed under the
