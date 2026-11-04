@@ -58,7 +58,8 @@ In this order. Steps 1–4 are one-time setup; 5–11 are per submission.
    question is three chances to disagree.
 7. **Age rating** — the questionnaire answers are below.
 8. **Screenshots** — upload from `.build/appstore/iphone-6.3/` and
-   `.build/appstore/ipad-13/`. The first three are the ones search results show.
+   `.build/appstore/ipad-13/`. Apple takes at most **ten per size**, and the
+   first three are the ones search results show.
 9. **Upload the build**: `Tools/archive_app.sh` archives and exports an `.ipa`,
    then Xcode → Window → **Organizer** → Distribute App → App Store Connect →
    Upload. (`xcrun altool --upload-app` still works with an app-specific

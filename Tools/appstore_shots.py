@@ -42,8 +42,6 @@ WANTED = [
     ("22-words-scored", "08-word-vibe-scored"),
     ("32-sudoku-filled", "09-number-vibe-filled"),
     ("64-trio-leaderboard-light", "10-vibe-pairings-scores"),
-    ("light-blurt-guessing", "11-similar-vibe-guessing"),
-    ("44-dark-hub", "12-five-games-dark"),
 ]
 
 # The test classes that attach them. A class per game, because the fast suite
