@@ -123,7 +123,7 @@ elif stated.group(1) != version:
 # The screenshots are shot rather than committed, so this only says whether they
 # have been shot; `Tools/appstore_shots.py` is what makes them, and it checks the
 # pixel sizes itself.
-for slug, device in (("iphone-6.9", "iPhone 17 Pro Max"), ("ipad-13", "iPad Pro 13-inch (M5)")):
+for slug, device in (("iphone-6.3", "iPhone 17 Pro"), ("ipad-13", "iPad Pro 13-inch (M5)")):
     shot_dir = ROOT / ".build" / "appstore" / slug
     count = len(list(shot_dir.glob("*.jpg"))) if shot_dir.exists() else 0
     if count < 3:

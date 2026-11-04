@@ -19,7 +19,7 @@ cannot be played by a reviewer with one device.
 | **Privacy manifest** | `Sources/PrivacyInfo.xcprivacy` — ships in the bundle; says what the app collects and declares the one required-reason API it uses |
 | **Export compliance** | `ITSAppUsesNonExemptEncryption: false` in `project.yml` — no question at upload and no annual report |
 | **Icon** | Rendered by `Tools/make_icon.swift`; there is a test that it is square, opaque and present |
-| **Screenshots** | `python3 Tools/appstore_shots.py "iPhone 17 Pro Max" iphone-6.9` and `… "iPad Pro 13-inch (M5)" ipad-13` |
+| **Screenshots** | `python3 Tools/appstore_shots.py "iPhone 17 Pro" iphone-6.3` and `… "iPad Pro 13-inch (M5)" ipad-13` |
 | **Version** | 1.0 (build 2), in `project.yml` |
 | **Devices** | iPhone **and** iPad (`TARGETED_DEVICE_FAMILY: "1,2"`), which is why an iPad screenshot set is required |
 | **Firebase configuration** | The Release archive is checked for `GoogleService-Info.plist` — without it the app builds, launches, plays solo and has no multiplayer at all |
@@ -57,7 +57,7 @@ In this order. Steps 1–4 are one-time setup; 5–11 are per submission.
    `Sources/PrivacyInfo.xcprivacy` and `site/privacy.html`; three answers to one
    question is three chances to disagree.
 7. **Age rating** — the questionnaire answers are below.
-8. **Screenshots** — upload from `.build/appstore/iphone-6.9/` and
+8. **Screenshots** — upload from `.build/appstore/iphone-6.3/` and
    `.build/appstore/ipad-13/`. The first three are the ones search results show.
 9. **Upload the build**: `Tools/archive_app.sh` archives and exports an `.ipa`,
    then Xcode → Window → **Organizer** → Distribute App → App Store Connect →
@@ -217,8 +217,7 @@ five are: it is a game my family plays, and the five solo games demonstrate the
 app's functionality in full.
 
 The two links at the bottom of the heart panel (top right of every screen) are
-the privacy policy and the support page. The panel also says, in plain text,
-that there is more on the website — there is no link there by design.
+the privacy policy and the support page. There is no other link out of the app.
 
 Please write to me from the feedback box in that panel with anything that does
 not work — it comes straight to me.
