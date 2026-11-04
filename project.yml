@@ -79,7 +79,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: party.vibegames.VibeGames
         PRODUCT_NAME: VibeGames
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "2"
+        CURRENT_PROJECT_VERSION: "3"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Support/Info.plist
@@ -100,7 +100,7 @@ targets:
         CFBundleDisplayName: Vibe Games
         CFBundleName: Vibe Games
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "2"
+        CFBundleVersion: "3"
         LSRequiresIPhoneOS: true
         ITSAppUsesNonExemptEncryption: false
         UIApplicationSupportsIndirectInputEvents: true

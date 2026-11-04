@@ -393,12 +393,6 @@
   cursor: pointer;
 }
 
-.support-foot {
-  margin: 0.3rem 0 0;
-  font-size: 0.76rem;
-  color: var(--ink-dim);
-}
-
 /* ── the feedback form ─────────────────────────────────────────────────── */
 
 .feedback {

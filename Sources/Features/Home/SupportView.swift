@@ -114,12 +114,6 @@ struct SupportView: View {
                     }
                     .padding(.top, 4)
 
-                    Text("Nothing here is expected. The games are free either way.")
-                        .font(.system(size: 12.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(VibeTheme.tertiaryText)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 2)
-
                     // The two URLs App Store Connect asks for, reachable from
                     // inside the app. A reviewer looking for the privacy policy
                     // should not have to guess that it is on the website.

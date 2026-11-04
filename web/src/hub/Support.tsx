@@ -173,7 +173,6 @@ export function SupportPanel({ game, onClose }: { game?: string; onClose: () => 
           </button>
         </section>
 
-        <p className="support-foot">Nothing here is expected. The games are free either way.</p>
       </div>
     </div>
   );

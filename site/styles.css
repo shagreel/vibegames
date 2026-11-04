@@ -639,12 +639,6 @@ a.store__item:hover {
 }.feedback__sent span { display: block; margin-top: 0.2rem; font-size: 0.9rem; }
 .help .help__way p.feedback__sent { margin-top: 1.1rem; color: var(--ink-soft); }
 
-.help__foot {
-  margin: 2.4rem 0 0;
-  color: var(--ink-faint);
-  font-size: 0.85rem;
-}
-
 .help__link { color: var(--ink); font-weight: 700; text-decoration: none; }
 .help__link:hover, .help__link:focus-visible { text-decoration: underline; }
 

@@ -277,7 +277,6 @@ Sources/App/VibeGamesApp.swift:13.
 - “Other ways to help” (section heading) — Sources/Features/Home/SupportView.swift:107
 - “Share it with another family” (share row) — Sources/Features/Home/SupportView.swift:117
 - “They can play in a browser tonight, free” (share row detail) — Sources/Features/Home/SupportView.swift:118
-- “Nothing here is expected. The games are free either way.” (footer) — Sources/Features/Home/SupportView.swift:125
 - “Privacy” (link) — Sources/Features/Home/SupportView.swift:135
 - “·” (separator between the two links) — Sources/Features/Home/SupportView.swift:137
 - “Support” (link) — Sources/Features/Home/SupportView.swift:138
@@ -1038,7 +1037,6 @@ analytics keys, CSS classes and game content are excluded.
 - “Link copied” / “Share it with another family” (share row) — web/src/hub/Support.tsx:162
 - “They can play in a browser tonight, free” (share row detail) — web/src/hub/Support.tsx:163
 - “Copied” / “Copy the Venmo handle” (clipboard button) — web/src/hub/Support.tsx:172
-- “Nothing here is expected. The games are free either way.” (footer) — web/src/hub/Support.tsx:176
 
 **Feedback form**
 
