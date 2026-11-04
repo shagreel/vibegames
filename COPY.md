@@ -32,7 +32,7 @@ on screen.
 **iOS app**
 
 - `Sources/Features/Home/` — shared chrome: hub, preferences/about, support panel,
-  feedback form, tip jar, name prompt, solo-resume prompt, round-over panel, game
+  feedback form, name prompt, solo-resume prompt, round-over panel, game
   header bar, game-code badge, shared settings pieces.
 - `Sources/Features/<Game>/` — each game's lobby, play screen, settings sheet and
   its model's error/summary strings: `VibeFive/`, `VibeWords/`, `VibeSudoku/`,
@@ -262,10 +262,9 @@ appearance sections from `Sources/Features/Home/GameSettings.swift`.
 Full appearance names, used where there is room: “Match System”, “Light”, “Dark” —
 Sources/App/VibeGamesApp.swift:13.
 
-### Support panel, feedback form and tip jar
+### Support panel and feedback form
 
-`Sources/Features/Home/SupportView.swift`, `Sources/Features/Home/FeedbackService.swift`,
-`Sources/Features/Home/TreatJar.swift`.
+`Sources/Features/Home/SupportView.swift`, `Sources/Features/Home/FeedbackService.swift`.
 
 **The heart and the panel**
 
@@ -274,13 +273,8 @@ Sources/App/VibeGamesApp.swift:13.
 - “Done” (sheet button) — Sources/Features/Home/SupportView.swift:157
 - “Made with love” (heading) — Sources/Features/Home/SupportView.swift:24
 - “I built these games for my own family. We play them in the evenings — it is how we wind down together and stay close — and I wanted to share that with other families.” (blurb, first paragraph) — Sources/Features/Home/SupportView.swift:26
-- “Every game is free. Nothing to unlock, no adverts, no account. If you would like to say thank you, you can buy my family a treat — it is a gift, and it does not unlock anything, because there is nothing locked.” (blurb, second paragraph) — Sources/Features/Home/SupportView.swift:31
+- “Every game is free. Nothing to unlock, no adverts, no account.” (blurb, second paragraph) — Sources/Features/Home/SupportView.swift:28
 - “Other ways to help” (section heading) — Sources/Features/Home/SupportView.swift:107
-- “Buy us a treat” (tip row, ready to buy) — Sources/Features/Home/SupportView.swift:181
-- “Buy us a treat” (tip row while the purchase is settling) — Sources/Features/Home/SupportView.swift:190
-- “Waiting for the App Store…” (tip row detail while buying) — Sources/Features/Home/SupportView.swift:191
-- “Thank you” (tip row after buying) — Sources/Features/Home/SupportView.swift:198
-- “That means a lot. I hope your table has a good evening.” (tip row detail after buying) — Sources/Features/Home/SupportView.swift:199
 - “Share it with another family” (share row) — Sources/Features/Home/SupportView.swift:117
 - “They can play in a browser tonight, free” (share row detail) — Sources/Features/Home/SupportView.swift:118
 - “Nothing here is expected. The games are free either way.” (footer) — Sources/Features/Home/SupportView.swift:125

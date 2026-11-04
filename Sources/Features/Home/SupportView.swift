@@ -3,13 +3,10 @@ import SwiftUI
 /// The ways to say thanks. Kept in one place because the heart button, the panel
 /// and the website all point at the same things.
 ///
-/// There is one way to pay in this app, and Apple takes it: a consumable tip,
-/// sold by the App Store, in `TreatJar`. What there is *not* is a link to any
-/// other way to pay — no Venmo, no website page that carries one — because
-/// guideline 3.1.1 forbids pointing somebody at a purchasing mechanism other
-/// than in-app purchase, and `Tools/check_app_no_payments.py` fails if one comes
-/// back. The website keeps that route for people playing in a browser, where
-/// Apple has no say in it.
+/// There is **no way to pay in this app**: no in-app purchase, no tip jar, and no
+/// link to any other way to pay — no Venmo, no website page that carries one.
+/// The website keeps that route for people playing in a browser, where Apple has
+/// no say in it.
 enum Support {
     /// Where the browser versions live. Sharing costs nothing and is the thing
     /// that actually helps.
@@ -28,9 +25,7 @@ enum Support {
         — it is how we wind down together and stay close — and I wanted to share \
         that with other families.
 
-        Every game is free. Nothing to unlock, no adverts, no account. If you would \
-        like to say thank you, you can buy my family a treat — it is a gift, and it \
-        does not unlock anything, because there is nothing locked.
+        Every game is free. Nothing to unlock, no adverts, no account.
         """
 }
 
@@ -75,7 +70,6 @@ struct SupportView: View {
     var game: AppAnalytics.Game?
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var treats = TreatJar()
 
     var body: some View {
         NavigationStack {
@@ -110,8 +104,6 @@ struct SupportView: View {
                         .foregroundStyle(VibeTheme.tertiaryText)
 
                     VStack(spacing: 12) {
-                        treatRow
-
                         ShareLink(item: Support.playURL) {
                             SupportRow(symbol: "person.2.fill",
                                        title: "Share it with another family",
@@ -146,7 +138,6 @@ struct SupportView: View {
                 .padding(.bottom, 36)
             }
             .vibeCanvas()
-            .task { await treats.load() }
             // The panel is a form on a phone: without this the keyboard covers
             // Send and the only way to it is to guess that you can scroll.
             .scrollDismissesKeyboard(.interactively)
@@ -162,48 +153,6 @@ struct SupportView: View {
         }
     }
 
-    /// The tip, when the store has one to sell.
-    ///
-    /// Hidden while loading and hidden when there is nothing to load: before the
-    /// product exists in App Store Connect, and in any build without a StoreKit
-    /// configuration, the store returns nothing — and a button that cannot do
-    /// anything is worse than no button. A price that is not there yet is not
-    /// worth a placeholder either, because the price is the only thing this row
-    /// has to say.
-    @ViewBuilder
-    private var treatRow: some View {
-        switch treats.state {
-        case .ready(let price):
-            Button {
-                Task { await treats.buy() }
-            } label: {
-                SupportRow(symbol: "gift.fill",
-                           title: "Buy us a treat",
-                           detail: price,
-                           tint: VibeTheme.heart)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("support.treat")
-
-        case .buying:
-            SupportRow(symbol: "gift.fill",
-                       title: "Buy us a treat",
-                       detail: "Waiting for the App Store…",
-                       tint: VibeTheme.heart)
-                .opacity(0.6)
-                .accessibilityIdentifier("support.treatWaiting")
-
-        case .thanked:
-            SupportRow(symbol: "heart.fill",
-                       title: "Thank you",
-                       detail: "That means a lot. I hope your table has a good evening.",
-                       tint: VibeTheme.heart)
-                .accessibilityIdentifier("support.treatThanked")
-
-        case .loading, .unavailable:
-            EmptyView()
-        }
-    }
 }
 
 /// One line of "here is a thing you could do".

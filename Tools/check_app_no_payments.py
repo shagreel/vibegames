@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Fails if the iOS app gains a way to pay that is not Apple's.
+"""Fails if the iOS app gains any way to pay at all.
 
-The app sells exactly one thing: a tip, as a consumable in-app purchase. Apple
-takes its commission on that and, in exchange, forbids the app from pointing at
-any *other* way to pay for the same thing — guideline 3.1.1 — which is why there
-is no Venmo link in here, no website page that carries one, and why the line
-naming the website came out when the tip went in.
+The app sells nothing: no in-app purchase, no tip jar, no link to a website page
+that carries a way to pay. A link to Venmo, or to the page that carries one, is
+the guideline 3.1.1 mistake; so is bringing the tip back without deciding to sell
+it through Apple again.
 
-So this scans `Sources/` for the names of other payment routes, and for the path
-of the page that carries one. It does not object to the tip itself: "Buy us a
-treat" is the product, and a rule that forbade it would be forbidding the thing
-the app is supposed to do.
+So this scans `Sources/` for the names of payment routes, the path of the page
+that carries one, and the name of the tip the app used to sell.
 
 Comments are exempt on purpose. The app's own comments explain *why* there is no
 payment link, and that explanation has to be able to name the thing it is
@@ -34,8 +31,9 @@ MARKERS = (
     "venmo",
     "chill-gelato",
     "chill gelato",
-    # Note: "buy us a treat" is *not* here. It is the name of the in-app product,
-    # so a rule against it would be a rule against the tip jar itself.
+    # The tip the app used to sell. It is gone, and a guard that lets the name
+    # come back would let the feature come back with it.
+    "buy us a treat",
     "paypal",
     "cash.app",
     "cashapp",
@@ -76,7 +74,7 @@ def main() -> None:
         sys.exit(1)
 
     print(f"App payment check passed — scanned {scanned} Swift files, "
-          "no way to pay in the app but Apple's own.")
+          "no way to pay in the app.")
 
 
 if __name__ == "__main__":

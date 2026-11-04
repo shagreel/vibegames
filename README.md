@@ -1010,7 +1010,7 @@ and is worth a few seconds. Beyond that, the only lever is running fewer tests.
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**396 tests in all: 328 unit and 68 UI.** They are what the numbers above are
+**382 tests in all: 314 unit and 68 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -1410,11 +1410,9 @@ read side by side rather than through a translation table.
 Four smaller events sit around the edges, each because it answers a question that
 would otherwise be a guess: `screen_view` (a game opened but never started is a
 lobby problem, not a game problem), `feedback_sent` (does the form work in the
-wild), `support_open` (the top of the only funnel that keeps this running), and
-`share`. `donation_tap` is the website's event, for the Venmo link the app is not
-allowed to point at; the app's own way to pay is the tip, and `treat_bought` is
-that event — one number, against `support_open`, for how many people found the
-panel and how many of them gave something.
+wild), `support_open` (does anyone find the panel that carries the feedback box),
+and `share`. `donation_tap` is the website's event, for the Venmo link the app is
+not allowed to point at; the app has no way to pay, so it has no event for one.
 
 **There is deliberately no "app launched" event.** Analytics records
 `first_open` and `session_start` on its own, with the retention and engagement

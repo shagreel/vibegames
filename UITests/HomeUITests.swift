@@ -168,13 +168,9 @@ final class HomeUITests: XCTestCase {
             .firstMatch
         XCTAssertFalse(aboutPaying.exists, "the app should offer no way to pay in it")
 
-        // The tip row is deliberately not asserted here. A test run has no store
-        // — StoreKit testing needs the app signed with the in-app purchase
-        // entitlement, which simulator test builds are not — and a build before
-        // the product exists in App Store Connect has none either. In both, the
-        // row is hidden rather than shown broken, which is the behaviour
-        // `TreatJarTests` covers. What is checked here is that the panel is a
-        // panel without it: the share row is offered.
+        // The panel offers one way to help — sharing — and no way to pay at all.
+        // The tip row that used to sit above the share row is gone, and
+        // `testNothingOutsideTheAppStoreIsOffered` checks the other routes.
         XCTAssertTrue(app.descendants(matching: .any)["support.share"].firstMatch.exists,
                       "the panel should offer the one way to help that costs nothing")
 
@@ -207,13 +203,12 @@ final class HomeUITests: XCTestCase {
         attach(app, named: "73-hub-footer")
     }
 
-    /// The app sells one thing, and Apple sells it.
+    /// The app sells nothing, and points at nothing that sells anything.
     ///
-    /// This was a test that the ways-to-help link handed over to Safari, and it
-    /// was a good test of a thing that had to go: the page it opened carries a
-    /// Venmo link, and once the same tip is sold in the app a link to another
-    /// payment route is exactly what guideline 3.1.1 forbids. So what is left to
-    /// check is that nothing outside the App Store is offered anywhere.
+    /// This was a test that the ways-to-help link handed over to Safari. That
+    /// page carries a Venmo link, and the app has no purchase of its own to point
+    /// at, so the route stays out of the app altogether. What is left to check is
+    /// that nothing that takes money is offered anywhere.
     func testNothingOutsideTheAppStoreIsOffered() throws {
         let app = XCUIApplication()
         app.launch(withName: "Tester")
@@ -242,8 +237,7 @@ final class HomeUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5), "the heart should open the panel")
 
         XCTAssertNil(offersAnotherWayToPay(),
-                     "and neither should the panel: the tip in it is Apple's, and "
-                     + "pointing at another way to pay is the rejection")
+                     "and neither should the panel: there is nothing to buy in it")
     }
 
     /// The whole point of the heart being on every screen: you can say what is
