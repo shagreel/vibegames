@@ -198,29 +198,30 @@ export function pressSeed(seed: number, dealtRows: number): number {
 }
 
 /**
- * The digits for a press of `rowCount` rows, built around what is left.
+ * The digits for a press of `rowCount` rows, built around what is stuck.
  *
- * Every digit still on the board gets a partner in the new rows where there is
- * room: the partner is `10 - value`, the other half of a sum-to-ten pair (the
- * same digit for a 5). The rest of the new digits are drawn as valid pairs
- * among themselves, and the whole set is shuffled and laid out across the new
- * rows. Mirrors `VibeTenBoard.pressDigits`.
+ * Every stranded digit gets a partner in the new rows where there is room: the
+ * partner is `10 - value`, the other half of a sum-to-ten pair (the same digit
+ * for a 5). A digit that can already see a matching digit is left alone,
+ * because it does not need one. The rest of the new digits are drawn as valid
+ * pairs among themselves, and the whole set is shuffled and laid out across the
+ * new rows. Mirrors `VibeTenBoard.pressDigits`.
  */
 export function pressDigits(
   rowCount: number,
   seed: number,
   columns: number,
-  remaining: number[],
+  stranded: number[],
   dealtRows: number,
 ): number[] {
   const capacity = rowCount * columns;
   if (capacity <= 0) return [];
-  let partnered = Math.min(remaining.length, capacity);
+  let partnered = Math.min(stranded.length, capacity);
   if (partnered % 2 === 1) partnered -= 1;
 
   const digits: number[] = [];
   for (let index = 0; index < partnered; index += 1) {
-    digits.push(10 - remaining[index]);
+    digits.push(10 - stranded[index]);
   }
 
   const generator = new SeededGenerator(pressSeed(seed, dealtRows));
@@ -277,6 +278,18 @@ export function cells(board: TenBoard): { position: Position; value: number }[] 
     });
   });
   return out;
+}
+
+/** The values with no legal partner at all right now. */
+export function strandedValues(board: TenBoard): number[] {
+  const matched = new Set<string>();
+  for (const [first, second] of availableMatches(board)) {
+    matched.add(`${first.column}-${first.row}`);
+    matched.add(`${second.column}-${second.row}`);
+  }
+  return cells(board)
+    .filter((entry) => !matched.has(`${entry.position.column}-${entry.position.row}`))
+    .map((entry) => entry.value);
 }
 
 /** Whether a row exists and every digit in it has been taken. */
@@ -457,9 +470,8 @@ export function addRows(board: TenBoard, rowCount: number): TenBoard | null {
       || rowCount % 2 !== 0
       || rowCount > roomForRows(board)
       || !canAddRow(board)) return null;
-  const remainingValues = cells(board).map((entry) => entry.value);
   const digits = pressDigits(rowCount, board.seed, board.columns,
-                             remainingValues, board.dealtRows);
+                             strandedValues(board), board.dealtRows);
   if (digits.length !== rowCount * board.columns) return null;
   const stacks = board.stacks.map((column, index) => [
     ...column,

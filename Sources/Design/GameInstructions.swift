@@ -146,7 +146,7 @@ struct GameInstructions {
                     body: "You can reveal more rows of numbers at the bottom of the board "
                         + "by pressing the **Add rows** button. During game setup, you can choose "
                         + "whether the button reveals two or four rows. The new rows bring a "
-                        + "partner for the numbers still on the board, and pair up the rest."),
+                        + "partner for the numbers that have no pair to take, and pair up the rest."),
             Section(title: "Winning",
                     body: "Continue removing pairs until you have removed them all. If you are able "
                         + "to remove all the numbers, you win. If you cannot remove all the numbers "

@@ -818,7 +818,7 @@ chance — and a shorter start shows only the top of the deal, so some digits be
 with their partner still face down. `Tools/ten_solvability.swift` plays a run of
 boards and tries to clear each one with a player's heuristic — take the pair whose
 digits have the fewest other partners, break ties at random — and, with `--grow`,
-reveals two rows with partners for what is left whenever nothing pairs, exactly
+reveals two rows with partners for what is stuck whenever nothing pairs, exactly
 as the game does:
 
 ```sh
@@ -856,8 +856,9 @@ attempts at about zero — and the trap is a move that strands a digit.
 
 Adding rows is part of the deal, not a separate supply: a press of two or four
 rows — two when only two still fit — plans its digits from the board. Every
-number still on the board gets a partner in the new rows (`10 - value`, which is
-the same number for a 5), the rest of the digits are drawn as valid pairs among
+number that has **no pair to take** gets a partner in the new rows (`10 - value`,
+which is the same number for a 5); a number that can already see a matching
+number is left alone. The rest of the digits are drawn as valid pairs among
 themselves, and the whole set is shuffled and laid across the new rows. Clearing
 rows is what makes room for the next press, so a full start is not the end of the
 deal: it is just where this player has got to. There is no switch for any of it.
@@ -1004,7 +1005,7 @@ and is worth a few seconds. Beyond that, the only lever is running fewer tests.
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**378 tests in all: 310 unit and 68 UI.** They are what the numbers above are
+**379 tests in all: 311 unit and 68 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.

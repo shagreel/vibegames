@@ -179,29 +179,30 @@ struct VibeTenBoard: Equatable {
         return UInt32(truncatingIfNeeded: value)
     }
 
-    /// The digits for a press of `rowCount` rows, built around what is left.
+    /// The digits for a press of `rowCount` rows, built around what is stuck.
     ///
-    /// Every digit still on the board gets a partner in the new rows where the
-    /// rows have room: the partner is `10 - value`, which is the other half of a
-    /// sum-to-ten pair (and is the same digit for a 5). The rest of the new
-    /// digits are drawn as valid pairs among themselves. Then the whole set is
-    /// shuffled and laid out across the new rows. The first leftover may be left
-    /// out when the counts are odd, because a press has an even number of digits
-    /// and every added digit has to belong to a pair.
+    /// Every stranded digit gets a partner in the new rows where the rows have
+    /// room: the partner is `10 - value`, which is the other half of a sum-to-ten
+    /// pair (and is the same digit for a 5). A digit that can already see a
+    /// matching digit is left alone, because it does not need one. The rest of
+    /// the new digits are drawn as valid pairs among themselves. Then the whole
+    /// set is shuffled and laid out across the new rows. One stranded digit may
+    /// be left out when the count is odd, because a press has an even number of
+    /// digits and every added digit has to belong to a pair.
     static func pressDigits(rowCount: Int,
                             seed: UInt32,
                             columns: Int,
-                            remaining: [Int],
+                            stranded: [Int],
                             dealtRows: Int) -> [Int] {
         let capacity = rowCount * columns
         guard capacity > 0 else { return [] }
 
-        var partnered = min(remaining.count, capacity)
+        var partnered = min(stranded.count, capacity)
         if partnered % 2 == 1 { partnered -= 1 }
 
         var digits: [Int] = []
         digits.reserveCapacity(capacity)
-        for value in remaining.prefix(partnered) {
+        for value in stranded.prefix(partnered) {
             digits.append(10 - value)
         }
 
@@ -291,6 +292,20 @@ struct VibeTenBoard: Equatable {
             }
         }
         return cells
+    }
+
+    /// The values with no legal partner at all right now.
+    ///
+    /// A digit with a clear line to another matching digit is not stranded,
+    /// even if that line is the only one: it can be taken. A digit boxed in by
+    /// other digits is stranded, and is the one a press should partner.
+    var strandedValues: [Int] {
+        var matched = Set<Position>()
+        for pair in availableMatches() {
+            matched.insert(pair.0)
+            matched.insert(pair.1)
+        }
+        return cells.filter { !matched.contains($0.position) }.map(\.value)
     }
 
     /// Whether a row exists and every digit in it has been taken.
@@ -462,11 +477,10 @@ struct VibeTenBoard: Equatable {
               rowCount % 2 == 0,
               rowCount <= roomForRows,
               canAddRow else { return false }
-        let remaining = cells.map(\.value)
         let digits = VibeTenBoard.pressDigits(rowCount: rowCount,
                                               seed: seed,
                                               columns: columns,
-                                              remaining: remaining,
+                                              stranded: strandedValues,
                                               dealtRows: dealtRows)
         guard digits.count == rowCount * columns else { return false }
         for column in stacks.indices {

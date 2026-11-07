@@ -21,6 +21,7 @@ import {
   pairChoices,
   remaining,
   remove,
+  strandedValues,
   take,
   valueAt,
   values,
@@ -272,6 +273,16 @@ describe('adding rows', () => {
     expect(canBePaired([5, 3, 9, 2, ...added])).toBe(true);
     expect(heightOf(next, 0)).toBe(3);
     expect(next.dealtRows).toBe(3);
+  });
+
+  it('only gives partners to digits with no legal pair', () => {
+    // 3 and 7 can see each other in one column: neither is stranded.
+    expect(strandedValues(boardFromStacks([[3, 7]], 0))).toEqual([]);
+    // A 1 between them on the row has no 9 of its own, so all three are stuck.
+    expect(strandedValues(boardFromStacks([[3], [1], [7]], 0)).sort())
+      .toEqual([1, 3, 7]);
+    // 3 and 7 still see each other; only the 2 has nobody.
+    expect(strandedValues(boardFromStacks([[3, 7], [2]], 0))).toEqual([2]);
   });
 
   it('is deterministic from the same board and seed', () => {

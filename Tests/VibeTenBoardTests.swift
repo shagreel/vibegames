@@ -379,6 +379,21 @@ final class VibeTenAddRowTests: XCTestCase {
         XCTAssertEqual(board.dealtRows, 3)
     }
 
+    func testOnlyStrandedDigitsGetPartners() {
+        // 3 and 7 can see each other in one column: neither is stranded.
+        let visible = VibeTenBoard(stacks: [[3, 7]])
+        XCTAssertTrue(visible.strandedValues.isEmpty)
+
+        // A 1 sits between them on the row, and has no 9 of its own, so all
+        // three are stranded.
+        let blocked = VibeTenBoard(stacks: [[3], [1], [7]])
+        XCTAssertEqual(blocked.strandedValues.sorted(), [1, 3, 7])
+
+        // 3 and 7 still see each other; only the 2 has nobody.
+        let partly = VibeTenBoard(stacks: [[3, 7], [2]])
+        XCTAssertEqual(partly.strandedValues, [2])
+    }
+
     func testAPressIsDeterministicFromTheSameBoardAndSeed() {
         var first = VibeTenBoard(stacks: [[5], [3], [9], [2]], seed: 99)
         var second = VibeTenBoard(stacks: [[5], [3], [9], [2]], seed: 99)
@@ -432,8 +447,9 @@ final class VibeTenAddRowTests: XCTestCase {
         XCTAssertTrue(board.addRows(2))
         XCTAssertEqual(board.dealtRows, 22)
         XCTAssertEqual(board.height(ofColumn: 0), 18)
-        // Every leftover is a 1, so every added digit is its partner: a 9.
-        XCTAssertTrue(addedRows(board, 2).allSatisfy { $0 == 9 })
+        // The 1s can all pair with each other, so none is stranded: the press
+        // is drawn as whole pairs rather than as partners for them.
+        XCTAssertTrue(canBePaired(addedRows(board, 2)))
     }
 }
 
