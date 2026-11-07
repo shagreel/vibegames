@@ -188,7 +188,7 @@ final class VibeTenModelTests: XCTestCase {
     }
 
     /// A full start has no room for a press. Once rows clear, the offer comes
-    /// back and keeps drawing from the same seed past the first eighteen rows.
+    /// back and keeps the board growing with partners for what is left.
     func testTheNewRowOfferComesBackAfterRowsAreCleared() {
         var cells = [[VibeTenCell]](repeating: [], count: 9)
         for column in 0..<9 {
@@ -206,10 +206,7 @@ final class VibeTenModelTests: XCTestCase {
 
         model.addRows()
         XCTAssertEqual(model.board?.height(ofColumn: 0), 18)
-        XCTAssertEqual(model.board?.dealtRows, 20, "the stream goes past eighteen")
-        XCTAssertEqual(model.board?.value(at: .init(column: 0, row: 16)),
-                       VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 18)[0],
-                       "and the new rows are the same seed's next rows")
+        XCTAssertEqual(model.board?.dealtRows, 20, "the frontier goes past eighteen")
     }
 
     /// A press reveals four rows when four fit, and two when only two do: a

@@ -114,7 +114,7 @@ for key, value in (
 # The support page states the version, so that somebody reading it knows what
 # they are running — and so that a forgotten bump is caught here rather than by a
 # user.
-stated = re.search(r"Vibe Games (\d+\.\d+)", (SITE / "support.html").read_text())
+stated = re.search(r"Vibe Games (\d+(?:\.\d+)*)", (SITE / "support.html").read_text())
 if not stated:
     fail("site/support.html", "does not say which version it is for")
 elif stated.group(1) != version:

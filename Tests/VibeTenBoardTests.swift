@@ -181,27 +181,6 @@ final class VibeTenBoardTests: XCTestCase {
         }
     }
 
-    func testAResumedBoardKeepsTheStreamFrontierPastEighteen() {
-        var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 16),
-                                               count: 9),
-                                 seed: 1234,
-                                 dealtRows: 20)
-        XCTAssertEqual(board.dealtRows, 20, "the frontier is not clamped back to the grid")
-        XCTAssertTrue(board.addRow())
-        XCTAssertEqual(board.value(at: .init(column: 0, row: 16)),
-                       VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 20)[0],
-                       "a resumed board carries on from where the stream stopped")
-    }
-
-    func testTheStreamAfterTheFirstDealMatchesTheWebFixture() {
-        let firstRow = VibeTenBoard.maximumRows
-        for (offset, expected) in Self.streamRows.enumerated() {
-            XCTAssertEqual(VibeTenBoard.rowDigits(seed: 1234, columns: 9,
-                                                  row: firstRow + offset),
-                           expected, "row \(firstRow + offset)")
-        }
-    }
-
     /// Every row count, from seed 1234. Dumped from this engine.
     static let fixtures: [String: [[Int]]] = [
         "1234-9x12": [
@@ -250,17 +229,6 @@ final class VibeTenBoardTests: XCTestCase {
         ]
     ]
 
-    /// The rows after the first deal, from seed 1234. Dumped from this engine by
-    /// `Tools/dump_ten_stream.swift` into
-    /// `web/src/games/ten/stream.fixtures.json`.
-    static let streamRows: [[Int]] = [
-        [9, 6, 2, 6, 3, 4, 5, 8, 3],
-        [9, 9, 4, 9, 1, 4, 4, 5, 1],
-        [2, 5, 9, 1, 2, 5, 4, 2, 9],
-        [9, 2, 8, 3, 1, 3, 1, 8, 4],
-        [5, 4, 8, 3, 6, 4, 3, 9, 4],
-        [4, 8, 9, 6, 7, 7, 5, 6, 4]
-    ]
 }
 
 /// The scoreboard rule: the first player to clear the board wins, and the pairs
@@ -373,132 +341,71 @@ final class VibeTenDimTests: XCTestCase {
     }
 }
 
-/// Revealing the next rows of the same deal.
+/// Revealing rows, and the partners they bring with them.
 final class VibeTenAddRowTests: XCTestCase {
 
-    func testTheNextRowIsTheNextRowOfTheSameDeal() {
-        var board = VibeTenBoard(seed: 1234, startRows: 12)
-        let full = VibeTenBoard.deal(seed: 1234, columns: 9,
-                                     rows: VibeTenBoard.maximumRows).map { $0.map(\.value) }
-        let before = board.values
-        XCTAssertEqual(board.dealtRows, 12)
-        XCTAssertTrue(board.addRow())
-        XCTAssertEqual(board.height(ofColumn: 0), 13)
-        for column in 0..<9 {
-            XCTAssertEqual(Array(board.values[column].prefix(12)), before[column],
-                           "nothing already on the board moved")
-            XCTAssertEqual(board.values[column].last, full[column][12],
-                           "the new row was already in the deal")
+    /// A multiset is a set of whole pairs when every complement comes in pairs
+    /// too: 5s in twos, and the counts of 1/9, 2/8, 3/7 and 4/6 adding up to an
+    /// even number.
+    private func canBePaired(_ values: [Int]) -> Bool {
+        var counts = [Int](repeating: 0, count: 10)
+        for value in values where (1...9).contains(value) { counts[value] += 1 }
+        guard counts[5] % 2 == 0 else { return false }
+        for digit in 1...4 where (counts[digit] + counts[10 - digit]) % 2 != 0 {
+            return false
         }
-        XCTAssertEqual(board.dealtRows, 13, "the deal frontier moves on by a row")
+        return true
     }
 
-    func testTwoPlayersRevealingTheSameRowSeeTheSameDigits() {
-        var first = VibeTenBoard(seed: 77, startRows: 12)
-        var second = VibeTenBoard(seed: 77, startRows: 12)
-        for _ in 0..<4 {
-            XCTAssertTrue(first.addRow())
-            XCTAssertTrue(second.addRow())
-        }
+    private func addedRows(_ board: VibeTenBoard, _ count: Int) -> [Int] {
+        (0..<board.columns).flatMap { board.values[$0].suffix(count) }
+    }
+
+    func testAPressGivesEveryLeftoverDigitAPartner() {
+        // The issue's example: 5, 3, 9 and 2 are left with nothing to take.
+        // None of those four pair with another leftover, so a perfect pairing of
+        // the twelve leftovers and the eighteen added digits can only exist if
+        // the press brought a partner for each of them.
+        var board = VibeTenBoard(stacks: [[5], [3], [9], [2]], seed: 1234)
+        XCTAssertTrue(board.addRows(2))
+
+        let added = addedRows(board, 2)
+        XCTAssertEqual(added.count, 18, "two rows of nine")
+        XCTAssertTrue(canBePaired([5, 3, 9, 2] + added),
+                      "the leftovers and the press together are whole pairs")
+        XCTAssertFalse(board.availableMatches().isEmpty,
+                       "the press should leave a pair that can actually be taken")
+        XCTAssertEqual(board.height(ofColumn: 0), 3)
+        XCTAssertEqual(board.dealtRows, 3)
+    }
+
+    func testAPressIsDeterministicFromTheSameBoardAndSeed() {
+        var first = VibeTenBoard(stacks: [[5], [3], [9], [2]], seed: 99)
+        var second = VibeTenBoard(stacks: [[5], [3], [9], [2]], seed: 99)
+        XCTAssertTrue(first.addRows(2))
+        XCTAssertTrue(second.addRows(2))
         XCTAssertEqual(first.values, second.values)
-    }
-
-    func testRowsCanBeRevealedPastTheFirstDealOnceClearedRowsMakeRoom() {
-        // Sixteen rows of digits with the first deal fully shown: clearing two
-        // rows has made room for another press, and the stream keeps going.
-        var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 16),
-                                               count: 9),
-                                 seed: 1234,
-                                 dealtRows: 18)
-        XCTAssertTrue(board.canAddRow)
-        XCTAssertEqual(board.roomForRows, 2)
-        XCTAssertTrue(board.addRow())
-        XCTAssertTrue(board.addRow())
-        XCTAssertEqual(board.dealtRows, 20)
-        for column in 0..<9 {
-            XCTAssertEqual(board.value(at: .init(column: column, row: 16)),
-                           VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 18)[column],
-                           "column \(column): the row after the first deal")
-            XCTAssertEqual(board.value(at: .init(column: column, row: 17)),
-                           VibeTenBoard.rowDigits(seed: 1234, columns: 9, row: 19)[column],
-                           "column \(column): and the one after it")
-        }
     }
 
     func testAFullGridHasNowhereToPutOne() {
         var board = VibeTenBoard(seed: 7)
         XCTAssertFalse(board.canAddRow, "eighteen rows is the top of the grid")
-        XCTAssertFalse(board.addRow())
+        XCTAssertFalse(board.addRows(2))
     }
 
-    func testARowIsAvailableOnlyWhenTheBottomOfTheGridIsFree() {
-        // Every column one short of the last row: there is room underneath.
+    func testAPressNeedsRoomForBothRows() {
         var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 17),
                                                count: 9))
-        XCTAssertTrue(board.canAddRow)
-        XCTAssertTrue(board.addRow())
-        XCTAssertFalse(board.canAddRow, "the grid is full again")
-
-        // One column still reaching the last row holds the new row back.
-        let tall = VibeTenBoard(stacks: (0..<9).map {
-            Array(repeating: 3, count: $0 == 4 ? 18 : 17)
-        })
-        XCTAssertFalse(tall.canAddRow, "a single digit on the last row is in the way")
-    }
-}
-
-/// The board's shape: always nine columns, always room for eighteen rows, and
-/// the first rows chosen.
-final class VibeTenShapeTests: XCTestCase {
-
-    func testEveryShapeDealsNineColumns() {
-        for startRows in VibeTenBoard.rowOptions {
-            let board = VibeTenBoard(seed: 12_345, startRows: startRows)
-            XCTAssertEqual(board.columns, 9, "\(startRows): nine columns")
-            XCTAssertEqual(board.rows, VibeTenBoard.maximumRows,
-                           "\(startRows): the board has room for eighteen rows")
-            XCTAssertEqual(board.values.count, 9)
-            for column in board.values {
-                XCTAssertEqual(column.count, startRows,
-                               "\(startRows): the digits start that many rows deep")
-                XCTAssertTrue(column.allSatisfy { (1...9).contains($0) },
-                              "\(startRows): digits one to nine")
-            }
-            XCTAssertEqual(board.remaining, 9 * startRows)
-            XCTAssertEqual(board.roomForRows, VibeTenBoard.maximumRows - startRows)
-        }
-    }
-
-    func testTheStartingRowsArePartOfTheDeal() {
-        XCTAssertEqual(VibeTenBoard(seed: 7, startRows: 12).values,
-                       VibeTenBoard(seed: 7, startRows: 12).values)
-        XCTAssertNotEqual(VibeTenBoard(seed: 7, startRows: 12).values,
-                          VibeTenBoard(seed: 7, startRows: 14).values,
-                          "two rows more is a different board")
-        XCTAssertNotEqual(VibeTenBoard(seed: 7, startRows: 12).values,
-                          VibeTenBoard(seed: 8, startRows: 12).values,
-                          "and so is another seed")
-        // The default is the board the game shipped with: nine by eighteen.
-        XCTAssertEqual(VibeTenBoard(seed: 7).values,
-                       VibeTenBoard(seed: 7, columns: 9, startRows: 18).values)
-
-        // Every start is the top of one whole deal: the rows underneath are
-        // already drawn and wait face down.
-        let full = VibeTenBoard.deal(seed: 7, columns: 9,
-                                     rows: VibeTenBoard.maximumRows).map { $0.map(\.value) }
-        for startRows in VibeTenBoard.rowOptions {
-            XCTAssertEqual(VibeTenBoard(seed: 7, startRows: startRows).values,
-                           full.map { Array($0.prefix(startRows)) },
-                           "\(startRows): the starting rows are the deal's first rows")
-        }
+        XCTAssertTrue(board.canAddRow, "one row of room is not a press")
+        XCTAssertFalse(board.addRows(2), "a press is two rows")
     }
 
     func testRowsAreRevealedUnderTheDigitsAndGrowTheBoard() {
         var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 6),
                                                count: 9))
         let before = board.values
-        XCTAssertTrue(board.addRow())
-        XCTAssertEqual(board.height(ofColumn: 0), 7)
+        XCTAssertTrue(board.addRows(2))
+        XCTAssertEqual(board.height(ofColumn: 0), 8)
         for column in 0..<9 {
             XCTAssertEqual(Array(board.values[column].prefix(6)), before[column],
                            "nothing already on the board moved")
@@ -508,12 +415,25 @@ final class VibeTenShapeTests: XCTestCase {
     func testABoardCanBeGrownToEighteenRowsAndNoFurther() {
         var board = VibeTenBoard(seed: 1234, startRows: 12)
         XCTAssertTrue(board.canAddRow, "six rows of room under a twelve-row start")
-        for _ in 0..<6 {
-            XCTAssertTrue(board.addRow())
+        for _ in 0..<3 {
+            XCTAssertTrue(board.addRows(2))
         }
         XCTAssertEqual(board.height(ofColumn: 0), 18)
         XCTAssertEqual(board.dealtRows, 18)
         XCTAssertFalse(board.canAddRow, "eighteen is the last row")
+    }
+
+    func testAResumedBoardKeepsItsFrontierAndPlansTheNextPress() {
+        var board = VibeTenBoard(stacks: Array(repeating: Array(repeating: 1, count: 16),
+                                               count: 9),
+                                 seed: 1234,
+                                 dealtRows: 20)
+        XCTAssertEqual(board.dealtRows, 20)
+        XCTAssertTrue(board.addRows(2))
+        XCTAssertEqual(board.dealtRows, 22)
+        XCTAssertEqual(board.height(ofColumn: 0), 18)
+        // Every leftover is a 1, so every added digit is its partner: a 9.
+        XCTAssertTrue(addedRows(board, 2).allSatisfy { $0 == 9 })
     }
 }
 

@@ -781,14 +781,14 @@ drawn — pairs of the same number or pairs that add up to ten — enough of the
 fill the whole grid, eighteen rows. Then all of those digits are shuffled and
 laid out, so where a pair's two halves end up is chance. The board reads as dealt
 rather than sorted, and clearing every digit is the aim, not a promise. A game
-starts showing the top twelve to eighteen rows of that one deal; the rest wait
-face down underneath. Both clients reproduce the deal from the seed with the same
-generator and the same order.
+starts showing the top twelve to eighteen rows of that one deal; rows added
+later are planned from what is left on the board. Both clients reproduce the
+starting deal from the seed with the same generator and the same order.
 
 **The board always has room for eighteen rows of digits at a time.** The settings choose
-how many of them start full: twelve, fourteen, sixteen or eighteen. The deal
-does not stop there: a game that clears rows makes room for more, and the stream
-keeps producing them, so a long game can pass eighteen rows. A solo game is won
+how many of them start full: twelve, fourteen, sixteen or eighteen. A game that
+clears rows makes room for more, and a press plans them from the board, so a long
+game can pass eighteen rows. A solo game is won
 by clearing the board. A round is only lost when nothing pairs *and* there is no
 room left to reveal a row; while the grid has room, the new-row offer appears on
 the first empty row under the digits and the round continues. In a room, the
@@ -818,8 +818,8 @@ chance — and a shorter start shows only the top of the deal, so some digits be
 with their partner still face down. `Tools/ten_solvability.swift` plays a run of
 boards and tries to clear each one with a player's heuristic — take the pair whose
 digits have the fewest other partners, break ties at random — and, with `--grow`,
-reveals more of the stream two rows at a press whenever nothing pairs, exactly as
-the game does:
+reveals two rows with partners for what is left whenever nothing pairs, exactly
+as the game does:
 
 ```sh
 swiftc -O Sources/Model/SeededGenerator.swift \
@@ -838,8 +838,8 @@ still face down. With the offer on — two rows a press, the default — 500 of 
 twelve-row and 500 of 500 fourteen-row starts cleared within 300 attempts, and
 498 of 500 sixteen-row starts did. The eighteen-row start is a full grid, and
 all 500 cleared within 300 attempts at a median of 3. Those runs stopped
-revealing at eighteen rows; the stream now runs on past it, so they are a floor
-rather than a ceiling. Four rows a press is about the same (499 of 500 at 12 and
+revealing at eighteen rows; a press now plans its digits from the board, so they
+are a floor rather than a ceiling. Four rows a press is about the same (499 of 500 at 12 and
 16 rows), and joined rows help a little (500 of 500, with fewer attempts).
 
 Dim mode is much harder. Of 500 eighteen-row boards it found a way through 435
@@ -854,21 +854,20 @@ impossible. That is the shape of the difficulty: the initial layout's statistics
 do not predict it — match counts, degree counts and digit mixes correlate with
 attempts at about zero — and the trap is a move that strands a digit.
 
-Adding rows is part of the deal, not a separate supply: a press reveals the next
-rows of the stream — two or four, as the host's setting says, and two when only
-two still fit, so every press arrives as whole pairs. The first eighteen rows are
-one deal; after that the stream continues in two-row blocks, each nine valid
-pairs drawn from a seed derived from the board's own. Clearing rows is what
-makes room for the next press, so a full start is not the end of the deal: it is
-just where this player has got to. There is no switch for any of it. Each player's board grows on
-their own device once a room has started, which is why the room stores the
-starting rows and the rows per press but not a board — and why two players who
-reveal the same row see the same digits. A room also stores the join and the pair
-mode, because every device has to deal the same board *and play it the same
-way*: the host chooses them when the room is made and everybody plays them. A
-player's score is their pairs, the running total behind the race; the winner is
-the first clear, written into the room's scores as a `clearedAt` that a later
-score update cannot take away.
+Adding rows is part of the deal, not a separate supply: a press of two or four
+rows — two when only two still fit — plans its digits from the board. Every
+number still on the board gets a partner in the new rows (`10 - value`, which is
+the same number for a 5), the rest of the digits are drawn as valid pairs among
+themselves, and the whole set is shuffled and laid across the new rows. Clearing
+rows is what makes room for the next press, so a full start is not the end of the
+deal: it is just where this player has got to. There is no switch for any of it.
+Each player's board grows on their own device once a room has started, which is
+why the room stores the starting rows and the rows per press but not a board. A
+room also stores the join and the pair mode, because every device has to deal the
+same board *and play it the same way*: the host chooses them when the room is
+made and everybody plays them. A player's score is their pairs, the running total
+behind the race; the winner is the first clear, written into the room's scores as
+a `clearedAt` that a later score update cannot take away.
 
 `VibeTenBoard` is the rules and knows nothing about screens or the database;
 `VibeTenModel` holds a board, a tapped cell and a score, and deals a shared
@@ -884,11 +883,6 @@ swiftc -O Sources/Model/SeededGenerator.swift \
   Tools/dump_ten_board.swift -o /tmp/dump_ten_board
 /tmp/dump_ten_board > web/src/games/ten/board.fixtures.json
 ```
-
-The rows after that first deal are pinned the same way by
-`web/src/games/ten/stream.fixtures.json`, dumped with
-`Tools/dump_ten_stream.swift`, so the two engines agree on the stream a long
-game reveals as well as on the deal it starts from.
 
 ## Utilities
 
@@ -1010,7 +1004,7 @@ and is worth a few seconds. Beyond that, the only lever is running fewer tests.
   landing page in both appearances — a board, and the leaderboard the game ends on
   — so the screenshots and the tests cannot drift apart.
 
-**382 tests in all: 314 unit and 68 UI.** They are what the numbers above are
+**378 tests in all: 310 unit and 68 UI.** They are what the numbers above are
 worth — the grade-matching figures, the 85,320 triples, the fixture agreement
 with iOS — because each of those is measured by a test rather than asserted in
 prose.
@@ -1204,7 +1198,6 @@ Tools/blurt_e2e.mjs             A real four-player game of Similar Vibe, in brow
 Tools/ten_room_rules_e2e.mjs    A Vibe Ten room played by the host's rules, in browsers
 Tools/ten_settings_e2e.mjs      The Vibe Ten settings sheet and its rows, in a browser
 Tools/dump_ten_board.swift       Dumps the Swift Vibe Ten deals for the web fixtures
-Tools/dump_ten_stream.swift      Dumps the rows after the first deal for the web
 Tools/ten_solvability.swift     Clears dealt Vibe Ten boards, revealing the rest of the deal
 Tools/blurt_presence_e2e.mjs    Leaving, rejoining and standing in, for real
 Tools/words_e2e.mjs             A real game of Word Vibe, in a browser

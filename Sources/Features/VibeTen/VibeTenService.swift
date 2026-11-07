@@ -31,7 +31,7 @@ struct VibeTenScore: Equatable {
 /// the starting rows, whether the rows join end to end, and how a taken pair
 /// leaves the board — so every device — phone or browser — deals the identical
 /// digits and plays them the same way. A press of the new-row offer reveals the
-/// next two or four rows of the same deal, and each player's board grows on its
+/// next two or four rows with partners for what is left, and each player's board grows on its
 /// own device once they do. Those rules are the host's choice, written once when
 /// the room is made and kept for the room's life; only the scores travel, and
 /// each player writes their own. The board is always nine columns.

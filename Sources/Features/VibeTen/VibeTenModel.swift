@@ -261,8 +261,8 @@ final class VibeTenModel: ObservableObject {
         /// The rows the game started with. Absent from a save made before the
         /// board could grow, where `rows` was the start.
         var startRows: Int?
-        /// How many rows of the board's stream had been shown. Absent from
-        /// older saves; the board falls back to its tallest column.
+        /// How many rows had been shown. Absent from older saves; the board
+        /// falls back to its tallest column.
         var dealtRows: Int?
         var wrapRows: Bool
         var mode: VibeTenMode
@@ -586,15 +586,12 @@ final class VibeTenModel: ObservableObject {
         return cap % 2 == 0 ? cap : cap - 1
     }
 
-    /// Reveals the next rows of the same deal under the board: two or four at a
-    /// press. Solo or in a room — each player's board grows on their own device
-    /// — and the digits are the deal's, not freshly drawn, so everybody who has
-    /// revealed the same row sees the same digits.
+    /// Reveals the next rows under the board: two or four at a press, with a
+    /// partner for each number still on the board and whole pairs for the rest.
+    /// Solo or in a room — each player's board grows on their own device.
     func addRows() {
         guard canAddRow, var board else { return }
-        for _ in 0..<rowsToAdd {
-            guard board.addRow() else { break }
-        }
+        guard board.addRows(rowsToAdd) else { return }
         self.board = board
         selected = nil
         checkForFinish(board)

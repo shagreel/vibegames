@@ -68,11 +68,9 @@ export interface TenBoard {
   readonly columns: number;
   readonly rows: number;
   /**
-   * How many rows of the board's stream have been shown: the starting rows plus
-   * every row the new-row offer has revealed. It is separate from the column
-   * heights because taking pairs shortens columns without winding the stream
-   * back, and it can go past eighteen once cleared rows make room for another
-   * press.
+   * How many rows have been shown: the starting rows plus every row the
+   * new-row offer has revealed. It is separate from the column heights because
+   * taking pairs shortens columns without changing the frontier.
    */
   readonly dealtRows: number;
   /** Whether the end of a row joins the start of the next. */
@@ -134,10 +132,8 @@ export function deal(seed: number, columns: number, rows: number): TenCell[][] {
  * cleared board.
  *
  * The grid is always dealt in full and the board starts showing the top
- * `startRows` of it. The rows beneath stay face down, and the new-row offer
- * reveals them one press at a time — the same rows for everyone in a room. The
- * stream does not stop at eighteen: after the first deal it continues in fresh
- * two-row blocks, so a game that clears rows can keep revealing.
+ * `startRows` of it. Rows added later are planned from what is still on the
+ * board: a partner for the numbers there, then whole pairs for the rest.
  */
 export function newBoard(
   seed: number,
@@ -188,41 +184,52 @@ export function boardFromStacks(
   };
 }
 
-/** How many rows each fresh block of the stream after the first deal holds.
- * Two, so a block is nine whole pairs: the smallest press reveals one. */
-export const STREAM_BLOCK_ROWS = 2;
-
 /**
- * The seed of one block of the stream after the first deal, drawn from the
- * board's own generator. Mirrors `VibeTenBoard.blockSeed`.
+ * The seed for one press's shuffle, drawn from the board's own generator.
+ * Mirrors `VibeTenBoard.pressSeed`.
  */
-export function blockSeed(seed: number, index: number): number {
+export function pressSeed(seed: number, dealtRows: number): number {
   const generator = new SeededGenerator(seed);
   let value = generator.next();
-  for (let draw = 0; draw < Math.max(0, Math.trunc(index)); draw += 1) {
+  for (let draw = 0; draw < Math.max(0, Math.trunc(dealtRows)); draw += 1) {
     value = generator.next();
   }
   return Number(value & 0xffffffffn);
 }
 
 /**
- * One row of the board's stream, column by column.
+ * The digits for a press of `rowCount` rows, built around what is left.
  *
- * The first eighteen rows are the deal a board starts from. After that the
- * stream keeps going in two-row blocks of nine valid pairs, so a game that
- * clears rows can reveal past eighteen — and two clients revealing the same
- * row still see the same digits. Mirrors `VibeTenBoard.rowDigits`.
+ * Every digit still on the board gets a partner in the new rows where there is
+ * room: the partner is `10 - value`, the other half of a sum-to-ten pair (the
+ * same digit for a 5). The rest of the new digits are drawn as valid pairs
+ * among themselves, and the whole set is shuffled and laid out across the new
+ * rows. Mirrors `VibeTenBoard.pressDigits`.
  */
-export function rowDigits(seed: number, columns: number, row: number): number[] {
-  if (columns <= 0 || row < 0) return [];
-  if (row < ROWS) {
-    return deal(seed, columns, ROWS).map((column) => column[row].value);
+export function pressDigits(
+  rowCount: number,
+  seed: number,
+  columns: number,
+  remaining: number[],
+  dealtRows: number,
+): number[] {
+  const capacity = rowCount * columns;
+  if (capacity <= 0) return [];
+  let partnered = Math.min(remaining.length, capacity);
+  if (partnered % 2 === 1) partnered -= 1;
+
+  const digits: number[] = [];
+  for (let index = 0; index < partnered; index += 1) {
+    digits.push(10 - remaining[index]);
   }
-  const offset = row - ROWS;
-  const block = Math.floor(offset / STREAM_BLOCK_ROWS);
-  const within = offset % STREAM_BLOCK_ROWS;
-  return deal(blockSeed(seed, block), columns, STREAM_BLOCK_ROWS)
-    .map((column) => column[within].value);
+
+  const generator = new SeededGenerator(pressSeed(seed, dealtRows));
+  for (let index = 0; index < (capacity - partnered) / 2; index += 1) {
+    const pair = PAIR_OPTIONS[generator.nextBounded(PAIR_OPTIONS.length)];
+    digits.push(pair[0], pair[1]);
+  }
+  shuffle(digits, generator);
+  return digits;
 }
 
 /** The digits in the shape the fixture and the app use. */
@@ -413,15 +420,15 @@ export function remove(board: TenBoard, a: Position, b: Position): TenBoard | nu
 }
 
 /**
- * Rows can be added while the bottom of the grid is free. The stream keeps
- * producing rows, so a long game is limited by space under the digits — not by
- * the eighteen rows the board started with.
+ * Rows can be added while the bottom of the grid is free. A press plans its
+ * digits from the board, so a long game is limited by space under the digits —
+ * not by the eighteen rows the board started with.
  */
 export function canAddRow(board: TenBoard): boolean {
   return board.stacks.every((column) => column.length < board.rows);
 }
 
-/** How many rows of the stream would fit under the digits as they are. */
+/** How many rows would fit under the digits as they are. */
 export function roomForRows(board: TenBoard): number {
   const tallest = board.stacks.reduce((most, column) => Math.max(most, column.length), 0);
   return Math.max(0, board.rows - tallest);
@@ -439,17 +446,24 @@ export function rowsToAdd(board: TenBoard, rowsPerAdd: number): number {
 }
 
 /**
- * Reveals the next row of the board's stream under the digits.
+ * Reveals `rowCount` rows under the digits, with a partner for what is left.
  *
- * Nothing else moves: the board is anchored at the top, so the row simply
- * extends it downward. The digits are not drawn now — the stream was settled by
- * the seed — which is what makes two players' new rows identical from the same
- * room seed.
+ * The digits are planned for the whole press before anything is appended, so
+ * the partners and the remaining pairs are one set, then shuffled. A press is
+ * two or four rows because the plan needs an even number of digits.
  */
-export function addRow(board: TenBoard): TenBoard | null {
-  if (!canAddRow(board)) return null;
-  const digits = rowDigits(board.seed, board.columns, board.dealtRows);
-  if (digits.length < board.columns) return null;
-  const stacks = board.stacks.map((column, index) => [...column, cell(digits[index])]);
-  return { ...board, dealtRows: board.dealtRows + 1, stacks };
+export function addRows(board: TenBoard, rowCount: number): TenBoard | null {
+  if (rowCount < ROWS_PER_ADD_OPTIONS[0]
+      || rowCount % 2 !== 0
+      || rowCount > roomForRows(board)
+      || !canAddRow(board)) return null;
+  const remainingValues = cells(board).map((entry) => entry.value);
+  const digits = pressDigits(rowCount, board.seed, board.columns,
+                             remainingValues, board.dealtRows);
+  if (digits.length !== rowCount * board.columns) return null;
+  const stacks = board.stacks.map((column, index) => [
+    ...column,
+    ...Array.from({ length: rowCount }, (_, row) => cell(digits[index * rowCount + row])),
+  ]);
+  return { ...board, dealtRows: board.dealtRows + rowCount, stacks };
 }

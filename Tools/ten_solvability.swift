@@ -29,9 +29,9 @@ import Foundation
 ///   --rows LIST      start rows to test (default 12,14,16,18)
 ///   --mode MODE      remove (default) or dim
 ///   --wrap YES|NO    whether the rows join end to end (default NO)
-///   --grow N         when nothing pairs, reveal more of the deal's stream two
-///                    or four rows at a press, the way the game does (default 0:
-///                    play only the rows the board starts with)
+///   --grow N         when nothing pairs, reveal two or four rows with partners
+///                    for what is left, the way the game does (default 0: play
+///                    only the rows the board starts with)
 ///   --seed N         the solver's own seed (default 1)
 ///   --detail         print the attempts each board needed
 
@@ -249,8 +249,7 @@ struct TenSolvability {
         guard press >= VibeTenBoard.minimumRowsPerAdd else { return false }
         let whole = press % 2 == 0 ? press : press - 1
         guard whole >= VibeTenBoard.minimumRowsPerAdd else { return false }
-        for _ in 0..<whole where !board.addRow() { return false }
-        return true
+        return board.addRows(whole)
     }
 
     /// How many digits have no visible partner at all right now.

@@ -23,7 +23,7 @@ import {
   ROWS,
   ROWS_PER_ADD_OPTIONS,
   ROW_OPTIONS,
-  addRow,
+  addRows,
   availableMatches,
   cellAt,
   isCleared,
@@ -82,7 +82,7 @@ const TEN_INSTRUCTIONS: HowToPlayContent = {
     },
     {
       title: 'New rows',
-      body: 'You can reveal more rows of numbers at the bottom of the board by pressing the **Add rows** button. During game setup, you can choose whether the button reveals two or four rows.',
+      body: 'You can reveal more rows of numbers at the bottom of the board by pressing the **Add rows** button. During game setup, you can choose whether the button reveals two or four rows. The new rows bring a partner for the numbers still on the board, and pair up the rest.',
     },
     {
       title: 'Winning',
@@ -137,8 +137,8 @@ interface TenSaved {
       the start too, which is why `startRows` is optional. */
   rows: number;
   startRows?: number;
-  /** How many rows of the board's stream had been shown. Absent from older
-      saves; the board falls back to its tallest column. */
+  /** How many rows had been shown. Absent from older saves; the board falls
+      back to its tallest column. */
   dealtRows?: number;
   wrapRows: boolean;
   stacks: TenCell[][];
@@ -490,20 +490,14 @@ function VibeTen() {
     }
   }
 
-  /** Reveals the next rows of the same deal under the board: two or four at a
-      press. Solo or in a room — each player's board grows on their own device
-      — and the digits are the deal's, not freshly drawn, so everybody who has
-      revealed the same row sees the same digits. */
-  function addRows() {
+  /** Reveals the next rows under the board: two or four at a press, with a
+      partner for each number still on the board and whole pairs for the rest.
+      Solo or in a room — each player's board grows on their own device. */
+  function revealRows() {
     if (!board || !canPlay) return;
-    let next = board;
-    const wanted = rowsToAdd(next, shownRowsPerAdd);
-    for (let index = 0; index < wanted; index += 1) {
-      const moved = addRow(next);
-      if (!moved) break;
-      next = moved;
-    }
-    if (next === board) return;
+    const wanted = rowsToAdd(board, shownRowsPerAdd);
+    const next = addRows(board, wanted);
+    if (next === null) return;
     setBoard(next);
     setSelected(null);
     setNotice('');
@@ -658,7 +652,7 @@ function VibeTen() {
             selected={selected}
             onTap={tapCell}
             disabled={!canPlay}
-            onAddRow={!finished && hasAddOffer(board) ? addRows : undefined}
+            onAddRow={!finished && hasAddOffer(board) ? revealRows : undefined}
             rowsToAdd={rowsToAdd(board, shownRowsPerAdd)}
           />
 

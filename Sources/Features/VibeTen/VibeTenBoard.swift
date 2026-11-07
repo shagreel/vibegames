@@ -91,11 +91,9 @@ struct VibeTenBoard: Equatable {
     /// The seed the board was dealt from, for a shared game's report.
     let seed: UInt32
 
-    /// How many rows of the board's stream have been shown: the starting rows,
-    /// plus every row the new-row offer has revealed. It is separate from the
-    /// column heights because taking pairs shortens columns without winding the
-    /// stream back, and it can go past eighteen once cleared rows make room for
-    /// another press.
+    /// How many rows have been shown: the starting rows, plus every row the
+    /// new-row offer has revealed. It is separate from the column heights
+    /// because taking pairs shortens columns without changing the frontier.
     private(set) var dealtRows: Int
 
     private(set) var stacks: [[VibeTenCell]]
@@ -107,12 +105,9 @@ struct VibeTenBoard: Equatable {
     /// The first deal is always the **full eighteen rows**, drawn as valid
     /// pairs — two of the same number or two that add to ten — and shuffled
     /// across the whole grid. The board starts showing the top `startRows` of
-    /// them and keeps the rest face down beneath. The stream does not stop
-    /// there: after eighteen rows it continues in fresh two-row blocks, each
-    /// nine valid pairs drawn from a seed taken out of the board's own
-    /// generator. So a game that clears rows can keep revealing, and everybody
-    /// in a room who reveals the same row gets the same digits. Clearing the
-    /// board is still the aim, not a promise.
+    /// them; rows added later are planned from what is left on the board, so a
+    /// stuck digit gets a partner in the new rows. Clearing the board is still
+    /// the aim, not a promise.
     init(seed: UInt32,
          columns: Int = VibeTenBoard.defaultColumns,
          startRows: Int = VibeTenBoard.defaultStartRows,
@@ -173,41 +168,51 @@ struct VibeTenBoard: Equatable {
         }
     }
 
-    /// How many rows each fresh block of the stream after the first deal holds.
-    /// Two, so a block is nine whole pairs: the smallest press reveals one.
-    static let streamBlockRows = 2
-
-    /// The seed of one block of the stream after the first deal, drawn from the
-    /// board's own generator. Deriving it from the seed rather than from the
-    /// block number keeps the blocks independent while every device still draws
-    /// the same ones.
-    static func blockSeed(seed: UInt32, index: Int) -> UInt32 {
+    /// The seed for one press's shuffle, drawn from the board's own generator.
+    /// Two devices on the same board and frontier still draw the same digits.
+    static func pressSeed(seed: UInt32, dealtRows: Int) -> UInt32 {
         var generator = SeededGenerator(seed: seed)
         var value = generator.next()
-        for _ in 0..<max(0, index) {
+        for _ in 0..<max(0, dealtRows) {
             value = generator.next()
         }
         return UInt32(truncatingIfNeeded: value)
     }
 
-    /// One row of the board's stream, column by column.
+    /// The digits for a press of `rowCount` rows, built around what is left.
     ///
-    /// The first eighteen rows are the deal a board starts from. After that the
-    /// stream keeps going in two-row blocks of nine valid pairs, so a game that
-    /// clears rows can reveal past eighteen without running out of digits — and
-    /// two devices revealing the same row still see the same digits.
-    static func rowDigits(seed: UInt32, columns: Int, row: Int) -> [Int] {
-        guard columns > 0, row >= 0 else { return [] }
-        if row < maximumRows {
-            return deal(seed: seed, columns: columns,
-                        rows: maximumRows).map { $0[row].value }
+    /// Every digit still on the board gets a partner in the new rows where the
+    /// rows have room: the partner is `10 - value`, which is the other half of a
+    /// sum-to-ten pair (and is the same digit for a 5). The rest of the new
+    /// digits are drawn as valid pairs among themselves. Then the whole set is
+    /// shuffled and laid out across the new rows. The first leftover may be left
+    /// out when the counts are odd, because a press has an even number of digits
+    /// and every added digit has to belong to a pair.
+    static func pressDigits(rowCount: Int,
+                            seed: UInt32,
+                            columns: Int,
+                            remaining: [Int],
+                            dealtRows: Int) -> [Int] {
+        let capacity = rowCount * columns
+        guard capacity > 0 else { return [] }
+
+        var partnered = min(remaining.count, capacity)
+        if partnered % 2 == 1 { partnered -= 1 }
+
+        var digits: [Int] = []
+        digits.reserveCapacity(capacity)
+        for value in remaining.prefix(partnered) {
+            digits.append(10 - value)
         }
-        let offset = row - maximumRows
-        let block = offset / streamBlockRows
-        let within = offset % streamBlockRows
-        let digits = deal(seed: blockSeed(seed: seed, index: block),
-                          columns: columns, rows: streamBlockRows)
-        return digits.map { $0[within].value }
+
+        var generator = SeededGenerator(seed: pressSeed(seed: seed, dealtRows: dealtRows))
+        for _ in 0..<((capacity - partnered) / 2) {
+            let pair = pairOptions[Int.random(in: 0..<pairOptions.count, using: &generator)]
+            digits.append(pair.0)
+            digits.append(pair.1)
+        }
+        digits.shuffle(using: &generator)
+        return digits
     }
 
     /// A board with an exact shape, for tests and for the browser to check
@@ -432,35 +437,44 @@ struct VibeTenBoard: Equatable {
 
     // MARK: - Adding rows
 
-    /// Rows can be added while the bottom of the grid is free. The stream keeps
-    /// producing rows, so a long game is limited by space under the digits —
-    /// not by the eighteen rows the board started with.
+    /// Rows can be added while the bottom of the grid is free. A press plans
+    /// its digits from the board, so a long game is limited by space under the
+    /// digits — not by the eighteen rows the board started with.
     var canAddRow: Bool {
         stacks.allSatisfy { $0.count < rows }
     }
 
-    /// How many rows of the stream would fit under the digits as they are.
+    /// How many rows would fit under the digits as they are.
     var roomForRows: Int {
         max(0, rows - (stacks.map(\.count).max() ?? 0))
     }
 
-    /// Reveals the next row of the board's stream under the digits.
+    /// Reveals `rowCount` rows under the digits, with a partner for what is
+    /// still on the board.
     ///
-    /// Nothing else moves: the board is anchored at the top, so the row simply
-    /// extends it downward. The digits are not drawn now — the stream was
-    /// settled by the seed — which is what makes two players' new rows
-    /// identical from the same room seed.
+    /// The digits are planned for the whole press before anything is appended,
+    /// so the partners and the remaining pairs are one set, then shuffled. A
+    /// press is two or four rows because the plan needs an even number of
+    /// digits.
     @discardableResult
-    mutating func addRow() -> Bool {
-        guard canAddRow else { return false }
-        // Gather the row before touching the board, so a failed reveal cannot
-        // leave some columns a row longer than the others.
-        let digits = VibeTenBoard.rowDigits(seed: seed, columns: columns, row: dealtRows)
-        guard digits.count >= columns else { return false }
+    mutating func addRows(_ rowCount: Int) -> Bool {
+        guard rowCount >= VibeTenBoard.minimumRowsPerAdd,
+              rowCount % 2 == 0,
+              rowCount <= roomForRows,
+              canAddRow else { return false }
+        let remaining = cells.map(\.value)
+        let digits = VibeTenBoard.pressDigits(rowCount: rowCount,
+                                              seed: seed,
+                                              columns: columns,
+                                              remaining: remaining,
+                                              dealtRows: dealtRows)
+        guard digits.count == rowCount * columns else { return false }
         for column in stacks.indices {
-            stacks[column].append(VibeTenCell(value: digits[column]))
+            for row in 0..<rowCount {
+                stacks[column].append(VibeTenCell(value: digits[column * rowCount + row]))
+            }
         }
-        dealtRows += 1
+        dealtRows += rowCount
         return true
     }
 }
