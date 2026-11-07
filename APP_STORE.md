@@ -75,7 +75,7 @@ In this order. Steps 1–4 are one-time setup; 5–11 are per submission.
 
 ## The listing copy
 
-**Name** (30): `Vibe Games`
+**Name** (30): `Vibe Games Party` — the app and the website still say “Vibe Games”; the store name had to differ.
 
 **Subtitle** (30): `Party games in your pocket`
 
@@ -93,7 +93,7 @@ family games,word game,guessing game,puzzle,trivia,charades,group game,pass and 
 **Description** (4000):
 
 ```
-Party games for the whole table, in your pocket.
+Party games for yourself, or for a large group.
 
 Quick games you can play on your own in a spare five minutes, or pass
 around a room with everyone on their own device. No accounts, no adverts,
@@ -111,12 +111,12 @@ things that fit. Sounds easy until the clock is running.
 
 WORD VIBE — Six guesses, one word.
 Everyone gets the same word at the same time, and the first to solve it wins.
-Coloured hints tell you how close you are, in the way you already know.
+Colored hints tell you how close you are, in the way you already know.
 
 NUMBER VIBE — Fill the grid, beat the room.
 The same puzzle on every screen at the same time. Take your time, or race.
 
-VIBE PAIRINGS — Three cards that match.
+VIBE PAIRINGS — Find three cards that match.
 Every card has four features and a trio is three cards where each feature is the
 same across all three or different on all three. Find the most and you win.
 
