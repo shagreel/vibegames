@@ -143,8 +143,8 @@ it is the one field in this file I cannot fill in.*
 **What's new** (release notes for 1.0.1):
 
 ```
-Vibe Ten's new rows now bring a partner for the numbers still on the board, so a
-board is harder to leave stuck. The listing copy is tidied up too.
+Vibe Ten's new rows now bring a partner for numbers that have no pair to take,
+so a board is harder to leave stuck. The listing copy is tidied up too.
 ```
 
 **Category**: Games → **Family** primary, Games → **Word** secondary.
