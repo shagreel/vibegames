@@ -119,7 +119,7 @@ python3 -m http.server 8099 --bind 127.0.0.1
 ## The QR codes
 
 `assets/qr/*.svg` are **genuine, scannable QR codes** — not decorative patterns —
-but they encode placeholder store URLs, because there is no listing yet. Point a
+but the Google Play one still encodes a placeholder URL, because there is no Android listing yet. Point a
 camera at one today and it will 404.
 
 To fix them, edit the two URLs at the top of `Tools/make_qr.mjs` and re-run:

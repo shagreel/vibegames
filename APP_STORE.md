@@ -263,14 +263,12 @@ Not blockers. Written down so they are decisions rather than surprises later.
 
 ## After it is live
 
-The loop is not closed until the site points at the listing:
+The site now points at the live listing (App Store id **6829241665**):
 
-1. `Tools/make_qr.mjs` — replace the two placeholder store URLs with the real
-   ones and re-run it; the landing page picks the new codes up with no change.
-2. The landing page's two "Coming soon" pills can go, and the store blocks become
-   links.
-3. `site/index.html` structured data — add the app as a `SoftwareApplication`
-   with `sameAs` pointing at the listing, which is what makes it eligible to show
-   with a rating and a price.
-4. The **Smart App Banner**: an `apple-itunes-app` meta tag on the landing page
-   with the app's id, so a phone visiting the site offers the app.
+1. **Done** — `Tools/make_qr.mjs` encodes the App Store URL; Google Play remains a
+   placeholder because there is no Android app.
+2. **App Store done** — its “Coming soon” pill is a download link. Google Play
+   stays “Coming soon”.
+3. **Done** — `site/index.html` has a `SoftwareApplication` with `sameAs` pointing
+   at the listing.
+4. **Done** — the landing page carries `apple-itunes-app` with the app id.

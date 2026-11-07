@@ -2,10 +2,9 @@
 /**
  * Generates the QR codes for the landing page.
  *
- * These are REAL, scannable codes — not decorative patterns. The browser one is
- * live; the two store ones are placeholders, because the app has no store
- * listing yet, so scanning those lands on a "not found" page. Replace those two
- * targets when the listings exist, re-run, and the page needs no other change.
+ * These are REAL, scannable codes — not decorative patterns. The browser and App
+ * Store codes are live; the Google Play one is still a placeholder, because
+ * there is no Android listing, so scanning it lands on a "not found" page.
  *
  *   node Tools/make_qr.mjs
  *
@@ -19,10 +18,9 @@ import QRCode from "../.build/qrtool/node_modules/qrcode/lib/index.js";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = resolve(root, "site/assets/qr");
 
-// TODO: point these at the real store listings once they exist.
 const TARGETS = [
   { file: "browser.svg", label: "Play in your browser", url: "https://play.vibegames.party" },
-  { file: "appstore.svg", label: "App Store", url: "https://apps.apple.com/app/id0000000000" },
+  { file: "appstore.svg", label: "App Store", url: "https://apps.apple.com/app/id6829241665" },
   { file: "playstore.svg", label: "Google Play", url: "https://play.google.com/store/apps/details?id=party.vibegames" },
 ];
 
@@ -49,4 +47,4 @@ for (const { file, label, url } of TARGETS) {
   console.log(`  ${file.padEnd(16)} -> ${url}`);
 }
 
-console.log("\nReminder: the two store codes encode placeholder URLs and will not resolve yet.");
+console.log("\nReminder: the Google Play code is still a placeholder and will not resolve.");

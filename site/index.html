@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="apple-itunes-app" content="app-id=6829241665" />
 <title>Vibe Games — party games in your pocket</title>
 <meta name="description" content="Vibe Five, Word Vibe, Number Vibe, Vibe Pairings, Similar Vibe and Vibe Ten. Play solo, or share a code and play with the room. Free on any device." />
 <meta name="theme-color" content="#0b0a17" />
@@ -40,10 +41,7 @@
 
 <!--
   What the page is, in a form a search engine can read. Only things that are
-  true: the games, playable in a browser, free. There is no SoftwareApplication
-  for the iOS app here on purpose — it is not in the App Store yet, and a store
-  link that does not exist is worse than no store link. Add one with a `sameAs`
-  when it ships.
+  true: the games, playable in a browser, free, and the iOS app on the App Store.
 -->
 <script type="application/ld+json">
 {
@@ -56,6 +54,16 @@
       "name": "Vibe Games",
       "description": "Quick party games, played solo or passed around a room, on whatever device is to hand.",
       "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://vibegames.party/#app",
+      "name": "Vibe Games",
+      "operatingSystem": "iOS",
+      "applicationCategory": "GameApplication",
+      "url": "https://apps.apple.com/app/id6829241665",
+      "sameAs": "https://apps.apple.com/app/id6829241665",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
     },
     {
       "@type": "ItemList",
@@ -173,13 +181,13 @@
             <span class="pill pill--live">Play now</span>
           </div>
         </a>
-        <div class="store__item">
+        <a class="store__item store__item--live" href="https://apps.apple.com/app/id6829241665">
           <img src="assets/qr/appstore.svg" alt="QR code for the App Store listing" width="132" height="132" />
           <div>
             <strong>App Store</strong>
-            <span class="pill">Coming soon</span>
+            <span class="pill pill--live">Download</span>
           </div>
-        </div>
+        </a>
         <div class="store__item">
           <img src="assets/qr/playstore.svg" alt="QR code for the Google Play listing" width="132" height="132" />
           <div>
