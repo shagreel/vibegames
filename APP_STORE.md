@@ -93,7 +93,7 @@ family games,word game,guessing game,puzzle,trivia,charades,group game,pass and 
 **Description** (4000):
 
 ```
-Party games for yourself, or for a large group.
+Party games for yourself or large groups.
 
 Quick games you can play on your own in a spare five minutes, or pass
 around a room with everyone on their own device. No accounts, no adverts,
