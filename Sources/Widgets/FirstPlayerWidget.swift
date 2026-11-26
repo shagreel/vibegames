@@ -86,15 +86,17 @@ private struct FirstPlayerWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: isSmall ? 4 : 6) {
-            HStack(spacing: 6) {
-                Text("FIRST PLAYER")
-                    .font(.system(size: isSmall ? 9 : 10, weight: .black, design: .rounded))
-                    .kerning(1.2)
-                    .foregroundStyle(.white.opacity(0.65))
+            // The small family has no room for a title as well as the card,
+            // the seat and the button; the question is the title.
+            if !isSmall {
+                HStack(spacing: 6) {
+                    Text("FIRST PLAYER")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .kerning(1.2)
+                        .foregroundStyle(.white.opacity(0.65))
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                if !isSmall {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white.opacity(0.55))
