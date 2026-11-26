@@ -61,6 +61,7 @@ struct VibeGamesApp: App {
 /// Navigation root for the whole suite. New games are wired in here.
 struct RootView: View {
     @AppStorage("vibegames.appearance") private var appearance = AppearancePreference.system.rawValue
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -96,5 +97,13 @@ struct RootView: View {
         // the device unless the player overrides it from the hub.
         .preferredColorScheme(AppearancePreference(rawValue: appearance)?.colorScheme)
         .tint(.accentColor)
+        // Notes that were saved while the phone was offline go as soon as the
+        // app is in front of somebody again. The outbox is keyed by note id, so
+        // running this on launch and on every return cannot duplicate one.
+        .task { await FeedbackService.flushPending() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await FeedbackService.flushPending() }
+        }
     }
 }
