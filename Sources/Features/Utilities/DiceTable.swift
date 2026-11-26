@@ -30,6 +30,17 @@ final class DiceTable: NSObject, ObservableObject {
     private var dice: [UUID: SCNNode] = [:]
     private(set) var sides: [UUID: Int] = [:]
 
+    /// Which throw the dice are on.
+    ///
+    /// A settle is read on the next runloop pass, and a player can shake again
+    /// before it gets there. Without a way to tell the two apart, that queued
+    /// read ran against dice that had just been thrown again, caught them in the
+    /// pose they were left in by the previous roll, and then switched settling
+    /// off — so the numbers under the table stayed on the old roll. A settle
+    /// carries the generation it began in and is dropped if another throw has
+    /// happened since.
+    private var throwGeneration = 0
+
     /// The dice that have been read since the last throw. The app shows a
     /// placeholder for the rest, so a number never appears before the die has
     /// stopped — which happens when one lands on another and rolls off it.
@@ -223,6 +234,7 @@ final class DiceTable: NSObject, ObservableObject {
 
     func addDie(id: UUID, sides: Int, value: Int) {
         guard dice[id] == nil else { return }
+        throwGeneration += 1
         self.sides[id] = sides
 
         let node = DiceSolid.node(sides: sides, value: value)
@@ -251,6 +263,7 @@ final class DiceTable: NSObject, ObservableObject {
     }
 
     func removeAll() {
+        throwGeneration += 1
         diceHolder.childNodes.forEach { $0.removeFromParentNode() }
         dice = [:]
         sides = [:]
@@ -259,10 +272,13 @@ final class DiceTable: NSObject, ObservableObject {
         quietSince = nil
         lastSample = [:]
         stillSamples = 0
+        wantsSettling = false
+        isFinishing = false
     }
 
     /// Throws every die on the table again.
     func tossAll() {
+        throwGeneration += 1
         for (_, node) in dice {
             // Lift it, spin it, and push it towards the middle so a die near the
             // edge does not climb the lip and bounce back on the spot.
@@ -343,8 +359,9 @@ final class DiceTable: NSObject, ObservableObject {
         // work goes to the next runloop pass, and the callback just returns.
         stillSamples = 0
         isFinishing = true
+        let generation = throwGeneration
         DispatchQueue.main.async { [weak self] in
-            self?.finishSettling()
+            self?.finishSettling(generation: generation)
         }
     }
 
@@ -375,15 +392,31 @@ final class DiceTable: NSObject, ObservableObject {
         return still
     }
 
-    private func finishSettling() {
+    func finishSettling(generation: Int) {
+        // Another throw landed while this read was queued. Its dice are in the
+        // air now, so reading them here would publish the pose they were left
+        // in by the last roll and then stop the table from ever settling the
+        // throw that is actually happening.
+        guard generation == throwGeneration else {
+            isFinishing = false
+            return
+        }
+
         isFinishing = false
         wantsSettling = false
-        settled = Set(dice.keys)
+
+        // Read every face before revealing any of them. `settled` is what makes
+        // the numbers visible, and setting it first showed the model's previous
+        // values for a frame.
+        var readings: [(id: UUID, value: Int)] = []
         for (id, node) in dice {
             guard let sides = sides[id] else { continue }
-            let value = DiceSolid.faceLookingUp(of: node, sides: sides)
-            onSettled?(id, value)
+            readings.append((id, DiceSolid.faceLookingUp(of: node, sides: sides)))
         }
+        for reading in readings {
+            onSettled?(reading.id, reading.value)
+        }
+        settled = Set(dice.keys)
         view?.rest()
     }
 

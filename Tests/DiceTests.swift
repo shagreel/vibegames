@@ -290,3 +290,26 @@ final class ShakeToRollTests: XCTestCase {
         XCTAssertEqual(triggers, 1, "one shake, one roll")
     }
 }
+
+/// The table's settling hand-off between a render frame and the next runloop.
+///
+/// The physics itself is best checked on a phone, but this one race can be
+/// pinned: a settle read is queued, the player shakes again before it runs, and
+/// the queued read must not settle the throw that has just started.
+@MainActor
+final class DiceTableSettleTests: XCTestCase {
+
+    func testASettleQueuedForAnOlderThrowIsDiscarded() {
+        let table = DiceTable()
+        let die = UUID()
+        table.addDie(id: die, sides: 6, value: 1)   // generation 1
+        table.tossAll()                              // generation 2, dice in the air
+
+        table.finishSettling(generation: 1)
+        XCTAssertTrue(table.settled.isEmpty,
+                      "the old read must not publish the new throw's starting pose")
+
+        table.finishSettling(generation: 2)
+        XCTAssertEqual(table.settled, [die], "the current throw still settles")
+    }
+}
