@@ -96,6 +96,33 @@ else:
         if phrase not in policy:
             fail("site/privacy.html", f"does not mention the {phrase} the manifest declares")
 
+# ── the widget extension ─────────────────────────────────────────────────────
+#
+# The widget is its own bundle. App Store Connect refuses an upload when its
+# version disagrees with the app's, and the widget has a privacy manifest of its
+# own because it touches UserDefaults.
+
+widget_target = re.search(r"^  VibeWidgets:\n(.*?)(?=^  [A-Za-z]|\Z)",
+                          project, re.MULTILINE | re.DOTALL)
+if not widget_target:
+    fail("project.yml", "no VibeWidgets target — the First Player widget is gone")
+else:
+    widget = widget_target.group(1)
+    if "NSExtensionPointIdentifier: com.apple.widgetkit-extension" not in widget:
+        fail("project.yml", "the VibeWidgets target is not a WidgetKit extension")
+    widget_version = re.search(r'CFBundleShortVersionString: "([^"]+)"', widget)
+    widget_build = re.search(r'CFBundleVersion: "([^"]+)"', widget)
+    if not widget_version or widget_version.group(1) != version:
+        fail("project.yml", f"the widget version does not match the app's {version}")
+    if not widget_build or widget_build.group(1) != (builds.group(1) if builds else "?"):
+        fail("project.yml", "the widget build number does not match the app's")
+
+widget_manifest = ROOT / "Sources/Widgets/PrivacyInfo.xcprivacy"
+if not widget_manifest.exists():
+    fail("Sources/Widgets/PrivacyInfo.xcprivacy", "missing — the widget bundle needs one")
+elif "NSPrivacyAccessedAPICategoryUserDefaults" not in widget_manifest.read_text():
+    fail("Sources/Widgets/PrivacyInfo.xcprivacy", "does not declare UserDefaults")
+
 # ── things that are set in the project and would be easy to lose ──────────────
 
 for key, value in (

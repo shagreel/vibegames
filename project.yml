@@ -28,6 +28,9 @@ targets:
       - path: Sources
         excludes:
           - "**/.DS_Store"
+          # The widget is a separate process with its own @main; it is built
+          # from its own target below.
+          - "Widgets/**"
       # The 81 card faces, one per combination. A folder reference keeps them in
       # their own directory in the bundle rather than dropping 81 loose files at
       # the root of it.
@@ -53,6 +56,10 @@ targets:
       # module is still `FirebaseAnalytics`.
       - package: Firebase
         product: FirebaseAnalyticsWithoutAdIdSupport
+      # The First Player widget, embedded in the app.
+      - target: VibeWidgets
+        embed: true
+        codeSign: true
     # Crash reports are unreadable without this: it uploads the dSYMs so stack
     # traces arrive with function names rather than addresses.
     # After the build, not after compilation: the script reads the app's own
@@ -114,6 +121,37 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+
+  VibeWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Widgets
+      # The decider's questions and seats are the same code the app uses. It is
+      # pure Foundation, so the widget can compile it without the app.
+      - path: Sources/Features/Utilities/FirstPlayer.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: party.vibegames.VibeGames.Widgets
+        PRODUCT_NAME: VibeWidgets
+        MARKETING_VERSION: "1.0.2"
+        CURRENT_PROJECT_VERSION: "5"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Support/Widgets/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 2KBMDZ33ZL
+        SKIP_INSTALL: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+    info:
+      path: Support/Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Vibe First Player
+        CFBundleName: VibeWidgets
+        CFBundleShortVersionString: "1.0.2"
+        CFBundleVersion: "5"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   VibeGamesTests:
     type: bundle.unit-test

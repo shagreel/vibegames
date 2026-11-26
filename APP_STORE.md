@@ -19,6 +19,7 @@ cannot be played by a reviewer with one device.
 | **Privacy manifest** | `Sources/PrivacyInfo.xcprivacy` — ships in the bundle; says what the app collects and declares the one required-reason API it uses |
 | **Export compliance** | `ITSAppUsesNonExemptEncryption: false` in `project.yml` — no question at upload and no annual report |
 | **Icon** | Rendered by `Tools/make_icon.swift`; there is a test that it is square, opaque and present |
+| **Widget** | First Player widget extension, with its own privacy manifest; no separate listing metadata |
 | **Screenshots** | `python3 Tools/appstore_shots.py "iPhone 17 Pro" iphone-6.3` and `… "iPad Pro 13-inch (M5)" ipad-13` |
 | **Version** | 1.0.2 (build 5), in `project.yml` |
 | **Devices** | iPhone **and** iPad (`TARGETED_DEVICE_FAMILY: "1,2"`), which is why an iPad screenshot set is required |
@@ -145,7 +146,9 @@ it is the one field in this file I cannot fill in.*
 ```
 Vibe Pairings keeps its table when a round gets busy, so every pairing on the
 table can be taken again. The dice no longer show the previous roll after a
-quick second shake.
+quick second shake. First Player is now a widget: keep the question and the
+seat on your Home Screen, and draw another without opening the app. Feedback
+written without a signal is saved on the phone and sent when it returns.
 ```
 
 **Category**: Games → **Family** primary, Games → **Word** secondary.
