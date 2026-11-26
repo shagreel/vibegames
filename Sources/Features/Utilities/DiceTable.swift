@@ -273,7 +273,9 @@ final class DiceTable: NSObject, ObservableObject {
         lastSample = [:]
         stillSamples = 0
         wantsSettling = false
-        isFinishing = false
+        // `isFinishing` is left alone: a settle queued for the old throw will
+        // clear it when it runs, and clearing it here would let a second read
+        // be queued against the same new throw.
     }
 
     /// Throws every die on the table again.
