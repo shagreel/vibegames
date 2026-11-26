@@ -224,7 +224,7 @@ private struct FeedbackForm: View {
 
     private var thanks: some View {
         VStack(spacing: 8) {
-            Text("Thank you — it's sent.")
+            Text("Thank you")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(VibeTheme.primaryText)
             // What happens next, and a way back: a box that becomes a dead end
