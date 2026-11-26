@@ -69,6 +69,33 @@ struct TrioSnapshot: Equatable {
 
     init() {}
 
+    /// Reads a `taken` node in either shape Firebase can hand back.
+    ///
+    /// Card ids are integers, so the node's keys are all integers. The Realtime
+    /// Database treats such a node as an *array* once its highest key is less
+    /// than twice its child count, and switches what `value` returns from a
+    /// dictionary to an array padded with `NSNull` holes. A busy round crosses
+    /// that line partway through — around forty-two cards in the real game —
+    /// and a reader that only accepts the dictionary shape sees an empty node
+    /// from then on. That is not a cosmetic difference: replaying the board
+    /// without its takes makes every later claim look like it lost a race.
+    ///
+    /// The array's indices are the card ids, so the holes are simply skipped.
+    /// Returns nil for a value that is neither shape, so a caller can refuse to
+    /// treat unreadable data as an empty board.
+    static func takenEntries(from value: Any?) -> [String: Any]? {
+        if value == nil || value is NSNull { return [:] }
+        if let entries = value as? [String: Any] { return entries }
+        if let entries = value as? [Any] {
+            var result: [String: Any] = [:]
+            for (cardID, entry) in entries.enumerated() where !(entry is NSNull) {
+                result[String(cardID)] = entry
+            }
+            return result
+        }
+        return nil
+    }
+
     init(meta: Any?, players: [String: Any]?, taken: [String: Any]?) {
         if let object = meta as? [String: Any] {
             exists = true
@@ -299,7 +326,12 @@ final class VibeTrioService {
 
         return await withCheckedContinuation { continuation in
             reference.runTransactionBlock({ current in
-                let entries = (current.value as? [String: Any]) ?? [:]
+                // Never guess at a board we cannot read. Treating an unknown
+                // shape as an empty node would validate the claim against the
+                // opening table and could write a take that never happened.
+                guard let entries = TrioSnapshot.takenEntries(from: current.value) else {
+                    return TransactionResult.abort()
+                }
                 let seen = TrioSnapshot(meta: ["seed": Int(seed)],
                                         players: nil,
                                         taken: entries)

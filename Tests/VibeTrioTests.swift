@@ -496,6 +496,70 @@ final class TrioSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.takeIDs, [])
         XCTAssertEqual(snapshot.scores, [:])
     }
+
+    /// Firebase hands `taken` back as an array once enough integer keys are
+    /// packed together, and the claim transaction used to read only the
+    /// dictionary shape. A round that crossed the line then replayed as an empty
+    /// board, so every remaining trio was refused as "someone got there first".
+    ///
+    /// This builds a round until the database would return the array shape, then
+    /// checks the parser gives back the same game and that its remaining trios
+    /// are still claims.
+    func testTakenNodeReadsTheSameInBothShapesFirebaseUses() throws {
+        let seed: UInt32 = 9
+        var table = TrioTable(seed: seed)
+        var entries: [String: Any] = [:]
+        var seq = 0
+
+        while firebaseArray(for: entries) == nil {
+            seq += 1
+            XCTAssertLessThan(seq, 40, "the array shape should arrive before the deck runs out")
+            let trio = try XCTUnwrap(table.availableTrios.first)
+            for position in trio {
+                entries[String(table.visible[position].id)] = [
+                    "seq": seq, "by": "aaaa", "name": "Alex",
+                ]
+            }
+            XCTAssertTrue(table.takeTrio(at: trio))
+        }
+
+        let array = try XCTUnwrap(firebaseArray(for: entries))
+        let parsed = try XCTUnwrap(TrioSnapshot.takenEntries(from: array))
+        let fromArray = TrioSnapshot(meta: ["seed": Int(seed)], players: nil, taken: parsed)
+        let fromDictionary = TrioSnapshot(meta: ["seed": Int(seed)], players: nil, taken: entries)
+
+        XCTAssertEqual(fromArray.takeIDs, fromDictionary.takeIDs,
+                       "the array's holes are not cards")
+
+        let replayed = TrioTable.replay(seed: seed, takes: fromArray.takeIDs)
+        let trio = try XCTUnwrap(replayed.availableTrios.first)
+        let ids = trio.map { replayed.visible[$0].id }
+        XCTAssertTrue(replayed.wouldFormTrio(ids: ids), "the claim is valid on the real table")
+        XCTAssertFalse(TrioTable(seed: seed).wouldFormTrio(ids: ids),
+                       "and invalid on the opening table the old code replayed")
+    }
+
+    func testUnreadableTakenNodeIsNotTreatedAsEmpty() {
+        XCTAssertEqual(TrioSnapshot.takenEntries(from: nil)?.count, 0)
+        XCTAssertEqual(TrioSnapshot.takenEntries(from: NSNull())?.count, 0)
+        XCTAssertNil(TrioSnapshot.takenEntries(from: "not a node"),
+                     "a claim must be refused rather than validated against an empty board")
+    }
+
+    /// What the Realtime Database's own `value` conversion does: an array with
+    /// `NSNull` holes when every key is an integer and the highest is less than
+    /// twice the child count. Mirrors `FChildrenNode.val`.
+    private func firebaseArray(for entries: [String: Any]) -> [Any]? {
+        let keys = entries.keys.compactMap(Int.init)
+        guard !entries.isEmpty, keys.count == entries.count else { return nil }
+        let maxKey = keys.max() ?? 0
+        guard maxKey < 2 * entries.count else { return nil }
+        var array = Array<Any>(repeating: NSNull(), count: maxKey + 1)
+        for (key, value) in entries {
+            array[Int(key)!] = value
+        }
+        return array
+    }
 }
 
 final class TrioIdentityTests: XCTestCase {
