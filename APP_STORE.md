@@ -20,7 +20,7 @@ cannot be played by a reviewer with one device.
 | **Export compliance** | `ITSAppUsesNonExemptEncryption: false` in `project.yml` — no question at upload and no annual report |
 | **Icon** | Rendered by `Tools/make_icon.swift`; there is a test that it is square, opaque and present |
 | **Screenshots** | `python3 Tools/appstore_shots.py "iPhone 17 Pro" iphone-6.3` and `… "iPad Pro 13-inch (M5)" ipad-13` |
-| **Version** | 1.0.1 (build 4), in `project.yml` |
+| **Version** | 1.0.2 (build 5), in `project.yml` |
 | **Devices** | iPhone **and** iPad (`TARGETED_DEVICE_FAMILY: "1,2"`), which is why an iPad screenshot set is required |
 | **Firebase configuration** | The Release archive is checked for `GoogleService-Info.plist` — without it the app builds, launches, plays solo and has no multiplayer at all |
 | **No in-app purchases** | Nothing to buy, no tip jar and no StoreKit configuration in the app; the product page carries no purchase |
@@ -140,11 +140,12 @@ all — they are good on a train.
 **Copyright**: `© 2026 <your name>` — *put the name you want on the listing here;
 it is the one field in this file I cannot fill in.*
 
-**What's new** (release notes for 1.0.1):
+**What's new** (release notes for 1.0.2):
 
 ```
-Vibe Ten's new rows now bring a partner for numbers that have no pair to take,
-so a board is harder to leave stuck. The listing copy is tidied up too.
+Vibe Pairings keeps its table when a round gets busy, so every pairing on the
+table can be taken again. The dice no longer show the previous roll after a
+quick second shake.
 ```
 
 **Category**: Games → **Family** primary, Games → **Word** secondary.
