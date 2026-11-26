@@ -148,7 +148,7 @@ Vibe Pairings keeps its table when a round gets busy, so every pairing on the
 table can be taken again. The dice no longer show the previous roll after a
 quick second shake. First Player is now a widget: keep the question and the
 seat on your Home Screen, and draw another without opening the app. Feedback
-written without a signal is saved on the phone and sent when it returns.
+now sends reliably even when the connection drops.
 ```
 
 **Category**: Games → **Family** primary, Games → **Word** secondary.

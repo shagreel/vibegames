@@ -49,6 +49,8 @@ struct VibeGamesApp: App {
     init() {
         // Tolerant of a missing GoogleService-Info.plist: solo play still works.
         FirebaseBootstrapper.configure()
+        // A note written while offline goes as soon as the connection is back.
+        FeedbackService.observeConnection()
     }
 
     var body: some Scene {
@@ -100,7 +102,7 @@ struct RootView: View {
         // Notes that were saved while the phone was offline go as soon as the
         // app is in front of somebody again. The outbox is keyed by note id, so
         // running this on launch and on every return cannot duplicate one.
-        .task { await FeedbackService.flushPending() }
+        .task { await FeedbackService.retryPending() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await FeedbackService.flushPending() }

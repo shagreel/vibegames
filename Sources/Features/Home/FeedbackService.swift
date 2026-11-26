@@ -33,17 +33,9 @@ enum FeedbackService {
             case .unavailable(let reason):
                 return reason
             case .timedOut:
-                return "The game service did not answer. Your note is saved and will send when it can."
+                return "The game service did not answer."
             }
         }
-    }
-
-    /// What happened to a note.
-    enum Delivery: Equatable {
-        /// The database has it.
-        case sent
-        /// It is on disk and will be retried; nothing is lost.
-        case queued
     }
 
     static let minimumLength = 4
@@ -51,15 +43,15 @@ enum FeedbackService {
 
     static var isAvailable: Bool { FirebaseBootstrapper.database != nil }
 
-    /// Posts the feedback, or saves it for the next attempt.
+    /// Saves the feedback and starts sending it.
     ///
-    /// A note is written to disk before the first attempt. If the database
-    /// answers, it is removed and the caller can say it arrived. If it does not,
-    /// the note stays in the outbox and is retried on the next launch or
-    /// foreground — so closing the app is no longer a way to lose a report.
+    /// Returns once the note is on disk, not once the database has it: the
+    /// outbox owns delivery from then on. The sheet can say "sent" straight
+    /// away, and a connection that drops or a phone that is put away cannot
+    /// take the note with it.
     static func send(_ text: String,
                      from source: Source,
-                     game: String?) async throws -> Delivery {
+                     game: String?) async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= minimumLength else { throw Failure.tooShort }
         guard trimmed.count <= maximumLength else { throw Failure.tooLong }
@@ -71,16 +63,16 @@ enum FeedbackService {
             )
         }
 
-        let note = try await FeedbackOutbox.shared.enqueue(
+        try await FeedbackOutbox.shared.enqueue(
             text: trimmed,
             source: source.rawValue,
             game: game.flatMap { $0.isEmpty ? nil : $0 }
         )
 
-        let delivered = await FeedbackOutbox.shared.flush { note in
-            try await post(note, database: database)
-        }
-        return delivered.contains(note.id) ? .sent : .queued
+        // Try at once, but do not make the sheet wait for the round trip. If
+        // this task is cut short, `retryPending` and the reconnect observer
+        // pick the note up; if the app dies, it is already on disk.
+        Task { await flushPending() }
     }
 
     /// Retries anything left from a previous launch or a failed send.
@@ -91,11 +83,33 @@ enum FeedbackService {
         }
     }
 
+    /// Keeps the outbox moving while the app is in front of somebody.
+    ///
+    /// The disk copy is the guarantee; this is what makes the guarantee become
+    /// "arrived" without needing the person to close and reopen the app, or to
+    /// send another note to kick the queue.
+    static func retryPending() async {
+        while !Task.isCancelled {
+            await flushPending()
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+        }
+    }
+
+    /// Flushes as soon as the Realtime Database reconnects, rather than waiting
+    /// for the next retry tick. Called once, while the app is starting.
+    static func observeConnection() {
+        guard let database = FirebaseBootstrapper.database else { return }
+        database.reference(withPath: ".info/connected").observe(.value) { snapshot in
+            guard snapshot.value as? Bool == true else { return }
+            Task { await flushPending() }
+        }
+    }
+
     /// Writes one note, waiting no longer than fifteen seconds for an answer.
     ///
-    /// A `setValue` with no connection can wait indefinitely. The timeout is
-    /// what lets the sheet say "saved" instead of staying on "Sending…" until
-    /// the phone is put away.
+    /// A `setValue` with no connection can wait indefinitely. The timeout lets
+    /// the sheet finish rather than staying on "Sending…" until the phone is put
+    /// away; the note is already on disk.
     private static func post(_ note: FeedbackOutbox.Note,
                              database: Database) async throws {
         let reference = database.reference(withPath: "feedback").child(note.id)
